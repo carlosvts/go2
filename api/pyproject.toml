@@ -1,7 +1,7 @@
 [project]
 name = "go2-api"
 version = "0.1.0"
-description = "Add your description here"
+description = "The SSOT of the Go2 WebRTC connection"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
