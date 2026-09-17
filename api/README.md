@@ -37,13 +37,48 @@ A API sobe sem tentar conectar. O `GET /status` responde `200` com `connected: f
 | Endpoint | Corpo | O que faz |
 |---|---|---|
 | `GET /status` | — | Conexão, bateria e modo. Sempre `200`; `?raw=true` inclui os payloads crus. |
-| `POST /commands/posture` | `{"cmd": "stand_up"}` | Muda a postura (`stand_up`, `stand_down`, `sit`, `rise_sit`, `balance_stand`, `recovery_stand`, `damp`). |
+| `POST /commands/posture` | `{"cmd": "stand_up"}` | Muda a postura ([lista abaixo](#posturas)). |
 | `POST /commands/move` | `{"vx", "vy", "vyaw", "duration_s"}` | Move o robô durante `duration_s` e para. |
-| `POST /commands/stop` | — | Para na hora. |
+| `POST /commands/stop` | — | Interrompe o `move` em andamento e envia `StopMove`: o robô para de andar e fica de pé onde está, sem mudar de postura. Não desliga os motores (para isso, use a postura `damp`). |
 | `PUT /commands/speed` | `{"level": 1}` | Define o nível de velocidade. |
 | `GET /commands/speed` | — | Lê o nível de velocidade. |
 
 Os comandos respondem `202` quando são enviados, sem esperar o robô terminar. Com o robô desconectado, respondem `503`.
+
+## Comandos
+
+### Posturas
+
+Disponíveis em `POST /commands/posture`:
+
+| `cmd` | O que faz |
+|---|---|
+| `stand_up` | Fica de pé. |
+| `stand_down` | Deita. |
+| `sit` | Senta. |
+| `rise_sit` | Levanta depois de sentar. |
+| `balance_stand` | Fica de pé em modo de equilíbrio, pronto para andar. |
+| `recovery_stand` | Levanta depois de uma queda. |
+| `damp` | Desliga a força dos motores; o robô cai se estiver de pé. |
+
+### Gestos (planejado)
+
+Ainda **não implementados**: hoje, enviar um deles responde `422`. O endpoint previsto é `POST /commands/gesture` (ver `docs/arquitetura_go2_api.md`, seção 4.2).
+
+| `cmd` | O que faz |
+|---|---|
+| `hello` | Acena com a pata. |
+| `stretch` | Se espreguiça. |
+| `finger_heart` | Faz um coração com as patas. |
+| `wiggle_hips` | Rebola. |
+| `content` | Demonstra contentamento. |
+| `dance1`, `dance2` | Danças. |
+| `scrape` | Arranha o chão. |
+| `pose` | Faz uma pose. |
+
+### Truques (planejado)
+
+Também **não implementados**. Têm risco real de queda e vão exigir `"confirm": true` em `POST /commands/trick`: `front_flip`, `back_flip`, `handstand`, `moon_walk`, `bound`.
 
 ## Limitações atuais
 
