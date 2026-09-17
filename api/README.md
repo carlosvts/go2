@@ -1,6 +1,6 @@
 # go2-api
 
-API HTTP que mantém a **única conexão WebRTC** com o Unitree Go2 (NEURON/UFLA). O robô só aceita uma conexão por vez, então os outros serviços (voz, chat etc.) mandam comandos por HTTP em vez de conectar direto.
+API HTTP que mantém e multiplexa a **única conexão WebRTC** com o Unitree Go2 (NEURON/UFLA). O robô só aceita uma conexão por vez, então os outros serviços (voz, chat etc.) mandam comandos por HTTP em vez de conectar direto.
 
 ## Rodando
 
@@ -13,7 +13,24 @@ uv run uvicorn app.main:app --reload
 - Documentação interativa: `http://127.0.0.1:8000/docs`
 - Testes (não precisam do robô): `uv run pytest`
 
-Prefira o **serial** ao IP, porque o IP pode mudar. Não use `192.168.123.x`: essa é a rede interna do robô.
+Prefira o **serial** ao IP. 
+
+> [!NOTE]
+> `192.168.123.x` é a rede interna do robô.
+
+### Sem o robô
+
+Para testar os endpoints sem o robô, use no `.env`:
+
+```bash
+GO2_CONNECTION_METHOD=LocalAP
+GO2_CONNECT_ON_STARTUP=false
+```
+
+A API sobe sem tentar conectar. O `GET /status` responde `200` com `connected: false`, os comandos respondem `503` e corpos inválidos respondem `422`.
+
+> [!NOTE]
+> Com `LocalSTA`, a API exige `GO2_ROBOT_IP` ou `GO2_ROBOT_SERIAL_NUMBER` mesmo sem conectar. Por isso o exemplo usa `LocalAP`.
 
 ## Endpoints
 
