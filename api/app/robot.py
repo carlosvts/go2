@@ -273,6 +273,17 @@ class RobotConnection:
         await self._cancel_move()
         self.send_sport(SPORT_CMD[command_name])
 
+    # ─── Gestos ────────────────────────────────────────────────────────────
+
+    async def gesture(self, command_name: str) -> None:
+        """Executa um gesto, cancelando qualquer movimento ativo.
+
+        Pendente de validação física: se o robô ignora um gesto pedido de
+        barriga no chão, ou se `StopMove` interrompe um gesto em curso.
+        """
+        await self._cancel_move()
+        self.send_sport(SPORT_CMD[command_name])
+
     # ─── Movimento contínuo ────────────────────────────────────────────────
 
     async def start_move(
