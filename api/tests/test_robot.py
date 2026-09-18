@@ -179,3 +179,24 @@ async def test_status_sem_estado_recebido(robot: RobotConnection) -> None:
     assert snapshot.battery_percent is None
     assert snapshot.mode is None
     assert snapshot.low_state_age_s is None
+
+
+async def test_gesture_envia_api_id_sem_parametro(
+    robot: RobotConnection, pub_sub
+) -> None:
+    await robot.gesture("Hello")
+
+    assert pub_sub.api_ids == [SPORT_CMD["Hello"]]
+    assert pub_sub.sent[0]["data"]["parameter"] == ""
+
+
+async def test_gesture_cancela_movimento_em_curso(
+    robot: RobotConnection, pub_sub
+) -> None:
+    await robot.start_move(vx=0.2, vy=0.0, vyaw=0.0, duration_s=5.0)
+    await robot.gesture("Hello")
+    enviados = len(pub_sub.sent)
+    await asyncio.sleep(0.1)
+
+    assert pub_sub.api_ids[-1] == SPORT_CMD["Hello"]
+    assert len(pub_sub.sent) == enviados  # o reenvio do Move parou

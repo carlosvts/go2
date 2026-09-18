@@ -184,3 +184,39 @@ def test_get_speed(client: TestClient, pub_sub) -> None:
 
 def test_get_speed_sem_robo_responde_503(offline_client: TestClient) -> None:
     assert offline_client.get("/commands/speed").status_code == 503
+
+
+# ─── /commands/gesture ─────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("cmd", "esperado"),
+    [
+        ("hello", "Hello"),
+        ("stretch", "Stretch"),
+        ("finger_heart", "FingerHeart"),
+        ("wiggle_hips", "WiggleHips"),
+        ("content", "Content"),
+        ("dance1", "Dance1"),
+        ("dance2", "Dance2"),
+        ("scrape", "Scrape"),
+        ("pose", "Pose"),
+    ],
+)
+def test_gesture_aceita_todo_o_enum(
+    client: TestClient, pub_sub, cmd: str, esperado: str
+) -> None:
+    resposta = client.post("/commands/gesture", json={"cmd": cmd})
+
+    assert resposta.status_code == 202
+    assert resposta.json() == {"accepted": True, "cmd": esperado}
+    assert pub_sub.api_ids == [SPORT_CMD[esperado]]
+
+
+def test_gesture_rejeita_trick(client: TestClient) -> None:
+    """Tricks têm risco de queda e entram só em endpoint próprio."""
+    assert client.post("/commands/gesture", json={"cmd": "front_flip"}).status_code == 422
+
+
+def test_gesture_sem_robo_responde_503(offline_client: TestClient) -> None:
+    assert offline_client.post("/commands/gesture", json={"cmd": "hello"}).status_code == 503
