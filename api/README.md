@@ -38,6 +38,7 @@ A API sobe sem tentar conectar. O `GET /status` responde `200` com `connected: f
 |---|---|---|
 | `GET /status` | — | Conexão, bateria e modo. Sempre `200`; `?raw=true` inclui os payloads crus. |
 | `POST /commands/posture` | `{"cmd": "stand_up"}` | Muda a postura ([lista abaixo](#posturas)). |
+| `POST /commands/gesture` | `{"cmd": "hello"}` | Executa um gesto ([lista abaixo](#gestos)). |
 | `POST /commands/move` | `{"vx", "vy", "vyaw", "duration_s"}` | Move o robô durante `duration_s` e para. |
 | `POST /commands/stop` | — | Interrompe o `move` em andamento e envia `StopMove`: o robô para de andar e fica de pé onde está, sem mudar de postura. Não desliga os motores (para isso, use a postura `damp`). |
 | `PUT /commands/speed` | `{"level": 1}` | Define o nível de velocidade. |
@@ -61,9 +62,9 @@ Disponíveis em `POST /commands/posture`:
 | `recovery_stand` | Levanta depois de uma queda. |
 | `damp` | Desliga a força dos motores; o robô cai se estiver de pé. |
 
-### Gestos (planejado)
+### Gestos
 
-Ainda **não implementados**: hoje, enviar um deles responde `422`. O endpoint previsto é `POST /commands/gesture` (ver `docs/arquitetura_go2_api.md`, seção 4.2).
+Disponíveis em `POST /commands/gesture`. Um movimento em curso é cancelado antes do gesto.
 
 | `cmd` | O que faz |
 |---|---|
