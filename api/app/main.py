@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import Settings, get_settings
 from app.robot import RobotConnection, RobotTimeoutError, RobotUnavailableError
-from app.routers import posture, status as status_router
+from app.routers import gesture, posture, status as status_router
 
 log = logging.getLogger(__name__)
 
@@ -63,6 +63,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(status_router.router)
     app.include_router(posture.router)
+    app.include_router(gesture.router)
     return app
 
 
