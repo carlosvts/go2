@@ -12,8 +12,9 @@ from unitree_webrtc_connect import SPORT_CMD
 class PostureCommand(str, Enum):
     """Comandos de postura, como aparecem no corpo da request.
 
-    Gestos (`hello`, `stretch`, ...) e "tricks" (`front_flip`, ...) ficam de
-    fora desta versão — grupo 4.2 da `docs/arquitetura_go2_api.md`.
+    Gestos (`hello`, `stretch`, ...) ficam em `app/models/gestures.py`; os
+    "tricks" (`front_flip`, ...) ainda não existem — grupo 4.2 da
+    `docs/arquitetura_go2_api.md`.
     """
 
     stand_up = "stand_up"

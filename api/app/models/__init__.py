@@ -6,10 +6,13 @@ from app.models.commands import (
     SpeedLevelRequest,
     SpeedLevelResponse,
 )
+from app.models.gestures import GestureCommand, GestureRequest
 from app.models.status import StatusResponse
 
 __all__ = [
     "CommandAccepted",
+    "GestureCommand",
+    "GestureRequest",
     "MoveRequest",
     "PostureCommand",
     "PostureRequest",
