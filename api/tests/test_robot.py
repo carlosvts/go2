@@ -25,7 +25,7 @@ async def test_move_usa_payload_x_y_yaw(robot: RobotConnection, pub_sub) -> None
     await robot.start_move(vx=0.3, vy=-0.1, vyaw=0.5, duration_s=0.05)
 
     assert pub_sub.api_ids[0] == SPORT_CMD["Move"]
-    assert pub_sub.parameter_of(0) == {"x": 0.3, "y": -0.1, "yaw": 0.5}
+    assert pub_sub.parameter_of(0) == {"x": 0.3, "y": -0.1, "z": 0.5}
 
 
 async def test_move_reenvia_e_para_no_fim_da_janela(

@@ -294,9 +294,11 @@ class RobotConnection:
         Sem lease nesta versão: um novo `move` cancela o anterior.
         """
         await self._cancel_move()
-        # Pendente de validação física: nomes do `parameter` do Move (1008).
-        # Se o robô ignorar o comando, conferir aqui e em `_move_loop`.
-        self.send_sport(SPORT_CMD["Move"], {"x": vx, "y": vy, "yaw": vyaw})
+        # Padrão exigido pelo webrtc_bridge: o `parameter` do Move (1008) usa
+        # `x`/`y`/`z`, com `z` sendo o yaw — como no exemplo `sportmode.py` da
+        # lib. Com `yaw` o robô ignora o comando. Manter em sincronia com
+        # `_move_loop`.
+        self.send_sport(SPORT_CMD["Move"], {"x": vx, "y": vy, "z": vyaw})
         self._move_task = asyncio.create_task(
             self._move_loop(vx, vy, vyaw, duration_s)
         )
@@ -306,9 +308,9 @@ class RobotConnection:
     ) -> None:
         interval = 1.0 / self._settings.move_rate_hz
         deadline = time.monotonic() + duration_s
-        # Pendente de validação física — mesmo payload de `start_move`, manter
+        # Mesmo payload de `start_move` — manter
         # os dois em sincronia se o formato for corrigido.
-        parameter = {"x": vx, "y": vy, "yaw": vyaw}
+        parameter = {"x": vx, "y": vy, "z": vyaw}
         try:
             while time.monotonic() < deadline:
                 await asyncio.sleep(interval)

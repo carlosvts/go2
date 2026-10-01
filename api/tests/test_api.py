@@ -112,7 +112,7 @@ def test_move_aceito(client: TestClient, pub_sub) -> None:
     )
 
     assert resposta.status_code == 202
-    assert pub_sub.parameter_of(0) == {"x": 0.5, "y": 0.0, "yaw": 0.2}
+    assert pub_sub.parameter_of(0) == {"x": 0.5, "y": 0.0, "z": 0.2}
 
 
 @pytest.mark.parametrize(
