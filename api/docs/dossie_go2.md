@@ -1,6 +1,6 @@
 # Dossiê Técnico — Unitree Go2
 
-> Compilado a partir de documentação oficial da Unitree, repositórios da comunidade (TheRoboVerse), pesquisa de segurança pública e revendedores especializados. Specs de mercado variam por região/lote — os números aqui são de múltiplas fontes cruzadas, mas vale confirmar contra o manual do lote específico de vocês quando a precisão importar (ex: relatório técnico).
+> Compilado a partir de documentação oficial da Unitree, repositórios da comunidade (TheRoboVerse), pesquisa de segurança pública e revendedores especializados. Specs de mercado variam por região/lote — os números aqui são de múltiplas fontes cruzadas, mas vale confirmar contra o manual do lote específico do robô quando a precisão importar (ex: relatório técnico).
 
 ---
 
@@ -39,14 +39,14 @@ O Go2 é a segunda geração da linha de robôs quadrúpedes da Unitree (sucesso
 - Distância mínima detectável: ~0,05 m.
 - Gera nuvem de pontos densa, usada tanto pelo comportamento autônomo de desvio de obstáculo do robô quanto disponível para os desenvolvedores via SDK/WebRTC.
 - EDU Plus e configurações avançadas permitem upgrade para LiDAR de terceiros (Livox Mid-360, Hesai XT16) para SLAM mais robusto.
-- **Importante (achado no código-fonte, não em marketing)**: o dado bruto que chega pelo WebRTC vem comprimido, e a biblioteca de vocês tem **dois decoders diferentes** para ele, com resultados diferentes:
+- **Importante (achado no código-fonte, não em marketing)**: o dado bruto que chega pelo WebRTC vem comprimido, e a `unitree_webrtc_connect` tem **dois decoders diferentes** para ele, com resultados diferentes:
   - **`native`** — Python puro (numpy + lz4), decodifica um grid de ocupação binário comprimido e devolve uma nuvem de pontos real (`x,y,z`, resolução padrão de 0,05m). Auditável, sem dependência de binário de terceiros.
   - **`libvoxel`** (configurado como **padrão** na lib) — roda um binário WebAssembly (`libvoxel.wasm`, minificado, nomes de função de uma letra só) via `wasmtime`, quase certamente extraído do próprio app/web da Unitree. Devolve **malha 3D pronta pra renderização** (`positions`, `uvs`, `indices`, `face_count` — formato tipo WebGL/Three.js), não uma lista de pontos utilizável em cálculo de distância ou SLAM.
   - Ou seja: se nada for trocado explicitamente, o padrão devolve geometria de tela, não dado de distância. Quem quiser usar o LiDAR pra cálculo/processamento precisa trocar para o decoder `native`.
 
 ### 3.2 Câmera frontal
 - RGB simples, wide-angle, 1280×720 — pensada para teleoperação (ver o que o robô vê), **não tem profundidade própria**.
-- Usada também para as funções de "AI vision" citadas no marketing (detecção de objeto, rastreamento de pessoa) — mas essas são capacidades que **dependem de vocês rodarem o modelo**, não vêm como serviço pronto que devolve resultado.
+- Usada também para as funções de "AI vision" citadas no marketing (detecção de objeto, rastreamento de pessoa) — mas essas são capacidades que **dependem de o projeto rodar o modelo**, não vêm como serviço pronto que devolve resultado.
 
 ### 3.3 Câmera de profundidade (só EDU)
 - Intel RealSense D435i, montada na docking station — sensor estéreo dedicado, close-range.
@@ -55,13 +55,13 @@ O Go2 é a segunda geração da linha de robôs quadrúpedes da Unitree (sucesso
 ### 3.4 Outros
 - IMU (orientação/equilíbrio).
 - Sensores de força nas 4 patas — **só no EDU**, instalados de fábrica, não é possível adicionar depois em outro modelo.
-- Microfone e alto-falante embarcados — existem, mas relatos de campo (inclusive um case da WSO2 rodando agente de voz no robô) descrevem qualidade ruidosa, o que motivou o uso de microfone externo (Anker PowerConf S3) no projeto de vocês.
+- Microfone e alto-falante embarcados — existem, mas relatos de campo (inclusive um case da WSO2 rodando agente de voz no robô) descrevem qualidade ruidosa, o que motivou o uso de microfone externo (Anker PowerConf S3) no projeto.
 
 ---
 
 ## 4. Compute embarcado
 
-> **Não aplicável ao robô de vocês** — confirmado que não é a versão EDU, não tem docking station nem Jetson. Toda essa seção descreve o que existiria *se* fosse EDU; mantida por completude e caso o grupo NEURON adquira uma unidade EDU no futuro.
+> **Não aplicável ao robô do projeto (Go2 Pro)** — confirmado que não é a versão EDU, não tem docking station nem Jetson. Toda essa seção descreve o que existiria *se* fosse EDU; mantida por completude e caso o grupo NEURON adquira uma unidade EDU no futuro.
 
 Existem **dois domínios de compute completamente separados** no Go2 EDU — isso é importante para arquitetura:
 
@@ -70,7 +70,7 @@ Existem **dois domínios de compute completamente separados** no Go2 EDU — iss
    - IP padrão: `192.168.123.18`
    - Usuário/senha padrão: `unitree` / `123` (recomenda-se trocar)
    - Acesso via SSH, VSCode Remote-SSH, ou USB-C→HDMI para desktop direto.
-   - Fica na rede interna do robô (faixa `192.168.123.x`) — diferente da rede WiFi externa que o "corpo" do robô usa para se conectar à internet/roteador de vocês.
+   - Fica na rede interna do robô (faixa `192.168.123.x`) — diferente da rede WiFi externa que o "corpo" do robô usa para se conectar à internet/roteador local.
 
 ---
 
@@ -97,18 +97,18 @@ O Go2 roda internamente sobre **CycloneDDS** (uma implementação open-source do
 - `rt/lowcmd` — comando de baixo nível, controle direto de torque/posição por junta.
 - `rt/lowstate` / `rt/lf/lowstate` — leitura de estado de baixo nível (IMU, força nas patas), a versão "lf" é de baixa frequência.
 - `rt/sportmodestate` — estado do modo esportivo (posição, velocidade, etc).
-- `rt/api/sport/request` e `/response` — comandos de alto nível (os `SPORT_CMD` que o projeto de vocês já usa).
+- `rt/api/sport/request` e `/response` — comandos de alto nível (os `SPORT_CMD` usados pela `go2-api`).
 - `rt/api/motion_switcher/request` — troca entre modos de movimento (normal, avançado, IA).
 - `rt/api/gpt/request` / `rt/gptflowfeedback` — canal dedicado ao assistente de voz nativo (BenBen), que usa GPT por trás.
 - `rt/api/videohub/request`, `rt/api/audiohub/request` — vídeo e áudio.
 - `rt/webrtcreq` / `rt/webrtcres` — o próprio canal pelo qual o WebRTC se comunica com o barramento DDS interno.
 
-**CycloneDDS funciona nativamente só no EDU.** Em Air/Pro seria necessário um upgrade de firmware não-oficial para habilitar — não é o caminho recomendado nem o que vocês usam.
+**CycloneDDS funciona nativamente só no EDU.** Em Air/Pro seria necessário um upgrade de firmware não-oficial para habilitar — não é o caminho recomendado nem o usado no projeto.
 
-**SDK oficial (`unitree_sdk2`)**: biblioteca C++ com wrapper Python (pybind11), acesso total aos tópicos DDS acima, incluindo controle de baixo nível. É o caminho "com todas as portas abertas", mas exige o modo de desenvolvedor do EDU habilitado — que, pelo que vocês relataram, não é o caso do robô de vocês.
+**SDK oficial (`unitree_sdk2`)**: biblioteca C++ com wrapper Python (pybind11), acesso total aos tópicos DDS acima, incluindo controle de baixo nível. É o caminho "com todas as portas abertas", mas exige o modo de desenvolvedor do EDU habilitado — que não é o caso do robô do projeto.
 
 ### 6.1 Existe uma terceira via (não recomendada)
-Segundo o FAQ comunitário do TheRoboVerse, é possível usar o SDK oficial mesmo num Air/Pro **ganhando acesso root ao robô e habilitando manualmente o "desenvolvimento secundário"** — via ferramentas de firmware customizado (o `go2_firmware_tools` da tabela na seção 8). Isso também remove um limite artificial de velocidade/torque que a Unitree aplica por software no Air (usa os mesmos motores do Pro/EDU). Diferente do WebRTC — que funciona sem modificar nada no robô — essa via exige **rootear o firmware do cérebro principal**, com risco real de inutilizar o robô se der errado, e vai além do que a Unitree tolera (é adjacente ao tipo de acesso que a própria empresa está ativamente tentando fechar, ver seção 11). Não recomendado para o escopo atual do projeto — nada do que vocês precisam hoje exige isso.
+Segundo o FAQ comunitário do TheRoboVerse, é possível usar o SDK oficial mesmo num Air/Pro **ganhando acesso root ao robô e habilitando manualmente o "desenvolvimento secundário"** — via ferramentas de firmware customizado (o `go2_firmware_tools` da tabela na seção 8). Isso também remove um limite artificial de velocidade/torque que a Unitree aplica por software no Air (usa os mesmos motores do Pro/EDU). Diferente do WebRTC — que funciona sem modificar nada no robô — essa via exige **rootear o firmware do cérebro principal**, com risco real de inutilizar o robô se der errado, e vai além do que a Unitree tolera (é adjacente ao tipo de acesso que a própria empresa está ativamente tentando fechar, ver seção 11). Não recomendado para o escopo atual do projeto — nada do que o projeto precisa hoje exige isso.
 
 ### 6.2 Como funciona o fluxo de conexão do SDK oficial (e por que ele não tem autenticação)
 Diferente do WebRTC (seção 7.3), conectar via SDK oficial não tem handshake de aplicação nenhum:
@@ -117,13 +117,13 @@ Diferente do WebRTC (seção 7.3), conectar via SDK oficial não tem handshake d
 3. Inicializar com uma linha: `ChannelFactory::Instance()->Init(domain_id, "eth0")` (ou `ChannelFactoryInitialize` no wrapper Python). Isso não abre uma "conexão" com o robô especificamente — só ativa descoberta automática (protocolo DDS SPDP/SEDP, via multicast UDP) na rede local.
 4. Publicar/assinar tópicos usa classes tipadas geradas de definições IDL, com um campo `crc()` de checksum — **isso valida integridade do dado, não autentica quem enviou**.
 
-**Consequência de segurança relevante**: não existe verificação de identidade na camada DDS — quem estiver na mesma rede local do robô pode, em princípio, publicar em qualquer tópico, incluindo `rt/lowcmd`. Isso não é especulação: existe uma pesquisa de segurança pública com CVE próprio — **CVE-2026-27509, "Unauthenticated DDS-Based Remote Code Execution"** — documentando exatamente essa falta de autenticação sendo explorada até execução remota de código em robôs Unitree. Contra-intuitivamente, isso torna o canal WebRTC "não-oficial" que vocês usam **mais robusto em termos de modelo de confiança** do que o canal DDS "oficial" seria, caso migrassem — vale considerar isso ao decidir prioridades futuras.
+**Consequência de segurança relevante**: não existe verificação de identidade na camada DDS — quem estiver na mesma rede local do robô pode, em princípio, publicar em qualquer tópico, incluindo `rt/lowcmd`. Isso não é especulação: existe uma pesquisa de segurança pública com CVE próprio — **CVE-2026-27509, "Unauthenticated DDS-Based Remote Code Execution"** — documentando exatamente essa falta de autenticação sendo explorada até execução remota de código em robôs Unitree. Contra-intuitivamente, isso torna o canal WebRTC "não-oficial" usado no projeto **mais robusto em termos de modelo de confiança** do que o canal DDS "oficial" seria, caso migrassem — vale considerar isso ao decidir prioridades futuras.
 
 ---
 
 ## 7. WebRTC — o caminho universal
 
-Como o SDK oficial (DDS) não está disponível para vocês, o WebRTC é o único caminho universal — funciona em Air/Pro/EDU sem exceção, porque é o mesmo protocolo que o app oficial da Unitree usa.
+Como o SDK oficial (DDS) não está disponível no robô do projeto, o WebRTC é o único caminho universal — funciona em Air/Pro/EDU sem exceção, porque é o mesmo protocolo que o app oficial da Unitree usa.
 
 ### 7.1 Como funciona por dentro
 Existe um serviço interno no robô chamado **`webrtc_bridge`**, que converte as mensagens do canal de dados WebRTC direto para o barramento DDS interno — segundo pesquisa de segurança pública sobre o assunto, esse bridge **não filtra tópicos ou tipos de mensagem**, ou seja, ele é essencialmente uma ponte transparente.
@@ -133,14 +133,14 @@ Apesar da ponte ser ampla, existe uma limitação documentada pela comunidade: *
 - **Funciona via WebRTC**: gestos e comandos de alto nível (`SPORT_CMD`), modos de movimento, LiDAR, vídeo, áudio (Pro/Edu), leitura de estado (`rt/lf/lowstate`, baixa frequência).
 - **Não funciona via WebRTC**: controle direto de torque/posição de cada motor — isso é exclusivo do SDK oficial com DDS habilitado.
 
-Para o escopo do projeto de vocês (controle por voz, gestos, movimento, telemetria, LiDAR), essa limitação não importa — nada do que foi discutido até agora precisa de controle de junta individual.
+Para o escopo do projeto (controle por voz, gestos, movimento, telemetria, LiDAR), essa limitação não importa — nada do que está planejado precisa de controle de junta individual.
 
-**O mapa de tópicos é maior do que só `SPORT_MOD`.** Inspecionando o código-fonte da lib de vocês (`constants.py`), o `RTC_TOPIC` documenta dezenas de canais além dos comandos esportivos — desvio de obstáculo tem **tópico próprio e separado** (`rt/api/obstacles_avoid/request`, não faz parte do `SPORT_CMD`), existe um subsistema inteiro de SLAM/mapeamento/navegação (`rt/uslam/...`, incluindo planejamento de trajetória global), posicionamento **UWB** (ultra-wideband, `rt/api/uwbswitch/request` + `rt/uwbstate`), controle de braço robótico e sensor de gás (herdados de outros robôs da linha, o Go2 não tem esse hardware fisicamente), e um tópico de execução de shell (`rt/api/bashrunner/request`) que merece cautela por ser uma superfície de execução de código, não um comando de robô comum. Detalhamento completo na seção 12.
+**O mapa de tópicos é maior do que só `SPORT_MOD`.** Inspecionando o código-fonte da lib (`constants.py`), o `RTC_TOPIC` documenta dezenas de canais além dos comandos esportivos — desvio de obstáculo tem **tópico próprio e separado** (`rt/api/obstacles_avoid/request`, não faz parte do `SPORT_CMD`), existe um subsistema inteiro de SLAM/mapeamento/navegação (`rt/uslam/...`, incluindo planejamento de trajetória global), posicionamento **UWB** (ultra-wideband, `rt/api/uwbswitch/request` + `rt/uwbstate`), controle de braço robótico e sensor de gás (herdados de outros robôs da linha, o Go2 não tem esse hardware fisicamente), e um tópico de execução de shell (`rt/api/bashrunner/request`) que merece cautela por ser uma superfície de execução de código, não um comando de robô comum. Detalhamento completo na seção 12.
 
 ### 7.3 Segurança / autenticação (AES-128)
-A partir do firmware 1.1.15 (Go2) / 1.5.1 (G1), o handshake local do WebRTC passou a exigir uma chave AES-128 por dispositivo (em vez da chave estática genérica anterior), amarrada à conta Unitree do dono via API na nuvem deles. É uma medida de autenticação de posse — sem ela, o handshake falha. Firmwares anteriores a essa versão (caso do robô de vocês) não exigem isso.
+A partir do firmware 1.1.15 (Go2) / 1.5.1 (G1), o handshake local do WebRTC passou a exigir uma chave AES-128 por dispositivo (em vez da chave estática genérica anterior), amarrada à conta Unitree do dono via API na nuvem deles. É uma medida de autenticação de posse — sem ela, o handshake falha. Firmwares anteriores a essa versão (caso do robô do projeto) não exigem isso.
 
-Confirmado no código-fonte da lib: a chave AES-GCM estática (firmware antigo, sem exigência de chave por dispositivo) está literalmente hardcoded como bytes fixos no módulo de autenticação — bate exatamente com o mecanismo descrito acima. O modo de conexão remota (`Remote`/TURN) funciona **imitando o app oficial** — os headers HTTP enviados fingem ser um Samsung Galaxy S20 rodando o app versão 1.8.0, usando um segredo de assinatura de app extraído do próprio binário da Unitree. Vale registrar, sem alarde: o esquema de criptografia usa AES em modo ECB e hash MD5 no login — ambos considerados fracos pelos padrões atuais, mas isso é do protocolo da Unitree, não algo que o projeto de vocês define ou pode corrigir.
+Confirmado no código-fonte da lib: a chave AES-GCM estática (firmware antigo, sem exigência de chave por dispositivo) está literalmente hardcoded como bytes fixos no módulo de autenticação — bate exatamente com o mecanismo descrito acima. O modo de conexão remota (`Remote`/TURN) funciona **imitando o app oficial** — os headers HTTP enviados fingem ser um Samsung Galaxy S20 rodando o app versão 1.8.0, usando um segredo de assinatura de app extraído do próprio binário da Unitree. Vale registrar, sem alarde: o esquema de criptografia usa AES em modo ECB e hash MD5 no login — ambos considerados fracos pelos padrões atuais, mas isso é do protocolo da Unitree, não algo que o projeto define ou pode corrigir.
 
 **Atualização — a versão mais recente da lib escalou a personificação.** O módulo mais novo (`unitree_cloud.py`) já não usa `requests` puro — usa `curl_cffi`, uma biblioteca que imita a impressão digital TLS (JA3) exata de um Chrome real, porque a nuvem da Unitree passou a bloquear `requests` comum via proteção estilo Cloudflare. É um sinal concreto de arms race ativo entre a Unitree e a comunidade que mantém essas bibliotecas — outro ponto a favor de mencionar isso ao professor antes de publicar algo em cima disso. Detalhe técnico à parte: a chave AES-128 por dispositivo fica armazenada no robô em `/unitree/etc/key/aes_key.bin` (envolta em RSA) e é espelhada na nuvem da Unitree como `dev.key`.
 
@@ -155,7 +155,7 @@ Confirmado no código-fonte da lib: a chave AES-GCM estática (firmware antigo, 
 
 **3. Monkey-patches no `aiortc`/`aioice` — workaround de compatibilidade, não de autenticação:** credenciais ICE fixas (não geradas por sessão, como seria o padrão) e downgrade forçado do algoritmo de hash do certificado DTLS — porque versões novas da biblioteca genérica de WebRTC negociam um formato que o firmware do Go2 (mais antigo) não entende.
 
-**O que essa verificação toda realmente prova**: no firmware de vocês (sem AES-128 por dispositivo), ela prova que o cliente sabe falar o protocolo — não prova *quem* é o cliente. A chave estática é a mesma pra qualquer Go2 nesse firmware e agora está pública neste código. Qualquer pessoa na mesma rede local, com essa biblioteca, consegue parear — é exatamente esse buraco que a chave AES-128 por dispositivo (firmware ≥1.1.15) veio fechar.
+**O que essa verificação toda realmente prova**: no firmware do robô do projeto (sem AES-128 por dispositivo), ela prova que o cliente sabe falar o protocolo — não prova *quem* é o cliente. A chave estática é a mesma pra qualquer Go2 nesse firmware e agora está pública neste código. Qualquer pessoa na mesma rede local, com essa biblioteca, consegue parear — é exatamente esse buraco que a chave AES-128 por dispositivo (firmware ≥1.1.15) veio fechar.
 
 ---
 
@@ -165,28 +165,28 @@ Não existe uma única biblioteca "oficial" para quem não tem o SDK habilitado 
 
 | Projeto | Autor | Linguagem | O que oferece |
 |---|---|---|---|
-| `unitree_webrtc_connect` | legion1581 | Python (`aiortc`) | O mais completo — sport commands, vídeo, áudio (Pro/Edu), LiDAR decodificado (2 decoders, ver seção 3.1), gerenciamento de biblioteca de áudio no robô (upload/play/megafone), desvio de obstáculo e controle de LED/volume (VUI) documentados via exemplo oficial. Dá suporte também a **G1 e R1** (não só Go2) — o R1 é quem tem braço robótico, o que explica os tópicos `ARM_COMMAND`/`ARM_FEEDBACK` do `RTC_TOPIC` que o Go2 não usa. **É a base que vocês já usam.** MIT.
+| `unitree_webrtc_connect` | legion1581 | Python (`aiortc`) | O mais completo — sport commands, vídeo, áudio (Pro/Edu), LiDAR decodificado (2 decoders, ver seção 3.1), gerenciamento de biblioteca de áudio no robô (upload/play/megafone), desvio de obstáculo e controle de LED/volume (VUI) documentados nos exemplos do repositório (que não vêm no pacote publicado). Dá suporte também a **G1 e R1** (não só Go2) — o R1 é quem tem braço robótico, o que explica os tópicos `ARM_COMMAND`/`ARM_FEEDBACK` do `RTC_TOPIC` que o Go2 não usa. **É a base da `go2-api`.** MIT.
 | `go2-webrtc` | tfoldi | Python + JS | Interface web simples de controle (dashboard), mais enxuta que a do legion1581. |
 | `unitree_ui` / `unitree_go2_ui` | legion1581 | TypeScript | Interface de controle via navegador, já com criptografia AES implementada em JS. |
 | `go2_python_sdk` | legion1581 | Python | SDK que tenta unificar CycloneDDS *e* WebRTC sob uma única API — WebRTC ainda não totalmente implementado nessa lib segundo o próprio README. |
 | `go2_ros2_sdk` | abizovnuralem | Python/ROS2 | Bridge que expõe o Go2 como tópicos ROS2 padrão (`/cmd_vel`, etc). Depende do stack ROS2 inteiro. |
 | `Go2Py` | Rooholla-KhorramBakht | Python | Interface unificada sim/real, focada em pesquisa de locomoção, também usa bridge ROS2 por baixo. |
-| `go2_firmware_tools` | legion1581 | Python | Ferramentas para habilitar "desenvolvimento secundário" via firmware customizado (fora do escopo recomendado para vocês). |
+| `go2_firmware_tools` | legion1581 | Python | Ferramentas para habilitar "desenvolvimento secundário" via firmware customizado (fora do escopo recomendado para o projeto). |
 | Forks (`VectorRobotics`, `phospho-app`) | comunidade | Python | Forks do driver original com pequenas variações/manutenção paralela. |
 
-> **Correção em relação ao que eu disse antes**: numa resposta anterior, apontei os IDs de `Handstand`, `FreeWalk`, `LeftFlip`, `BackFlip`, `EconomicGait` no `SPORT_CMD` de vocês como "desatualizados/incorretos", comparando com o header oficial `sport_api.hpp` que eu tinha clonado. **Isso estava errado.** Clonando agora o repositório oficial `unitree_webrtc_connect` mais atual, descobri que existe um **segundo dicionário paralelo no próprio código**, `SPORT_CMD_MCF` (Multi-Control Framework, modo introduzido no firmware 1.1.7), com seu **próprio espaço de IDs** pros mesmos nomes de comando — ex: `BackFlip` é `1044` no modo normal, `2043` no modo MCF (que exige o robô já estar nesse modo, sem handshake de `motion_switcher`). O header oficial que eu tinha consultado documentava o espaço MCF, não o normal — os dois são válidos, servem pra modos diferentes do robô. **O dicionário instalado de vocês está correto e é idêntico ao HEAD atual do repositório**, não desatualizado como eu disse antes. Registro esse erro aqui pra não gerar confusão se alguém consultar esse dossiê depois.
+> **Nota sobre `SPORT_CMD` e `SPORT_CMD_MCF`:** a lib tem dois dicionários de ids para os mesmos nomes de comando. `SPORT_CMD` é o espaço do modo normal; `SPORT_CMD_MCF` (Multi-Control Framework, introduzido no firmware 1.1.7) usa outro espaço e exige que o robô já esteja nesse modo. Exemplo: `BackFlip` é `1044` no normal e `2043` no MCF. O header oficial `sport_api.hpp` documenta o espaço MCF, por isso diverge do `SPORT_CMD` em `Handstand`, `FreeWalk`, `LeftFlip`, `BackFlip` e `EconomicGait`. Isso **não** indica erro no `SPORT_CMD`: o dicionário instalado (2.2.0) é idêntico ao do repositório upstream. Qual espaço vale para o robô do projeto ainda está a confirmar.
 
-### O que **não** encontrei no ecossistema
-Depois de vasculhar, não achei nenhum projeto que seja **um serviço de rede leve, standalone, REST + WebSocket, sem exigir o stack completo do ROS2**, feito especificamente para o Go2. O que existe se divide em três categorias — biblioteca Python para importar, dashboard de controle via navegador, ou bridge para dentro do ecossistema ROS2. Uma camada de API HTTP/WS que não carrega ROS2 nem é uma UI de operador parece ser, de fato, uma lacuna real — é exatamente o espaço onde a ideia de vocês (`go2-api`) se encaixaria.
+### O que **não** existe no ecossistema
+Não foi encontrado nenhum projeto que seja **um serviço de rede leve, standalone, REST + WebSocket, sem exigir o stack completo do ROS2**, feito especificamente para o Go2. O que existe se divide em três categorias — biblioteca Python para importar, dashboard de controle via navegador, ou bridge para dentro do ecossistema ROS2. Uma camada de API HTTP/WS que não carrega ROS2 nem é uma UI de operador parece ser, de fato, uma lacuna real — é exatamente o espaço onde a `go2-api` se encaixa.
 
 ---
 
 ## 9. O que já vem pronto de fábrica (comportamentos autônomos)
 
 - **Desvio de obstáculo inteligente** — usa LiDAR + câmera internamente, liga/desliga via app ou (provavelmente) via `SwitchAvoidMode` no espaço de API do SDK oficial.
-- **Side-Follow / Pet Mode (ISS 2.0)** — segue uma pessoa/o controle físico a curta distância. O material de marketing menciona "posicionamento vetorial sem fio" — e o código-fonte da lib **corrobora essa hipótese**: existem tópicos dedicados `UWB_REQ`/`UWB_STATE` (`rt/api/uwbswitch/request`, `rt/uwbstate`) — UWB (Ultra-Wideband) é justamente uma tecnologia de posicionamento por rádio de curto alcance, a mesma usada em AirTags e chaves de carro sem fio. Ou seja: **o follow provavelmente rastreia um dispositivo UWB físico** (o controle remoto), não a pessoa por visão computacional — "seguir quem está falando" via voz não teria, hoje, um dispositivo UWB associado pra rastrear. Não achei, em nenhuma fonte, esse comando exposto por nome (`LeadFollow`) no header oficial da Unitree que consultei — reforça que pode nem ser um comando de sport client chamável isoladamente, e sim um modo interno amarrado ao hardware UWB.
+- **Side-Follow / Pet Mode (ISS 2.0)** — segue uma pessoa/o controle físico a curta distância. O material de marketing menciona "posicionamento vetorial sem fio" — e o código-fonte da lib **corrobora essa hipótese**: existem tópicos dedicados `UWB_REQ`/`UWB_STATE` (`rt/api/uwbswitch/request`, `rt/uwbstate`) — UWB (Ultra-Wideband) é justamente uma tecnologia de posicionamento por rádio de curto alcance, a mesma usada em AirTags e chaves de carro sem fio. Ou seja: **o follow provavelmente rastreia um dispositivo UWB físico** (o controle remoto), não a pessoa por visão computacional — "seguir quem está falando" via voz não teria, hoje, um dispositivo UWB associado pra rastrear. Esse comando não aparece por nome (`LeadFollow`) no header oficial da Unitree consultado — reforça que pode nem ser um comando de sport client chamável isoladamente, e sim um modo interno amarrado ao hardware UWB.
 - **Assistente de voz nativo (BenBen)** — usa GPT por trás (canal DDS dedicado `rt/api/gpt`), mas roda via serviço em nuvem da própria Unitree, sem gancho para desenvolvedores customizarem.
-- **Gestos pré-programados** — os que vocês já usam (`Hello`, `Stretch`, `FingerHeart`, etc) e outros documentados no espaço de API oficial (`sport_api.hpp`, IDs 1001–2058), incluindo modos de marcha mais avançados como `HandStand`, `FreeWalk`, `ClassicWalk`.
+- **Gestos pré-programados** — os já expostos pela `go2-api` (`Hello`, `Stretch`, `FingerHeart`, etc) e outros documentados no espaço de API oficial (`sport_api.hpp`, IDs 1001–2058), incluindo modos de marcha mais avançados como `HandStand`, `FreeWalk`, `ClassicWalk`.
 
 ---
 
@@ -201,24 +201,24 @@ Depois de vasculhar, não achei nenhum projeto que seja **um serviço de rede le
 
 ## 11. Contexto de segurança do ecossistema (nota informativa)
 
-Pesquisa de segurança pública recente (meados de 2026) documentou falhas na arquitetura de autenticação da Unitree (CVE associado, artigo em arXiv) — incluindo uma vulnerabilidade onde a chave AES-128 por dispositivo podia ser obtida indevidamente via uma falha na API de nuvem ("cloud-oracle"), permitindo acesso não autorizado ao BLE e ao WebRTC de robôs de terceiros. A Unitree corrigiu essa vulnerabilidade específica (checagem de vínculo de propriedade) entre julho e agosto de 2026. Isso reforça um ponto prático para o dossiê institucional: o ecossistema inteiro de bibliotecas de terceiros (incluindo a que vocês usam) nasce de engenharia reversa de um protocolo que a própria fabricante está ativamente tentando proteger — mais um motivo para o alinhamento institucional que vocês já planejam ter com o professor antes de publicar algo com o nome da UFLA.
+Pesquisa de segurança pública recente (meados de 2026) documentou falhas na arquitetura de autenticação da Unitree (CVE associado, artigo em arXiv) — incluindo uma vulnerabilidade onde a chave AES-128 por dispositivo podia ser obtida indevidamente via uma falha na API de nuvem ("cloud-oracle"), permitindo acesso não autorizado ao BLE e ao WebRTC de robôs de terceiros. A Unitree corrigiu essa vulnerabilidade específica (checagem de vínculo de propriedade) entre julho e agosto de 2026. Isso reforça um ponto prático para o dossiê institucional: o ecossistema inteiro de bibliotecas de terceiros (incluindo a usada no projeto) nasce de engenharia reversa de um protocolo que a própria fabricante está ativamente tentando proteger — mais um motivo para o alinhamento institucional planejado com o professor orientador antes de publicar algo com o nome da UFLA.
 
 ---
 
 ## 12. O que está acessível hoje na `unitree_webrtc_connect` — e o que falta
 
-Levantamento feito lendo o código-fonte real da versão instalada de vocês (`constants.py`, `webrtc_driver.py`, `webrtc_datachannel.py`, `webrtc_audiohub.py`, decoders de LiDAR).
+Levantamento feito lendo o código-fonte real da versão 2.2.0 da lib, travada no `uv.lock` (`constants.py`, `webrtc_driver.py`, `webrtc_datachannel.py`, `webrtc_audiohub.py`, decoders de LiDAR). Pegadinhas de comportamento (um callback por tópico, ausência de timeout, threads, vídeo e lidar) estão em [`lib_unitree_webrtc_connect.md`](lib_unitree_webrtc_connect.md).
 
 ### 12.1 Pronto pra usar — tem classe/método dedicado
 
 | Capacidade | Como acessar |
 |---|---|
-| Comandos esportivos (mover, gestos) | `SPORT_CMD` + `publish_request_new` no tópico `SPORT_MOD` — já em uso no `robot_control`. |
+| Comandos esportivos (mover, gestos) | `SPORT_CMD` no tópico `SPORT_MOD`. A `go2-api` envia com `publish_without_callback` (sem esperar resposta) e usa `publish_request_new` só onde precisa da resposta (`GetSpeedLevel`), sempre com timeout próprio — ver `app/robot.py`. |
 | Vídeo (recepção) | `WebRTCVideoChannel`, callback via `add_track_callback`. |
 | Áudio bidirecional (Pro/Edu) | `WebRTCAudioChannel`, callback via `add_track_callback`, liga/desliga com `switchAudioChannel`. |
-| **Biblioteca de áudio no robô** (upload de MP3/WAV, tocar por UUID, modo megafone) | `WebRTCAudioHub` — classe completa, pronta, não usada ainda pelo projeto de vocês. Candidata natural pra substituir o `CMD_PLAY_AUDIO` customizado do modo chat. |
-| **Desvio de obstáculo** (liga/desliga/consulta) | `OBSTACLES_AVOID_API`: `SWITCH_SET` (`{"enable": bool}`), `SWITCH_GET` (retorna `{"enable": bool}`). Payload confirmado no exemplo oficial `examples/go2/data_channel/obstacles_avoid/`. |
-| **LED e volume (VUI)** | `RTC_TOPIC["VUI"]` com api_ids diretos: `1003` define volume, `1004` lê volume, `1005` define brilho, `1006` lê brilho, `1007` define cor/pisca do LED (`VUI_COLOR` + `time` + `flash_cycle` opcional). Payload confirmado no exemplo oficial `examples/go2/data_channel/vui/`. |
+| **Biblioteca de áudio no robô** (upload de MP3/WAV, tocar por UUID, modo megafone) | `WebRTCAudioHub` — classe completa, pronta, ainda não usada pela `go2-api` (#2). Candidata natural pra substituir o `CMD_PLAY_AUDIO` customizado do modo chat. |
+| **Desvio de obstáculo** (liga/desliga/consulta) | `OBSTACLES_AVOID_API`: `SWITCH_SET` (`{"enable": bool}`), `SWITCH_GET` (retorna `{"enable": bool}`). Payload visto no exemplo upstream `examples/go2/data_channel/obstacles_avoid/` e nos comentários de `constants.py`; o exemplo não vem no pacote 2.2.0. |
+| **LED e volume (VUI)** | `RTC_TOPIC["VUI"]` com api_ids diretos: `1003` define volume, `1004` lê volume, `1005` define brilho, `1006` lê brilho, `1007` define cor/pisca do LED (`VUI_COLOR` + `time` + `flash_cycle` opcional). Ids e payload vistos no exemplo upstream `examples/go2/data_channel/vui/`, que **não** vem no pacote 2.2.0; nenhum desses api_ids está em `constants.py`. **Revalidar no robô** antes de implementar (#3). |
 | LiDAR (nuvem de pontos) | Assinar `ULIDAR_ARRAY`, com `set_decoder('native')` explicitamente (padrão é `libvoxel`, que devolve malha, não pontos — seção 3.1) e `disableTrafficSaving(True)` chamado antes. |
 | Descoberta do robô na rede | `multicast_scanner.discover_ip_sn()`. |
 
@@ -247,13 +247,13 @@ Mapa completo dos tópicos encontrados no `constants.py`, por categoria:
 
 **Controle bruto do rádio remoto** — `WIRELESS_CONTROLLER` (`rt/wirelesscontroller`): simula o joystick físico (`lx/ly/rx/ry`) — payload confirmado, ver nota sobre os três mecanismos de movimento na seção 12.1.
 
-**Outros tópicos de API sem wrapper** — `MOTION_SWITCHER` (troca de modo de locomoção), `BASH_REQ` (`rt/api/bashrunner/request` — pelo nome, execução de shell; superfície sensível, cautela), `PROGRAMMING_ACTUATOR_CMD` (provável canal da função de "programação em blocos" do app), `ASSISTANT_RECORDER` (provável controle de gravação pro assistente de voz nativo, o equivalente ao papel do `OpenWakeWord` de vocês), `GRID_MAP` (mapa de ocupação 2D exibido no app).
+**Outros tópicos de API sem wrapper** — `MOTION_SWITCHER` (troca de modo de locomoção), `BASH_REQ` (`rt/api/bashrunner/request` — pelo nome, execução de shell; superfície sensível, cautela), `PROGRAMMING_ACTUATOR_CMD` (provável canal da função de "programação em blocos" do app), `ASSISTANT_RECORDER` (provável controle de gravação pro assistente de voz nativo, o equivalente ao papel do `OpenWakeWord` no pipeline de voz do projeto), `GRID_MAP` (mapa de ocupação 2D exibido no app).
 
-**Hardware que o Go2 não tem fisicamente** — `ARM_COMMAND`/`ARM_FEEDBACK` (braço robótico), `GAS_SENSOR`/`GAS_SENSOR_REQ` — herdados de outros robôs da linha Unitree, presentes no dicionário mas sem efeito no hardware de vocês.
+**Hardware que o Go2 não tem fisicamente** — `ARM_COMMAND`/`ARM_FEEDBACK` (braço robótico), `GAS_SENSOR`/`GAS_SENSOR_REQ` — herdados de outros robôs da linha Unitree, presentes no dicionário mas sem efeito no Go2.
 
 **O que seria preciso pra usar qualquer um desses**: descobrir o formato exato do `parameter` esperado por cada `api_id`. Três caminhos, em ordem de preferência: (1) achar outro projeto da comunidade que já tenha implementado wrapper pra esse tópico específico; (2) capturar o tráfego do app oficial acionando a função e inspecionar o payload real; (3) tentativa guiada pelos nomes/IDs do header oficial do SDK2 como ponto de partida.
 
-### 12.3 Não mapeado nem no `RTC_TOPIC` de vocês — visto em outras fontes
+### 12.3 Não mapeado no `RTC_TOPIC` — visto em outras fontes
 
 - `rt/api/sport_lease/request` — parece ser o mecanismo de "lease"/trava de quem detém o controle no momento — possivelmente a peça por trás do `RobotBusyError`.
 - `rt/config_change_status`
@@ -275,6 +275,8 @@ Pro escopo atual do projeto (voz, gestos, movimento, LiDAR, telemetria), nada da
 
 ## 13. Decisão de design registrada — controle de concorrência na `go2-api`
 
+> **Status:** desenho registrado, ainda não implementado. Hoje não há lease nem fila: o último `move` substitui o anterior (README, "Limitações atuais"). O lease é a issue #7 (`todo-later`).
+
 Definido ao pensar em múltiplos projetos do NEURON usando o mesmo robô físico ao mesmo tempo (cenário real: dois times, comunicação falha entre eles, comandos conflitantes chegando juntos).
 
 - **Leitura (LiDAR/vídeo/telemetria)**: sem problema — WebSocket é fan-out, todo cliente recebe a mesma cópia.
@@ -295,7 +297,7 @@ Como é um único processo Python (`asyncio`) que detém a única conexão WebRT
 
 ## 14. Fontes principais consultadas
 - **Repositório oficial `legion1581/unitree_webrtc_connect` clonado diretamente do GitHub** (README, `constants.py`, exemplos oficiais de VUI/desvio de obstáculo/LiDAR/áudio, `unitree_cloud.py`, `_cli.py`) — fonte primária da seção 12 atualizada e da correção sobre `SPORT_CMD_MCF`.
-- **Código-fonte da `unitree_webrtc_connect` instalada no projeto de vocês** (fornecido diretamente por você) e do `unitree_sdk2` oficial (clonado do GitHub da Unitree pra verificação cruzada dos IDs de comando) — fonte primária pra toda a seção 12 e para as correções nas seções 3.1, 7.2, 7.3, 8 e 9.
+- **Código-fonte da `unitree_webrtc_connect` instalada no projeto** (versão 2.2.0) e do `unitree_sdk2` oficial (clonado do GitHub da Unitree pra verificação cruzada dos IDs de comando) — fonte primária pra toda a seção 12 e para as correções nas seções 3.1, 7.2, 7.3, 8 e 9.
 - Documentação e loja oficial da Unitree (unitree.com, shop.unitree.com)
 - Repositórios GitHub: `legion1581/unitree_webrtc_connect`, `tfoldi/go2-webrtc`, `abizovnuralem/go2_ros2_sdk`, `legion1581/go2_python_sdk`, `Rooholla-KhorramBakht/Go2Py`, `unitreerobotics/unitree_sdk2`
 - Documentação técnica de terceiros (QRE Docs, OpenMind Robotics, TheRoboVerse)
