@@ -9,6 +9,7 @@
 | [`dossie_go2.md`](dossie_go2.md) | Referência técnica do Go2: modelos e specs, sensores, protocolo, segurança, ecossistema, mapa de tópicos (§12) e decisão de concorrência (§13). | Para consultar tópico, `api_id`, spec ou fonte. |
 
 Convenções:
+- Siglas e jargões são explicados no **glossário ao final de cada documento**. Glossário geral: [`essencial/glossario.md`](essencial/glossario.md).
 - **"A confirmar"** marca o que não foi validado no robô ou no fonte. Não trate como fato.
 - Referências a linhas da lib valem para a versão travada no `uv.lock` (hoje 2.2.0).
 - Status e escopo de cada item vivem nas issues do GitHub; a arquitetura (§4) só aponta para elas.

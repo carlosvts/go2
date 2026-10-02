@@ -30,4 +30,4 @@ Fichas curtas, uma ideia cada, no máximo uma tela. Para o detalhe, cada ficha a
 
 ---
 
-Para escrever uma ficha nova, siga o formato: **Em uma frase** → **Na prática** → **Pegadinha** → **Mais detalhes**. Marque como **"a confirmar"** o que não foi validado no robô.
+Para escrever uma ficha nova, siga o formato: **Em uma frase** → **Na prática** → **Pegadinha** → **Mais detalhes** → **Termos desta ficha** (toda sigla ou jargão usado, uma linha cada). Marque como **"a confirmar"** o que não foi validado no robô.
