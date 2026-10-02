@@ -126,3 +126,35 @@ Hoje a conexão é a classe concreta `RobotConnection` (`app/robot.py`). Extrair
 3. **O LiDAR vem errado por padrão.** O decoder default (`libvoxel`) devolve malha 3D pra renderizar, não pontos `x,y,z`. Pra cálculo, trocar pra `native` — e chamar `disableTrafficSaving(True)` antes de assinar.
 4. **Existem três jeitos de mandar o robô andar** (`SPORT_CMD["Move"]`, joystick simulado, e o `MOVE` de dentro da API de desvio de obstáculo), e eles interagem diferente com o desvio de obstáculo. Testar antes de assumir.
 5. **SN ≠ firmware.** SN é serial (`B42D...`), serve pra descoberta e pra chave AES. Firmware é outro campo do app, e é ele que decide se jailbreak é sequer possível.
+
+---
+
+## Glossário deste documento
+
+| Termo | Significado |
+|---|---|
+| **AES / AES-128** | *Advanced Encryption Standard*: criptografia simétrica (mesma chave cifra e decifra). "128" é o tamanho da chave em bits. |
+| **aiortc / aioice** | Bibliotecas Python que implementam WebRTC e ICE. A lib do projeto é construída em cima delas. |
+| **API** | *Application Programming Interface*: a interface que um programa oferece a outros. Aqui, a `go2-api`. |
+| **CycloneDDS** | Uma implementação open source do DDS, a usada dentro do Go2. |
+| **DDS** | *Data Distribution Service*: o sistema de mensagens interno do Go2. Os serviços publicam e leem dados por tópico. |
+| **DHCP** | *Dynamic Host Configuration Protocol*: o roteador distribui IPs automaticamente e pode trocá-los. |
+| **EDU / Pro / Air / X** | Versões do Go2. O projeto usa um **Pro**. Só o EDU tem Jetson e DDS aberto. |
+| **Firmware** | O software de fábrica que roda dentro do robô. |
+| **Handshake** | "Aperto de mão": a troca inicial de mensagens que abre uma conexão. |
+| **HTTP / REST** | HTTP: protocolo de pedido e resposta da web. REST: estilo de API em que cada endereço representa um recurso. |
+| **IP** | Endereço de um aparelho na rede. |
+| **LAN** | *Local Area Network*: a rede local, sem passar pela internet. |
+| **Lease** | "Posse" temporária do controle do robô, com token e prazo de validade (planejado, #7). |
+| **LiDAR / L1 / L2** | LiDAR (*Light Detection and Ranging*): sensor de distância a laser. L1 e L2 são os modelos da Unitree. Mid-360 (Livox) e XT16 (Hesai) são LiDARs de terceiros. |
+| **Monkey-patch** | Alterar, em tempo de execução, o código de outra biblioteca sem mexer no arquivo dela. |
+| **Multicast** | Mensagem enviada a todos os aparelhos da rede de uma vez. |
+| **RSA** | Criptografia assimétrica (chave pública e privada), aqui usada só para trocar a chave AES. |
+| **SDK** | *Software Development Kit*: o kit oficial da Unitree (`unitree_sdk2`), que usa DDS direto. |
+| **SN** | *Serial Number*: número de série do robô. |
+| **STA / AP / STA-T** | Modos de rede: STA (o robô entra no Wi-Fi do roteador), AP (o robô cria o próprio Wi-Fi), STA-T (remoto, pela nuvem da Unitree). |
+| **Tópico** | Nome de um canal de mensagens (ex.: `rt/api/sport/request`). |
+| **VUI** | Nome que a Unitree dá ao serviço de volume, brilho e LED do Go2 (o significado da sigla não está documentado na lib). |
+| **WebRTC** | *Web Real-Time Communication*: protocolo de comunicação em tempo real. É o túnel até o DDS do robô. |
+| **WebSocket (WS)** | Conexão que fica aberta, por onde o servidor manda dados continuamente. |
+| **Nomes próprios** | **NEURON**: grupo de pesquisa do projeto, na UFLA (Universidade Federal de Lavras). **TV Box**: aparelho de baixo custo usado como cliente no pipeline de voz. **G1 / R1**: robôs humanoides da Unitree. **BenBen**: assistente de voz de fábrica do Go2. **GPT**: modelo de linguagem da OpenAI. **WSO2**: empresa de software (citada como relato de campo). **Galaxy S20**: celular Samsung, imitado pela lib no modo remoto. **Anker PowerConf S3**: microfone externo usado no projeto. **MIT**: licença open source permissiva. **TheRoboVerse / QRE Docs**: comunidade e documentação de terceiros sobre o Go2. **ISS 2.0**: nome comercial da Unitree para o modo de seguir; o significado da sigla não está documentado. **`rt/qt_*`**: prefixo de tópicos de mapeamento; o significado de "qt" não está documentado. |
