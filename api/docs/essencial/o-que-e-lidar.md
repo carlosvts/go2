@@ -33,3 +33,12 @@ Medir distância até obstáculos, detectar o que está à frente e, no futuro, 
 ## Mais detalhes
 
 [`dossie_go2.md`](../dossie_go2.md) §3.1
+
+## Termos desta ficha
+
+- **LiDAR**: *Light Detection and Ranging*: sensor que mede distâncias com laser.
+- **Nuvem de pontos**: Conjunto de pontos `(x, y, z)` medidos pelo LiDAR.
+- **Campo de visão**: O quanto o sensor enxerga: 360° na horizontal × 90° na vertical.
+- **Voxel**: "Pixel 3D": um cubinho do espaço marcado como ocupado ou livre.
+- **Decoder**: O código que transforma o dado comprimido que chega do robô em algo utilizável.
+- **WebRTC**: *Web Real-Time Communication*: protocolo de comunicação em tempo real. É o túnel que liga a API ao robô.

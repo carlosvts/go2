@@ -29,3 +29,14 @@ Nenhuma alteração na lib é necessária.
 ## Mais detalhes
 
 [`lib_unitree_webrtc_connect.md`](../lib_unitree_webrtc_connect.md) §6 · issue #6
+
+## Termos desta ficha
+
+- **Decoder**: O código que transforma o dado comprimido que chega do robô em algo utilizável.
+- **Malha**: Superfície 3D feita de triângulos, usada para desenhar na tela.
+- **WebGL / WebAssembly**: WebGL: tecnologia de gráficos 3D do navegador. WebAssembly (WASM): formato de programa compilado que roda em navegadores e, aqui, dentro do Python.
+- **lz4 / numpy / `ndarray`**: lz4: algoritmo de compressão. numpy: biblioteca de cálculo numérico; `ndarray` é a matriz dela.
+- **SLAM**: *Simultaneous Localization and Mapping*: o robô mapeia o ambiente e se localiza nele ao mesmo tempo.
+- **JSON**: *JavaScript Object Notation*: formato de texto para dados, como `{"chave": "valor"}`.
+- **Event loop**: O "motor" do `asyncio`: executa as tarefas da API uma de cada vez. Se uma demora, todas esperam.
+- **Subscribe / unsubscribe**: Assinar / cancelar a assinatura de um tópico (passar a receber / parar de receber as mensagens).

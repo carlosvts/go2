@@ -21,3 +21,14 @@ O formato exato do payload de `lowstate` e `sportmodestate` ainda não foi fixad
 ## Mais detalhes
 
 [`dossie_go2.md`](../dossie_go2.md) §12 · [`arquitetura_go2_api.md`](../arquitetura_go2_api.md) §4
+
+## Termos desta ficha
+
+- **Tópico**: Nome de um canal de mensagens (ex.: `rt/api/sport/request`).
+- **IMU**: *Inertial Measurement Unit*: sensor de orientação e aceleração (inclinação, giro).
+- **`lf`**: *Low frequency* (baixa frequência): versão do tópico que manda menos mensagens por segundo.
+- **LiDAR**: *Light Detection and Ranging*: sensor que mede distâncias com laser.
+- **VUI**: Nome que a Unitree dá ao serviço de volume, brilho e LED do Go2 (o significado da sigla não está documentado na lib).
+- **Track**: Fluxo de mídia (vídeo ou áudio) dentro da conexão WebRTC.
+- **Payload**: O conteúdo útil de uma mensagem (os dados), sem o cabeçalho.
+- **Endpoint**: Um endereço da API que aceita pedidos (ex.: `POST /commands/move`).

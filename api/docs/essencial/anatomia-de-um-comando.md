@@ -31,3 +31,14 @@ No `Move`, o yaw vai no campo **`z`**, não em `yaw`. Com `yaw`, o robô ignora 
 ## Mais detalhes
 
 `app/robot.py` (`_build_request`, `send_sport`) · [`lib_unitree_webrtc_connect.md`](../lib_unitree_webrtc_connect.md) §3
+
+## Termos desta ficha
+
+- **JSON**: *JavaScript Object Notation*: formato de texto para dados, como `{"chave": "valor"}`.
+- **Tópico**: Nome de um canal de mensagens (ex.: `rt/api/sport/request`).
+- **`api_id`**: Número que identifica qual comando executar (ex.: `Move` = 1008).
+- **Request / `req`**: Pedido. `"type": "req"` marca a mensagem como pedido de execução.
+- **String**: Texto. "JSON serializado como string" = o JSON escrito dentro de um texto, entre aspas.
+- **`SPORT_CMD`**: Dicionário da lib com o `api_id` de cada comando de alto nível.
+- **Endpoint**: Um endereço da API que aceita pedidos (ex.: `POST /commands/move`).
+- **Yaw**: Rotação em torno do eixo vertical: virar para a esquerda ou para a direita.

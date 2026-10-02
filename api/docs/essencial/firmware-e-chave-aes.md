@@ -19,3 +19,11 @@
 ## Mais detalhes
 
 [`dossie_go2.md`](../dossie_go2.md) §7.3–7.4 · `app/config.py` · `app/robot.py` (`connect`)
+
+## Termos desta ficha
+
+- **Firmware**: O software de fábrica que roda dentro do robô. A versão dele muda o que o robô aceita.
+- **AES-128**: *Advanced Encryption Standard*, chave de 128 bits: tipo de criptografia. No firmware ≥ 1.1.15, cada robô tem uma chave própria.
+- **Handshake**: "Aperto de mão": a troca inicial de mensagens que abre a conexão.
+- **SN**: *Serial Number*: número de série do robô (`B42D...`).
+- **`.env`**: Arquivo de configuração da API, com as variáveis `GO2_*` (modelo em `.env.example`).

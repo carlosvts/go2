@@ -28,3 +28,12 @@ POST /commands/move {vx, vy, vyaw, duration_s}
 ## Mais detalhes
 
 `app/robot.py` (`start_move`, `_move_loop`) · `app/routers/posture.py`
+
+## Termos desta ficha
+
+- **Hz**: Hertz: vezes por segundo. 30 Hz = 30 envios por segundo.
+- **m/s, rad/s**: Metros por segundo; radianos por segundo (1 rad ≈ 57°).
+- **Yaw**: Rotação em torno do eixo vertical: virar para a esquerda ou para a direita.
+- **`StopMove`**: Comando que para o movimento e mantém o robô de pé.
+- **202 / 422 / 503 / 504**: Códigos de resposta HTTP. Ver [ficha](semantica-202-503-504.md).
+- **Lease**: "Posse" temporária do controle do robô, com prazo de validade (planejado, #7).

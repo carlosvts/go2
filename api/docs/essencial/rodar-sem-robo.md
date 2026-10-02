@@ -36,3 +36,11 @@ O `FakeHub` (#10) vai gerar dados falsos para os WebSockets, e o `scripts/ws_cli
 ## Pegadinha
 
 Teste passando ≠ funciona no robô. Os payloads marcados «pendente de validação física» no código só se confirmam com o robô ligado.
+
+## Termos desta ficha
+
+- **`uv`**: Gerenciador de pacotes e ambientes Python usado no projeto (`uv sync`, `uv run`).
+- **PortAudio / headers**: Biblioteca de áudio do sistema. Os *headers* são os arquivos que o compilador precisa para compilar o `pyaudio`.
+- **pytest**: Ferramenta que roda os testes automatizados.
+- **Fake**: Objeto de teste que imita o real (ex.: `FakeConnection` finge ser o robô).
+- **WebSocket**: Conexão que fica aberta entre cliente e servidor, por onde o servidor pode mandar dados continuamente (streams).

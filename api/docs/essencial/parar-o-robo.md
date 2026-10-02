@@ -23,3 +23,11 @@ Têm risco real de queda e dano. Ainda não foram implementados (#1). Quando for
 ## Mais detalhes
 
 `README.md` (Endpoints) · [`como-o-move-funciona.md`](como-o-move-funciona.md)
+
+## Termos desta ficha
+
+- **`StopMove`**: Comando que para o movimento e mantém o robô de pé.
+- **Damp**: Postura que tira a força dos motores. De pé, o robô cai.
+- **Junta**: Articulação do robô movida por um motor (o Go2 tem 12, 3 por pata).
+- **`curl`**: Programa de terminal para fazer pedidos HTTP.
+- **Endpoint**: Um endereço da API que aceita pedidos (ex.: `POST /commands/move`).

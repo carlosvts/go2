@@ -15,3 +15,14 @@ Com a API rodando, "só vou testar rapidinho um script com a lib" derruba a API 
 ## Mais detalhes
 
 [`arquitetura_go2_api.md`](../arquitetura_go2_api.md) §3 · [`go2_modelo_mental.md`](../go2_modelo_mental.md) §4–5
+
+## Termos desta ficha
+
+- **WebRTC**: *Web Real-Time Communication*: protocolo de comunicação em tempo real. É o túnel que liga a API ao robô.
+- **API**: *Application Programming Interface*: o "balcão de atendimento" de um programa. Aqui, a `go2-api`, que recebe pedidos HTTP e fala com o robô.
+- **HTTP**: Protocolo de pedido e resposta da web (é o que o navegador e o `curl` usam).
+- **WebSocket**: Conexão que fica aberta entre cliente e servidor, por onde o servidor pode mandar dados continuamente (streams).
+- **Lib**: Biblioteca de código. Aqui, a `unitree_webrtc_connect`, que faz a conexão WebRTC com o robô.
+- **`RobotBusyError`**: Erro da lib quando o robô recusa uma conexão porque já está ocupado com outra.
+- **MVP**: *Minimum Viable Product*: a primeira versão, só com o essencial.
+- **Pipeline de voz**: A cadeia do projeto que transforma fala em comando (microfone → reconhecimento → API).

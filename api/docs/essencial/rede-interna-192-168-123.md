@@ -20,3 +20,13 @@ Muito tutorial na internet usa `192.168.123.161`. Esses tutoriais são do SDK of
 ## Mais detalhes
 
 [`go2_modelo_mental.md`](../go2_modelo_mental.md) §3 · [`modos-de-rede.md`](modos-de-rede.md)
+
+## Termos desta ficha
+
+- **IP**: Endereço de um aparelho na rede (ex.: `192.168.12.1`).
+- **DHCP**: *Dynamic Host Configuration Protocol*: o roteador distribui os IPs automaticamente e pode trocar o IP de um aparelho.
+- **SDK**: *Software Development Kit*: o kit oficial da Unitree para programar o robô (`unitree_sdk2`). Usa DDS direto, por cabo, no EDU.
+- **DDS**: *Data Distribution Service*: o sistema de mensagens interno do Go2, em que os serviços publicam e leem dados por tópico.
+- **EDU**: Versão de pesquisa do Go2, com computador extra (Jetson) e DDS aberto. O robô do projeto é um **Pro**, não EDU.
+- **Jetson**: Computador da NVIDIA para IA, que vem acoplado só no Go2 EDU.
+- **LiDAR**: *Light Detection and Ranging*: sensor que mede distâncias com laser.

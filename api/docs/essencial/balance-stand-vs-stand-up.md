@@ -25,3 +25,9 @@ Depois de `stand_up`, o `POST /commands/move` responde **202** normalmente, porq
 ## Mais detalhes
 
 [`como-o-move-funciona.md`](como-o-move-funciona.md) · [`semantica-202-503-504.md`](semantica-202-503-504.md)
+
+## Termos desta ficha
+
+- **`curl`**: Programa de terminal para fazer pedidos HTTP.
+- **202 / 422 / 503 / 504**: Códigos de resposta HTTP. Ver [ficha](semantica-202-503-504.md).
+- **Endpoint**: Um endereço da API que aceita pedidos (ex.: `POST /commands/move`).

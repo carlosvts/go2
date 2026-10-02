@@ -19,3 +19,11 @@ Os ids só divergem justamente nos **truques** (flips, handstand), os comandos d
 ## Mais detalhes
 
 [`dossie_go2.md`](../dossie_go2.md) §8 (nota) · [`lib_unitree_webrtc_connect.md`](../lib_unitree_webrtc_connect.md) §8
+
+## Termos desta ficha
+
+- **`api_id`**: Número que identifica qual comando executar (ex.: `Move` = 1008).
+- **MCF**: *Multi-Control Framework*: um modo de locomoção do Go2 com ids de comando próprios.
+- **Firmware**: O software de fábrica que roda dentro do robô. A versão dele muda o que o robô aceita.
+- **`motion_switcher`**: Serviço do robô que troca o modo de locomoção (normal ↔ MCF). Ainda não mapeado.
+- **`SPORT_CMD`**: Dicionário da lib com o `api_id` de cada comando de alto nível.

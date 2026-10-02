@@ -19,3 +19,14 @@
 ## Mais detalhes
 
 [`lib_unitree_webrtc_connect.md`](../lib_unitree_webrtc_connect.md), com as linhas do código-fonte de cada item.
+
+## Termos desta ficha
+
+- **Callback**: Função entregue a alguém para ser chamada depois, quando algo acontecer.
+- **Event loop**: O "motor" do `asyncio`: executa as tarefas da API uma de cada vez. Se uma demora, todas esperam.
+- **Subscribe / unsubscribe**: Assinar / cancelar a assinatura de um tópico (passar a receber / parar de receber as mensagens).
+- **Timeout**: Limite de tempo de espera. Passou do limite, desiste com erro.
+- **`await` / `wait_for` / `to_thread`**: `await`: esperar uma tarefa assíncrona. `wait_for`: esperar com timeout. `to_thread`: rodar algo pesado fora do event loop.
+- **Data channel**: Canal de mensagens dentro da conexão WebRTC (comandos, estado, LiDAR).
+- **Cache**: Cópia guardada em memória do último dado recebido, para responder rápido sem perguntar de novo ao robô.
+- **Decoder**: O código que transforma o dado comprimido que chega do robô em algo utilizável.

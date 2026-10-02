@@ -20,3 +20,14 @@
 ## Mais detalhes
 
 [`go2_modelo_mental.md`](../go2_modelo_mental.md) §3 · [`dossie_go2.md`](../dossie_go2.md) §5 · `.env.example`
+
+## Termos desta ficha
+
+- **IP**: Endereço de um aparelho na rede (ex.: `192.168.12.1`).
+- **DHCP**: *Dynamic Host Configuration Protocol*: o roteador distribui os IPs automaticamente e pode trocar o IP de um aparelho.
+- **LAN**: *Local Area Network*: a rede local (do laboratório), sem passar pela internet.
+- **Multicast**: Mensagem enviada a todos os aparelhos da rede de uma vez.
+- **STA / AP**: *Station* (o robô se conecta a um roteador, como um celular) / *Access Point* (o robô vira o roteador e cria a própria rede Wi-Fi).
+- **STA-T / TURN**: Modo remoto: a conexão passa por um servidor intermediário (TURN) da Unitree na internet.
+- **SN**: *Serial Number*: número de série do robô (`B42D...`).
+- **`.env`**: Arquivo de configuração da API, com as variáveis `GO2_*` (modelo em `.env.example`).

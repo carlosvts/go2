@@ -26,3 +26,10 @@
 
 - [ ] `stand_down`, e só então `damp`, se for desligar.
 - [ ] Registrar o que foi validado fisicamente (payloads "pendentes de validação" no código e nas issues).
+
+## Termos desta ficha
+
+- **`.env`**: Arquivo de configuração da API, com as variáveis `GO2_*` (modelo em `.env.example`).
+- **Damp**: Postura que tira a força dos motores. De pé, o robô cai.
+- **Payload**: O conteúdo útil de uma mensagem (os dados), sem o cabeçalho.
+- **Firmware**: O software de fábrica que roda dentro do robô. A versão dele muda o que o robô aceita.
