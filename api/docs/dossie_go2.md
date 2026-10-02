@@ -306,3 +306,67 @@ Como é um único processo Python (`asyncio`) que detém a única conexão WebRT
 - Pesquisa de segurança independente sobre CVE-2026-27509 e CVE-2026-27510 (execução remota de código via DDS não-autenticado e adulteração de banco de dados móvel, respectivamente) — boschko.ca
 
 *Documento compilado a partir de busca na web em agosto de 2026 — specs de produto e estado do ecossistema de software mudam com frequência; revalidar antes de qualquer publicação formal.*
+
+---
+
+## Glossário deste documento
+
+| Termo | Significado |
+|---|---|
+| **AES / AES-128** | *Advanced Encryption Standard*: criptografia simétrica (mesma chave cifra e decifra). "128" é o tamanho da chave em bits. |
+| **AES-GCM / ECB** | Modos de uso do AES. GCM cifra e verifica integridade; ECB é um modo antigo, considerado fraco. |
+| **aiortc / aioice** | Bibliotecas Python que implementam WebRTC e ICE. A lib do projeto é construída em cima delas. |
+| **API** | *Application Programming Interface*: a interface que um programa oferece a outros. Aqui, a `go2-api`. |
+| **BLE** | *Bluetooth Low Energy*: Bluetooth de baixo consumo. |
+| **Callback** | Função entregue a alguém para ser chamada depois, quando algo acontecer. |
+| **CRC / checksum** | Número calculado sobre os dados para detectar se foram corrompidos. Não prova quem enviou. |
+| **CVE** | *Common Vulnerabilities and Exposures*: identificador público de uma falha de segurança (ex.: CVE-2026-27509). |
+| **CycloneDDS** | Uma implementação open source do DDS, a usada dentro do Go2. |
+| **DDS** | *Data Distribution Service*: o sistema de mensagens interno do Go2. Os serviços publicam e leem dados por tópico. |
+| **Decoder** | Código que transforma o dado comprimido que chega do robô em algo utilizável. |
+| **DTLS** | TLS adaptado para UDP. É a camada de criptografia do WebRTC. |
+| **EDU / Pro / Air / X** | Versões do Go2. O projeto usa um **Pro**. Só o EDU tem Jetson e DDS aberto. |
+| **Firmware** | O software de fábrica que roda dentro do robô. |
+| **GET / POST / PUT / DELETE** | Tipos de pedido HTTP: ler, criar ou disparar, substituir, apagar. |
+| **Handshake** | "Aperto de mão": a troca inicial de mensagens que abre uma conexão. |
+| **HTTP / REST** | HTTP: protocolo de pedido e resposta da web. REST: estilo de API em que cada endereço representa um recurso. |
+| **ICE / STUN / TURN** | Etapas do WebRTC para achar um caminho de rede. ICE testa caminhos, STUN descobre o IP público e TURN é um servidor intermediário que retransmite quando não há caminho direto. |
+| **IDL** | *Interface Definition Language*: arquivo que descreve o formato das mensagens, do qual se gera código. |
+| **IMU** | *Inertial Measurement Unit*: sensor de orientação e aceleração. |
+| **IP** | Endereço de um aparelho na rede. |
+| **JA3 / TLS** | TLS é a criptografia do HTTPS. JA3 é uma "impressão digital" do jeito que um cliente abre o TLS, usada para identificar se é um navegador real. |
+| **Jetson / TOPS** | Jetson: computador da NVIDIA para IA, que só vem no EDU (Orin Nano, Orin NX). TOPS: trilhões de operações por segundo, a medida de poder de IA. |
+| **LAN** | *Local Area Network*: a rede local, sem passar pela internet. |
+| **LiDAR / L1 / L2** | LiDAR (*Light Detection and Ranging*): sensor de distância a laser. L1 e L2 são os modelos da Unitree. Mid-360 (Livox) e XT16 (Hesai) são LiDARs de terceiros. |
+| **LIO-SAM** | *Lidar Inertial Odometry via Smoothing and Mapping*: um algoritmo conhecido de SLAM com LiDAR + IMU. |
+| **`lf`** | *Low frequency*: versão de baixa frequência de um tópico. |
+| **MCF** | *Multi-Control Framework*: modo de locomoção do Go2 com ids de comando próprios. |
+| **MD5** | Função de hash antiga, considerada insegura hoje. |
+| **Monkey-patch** | Alterar, em tempo de execução, o código de outra biblioteca sem mexer no arquivo dela. |
+| **MP3 / WAV** | Formatos de arquivo de áudio. |
+| **Multicast** | Mensagem enviada a todos os aparelhos da rede de uma vez. |
+| **Nuvem de pontos** | Conjunto de pontos `(x, y, z)` medidos pelo LiDAR. |
+| **Odometria / pose** | Odometria: estimativa de quanto o robô se moveu. Pose: posição + orientação. |
+| **PCD** | *Point Cloud Data*: formato de arquivo de nuvem de pontos. |
+| **Pose-graph / nó / aresta** | Forma de representar um mapa: nós são posições do robô, arestas são relações medidas entre elas. |
+| **RGB** | Câmera colorida comum (vermelho, verde, azul), sem profundidade. |
+| **ROS / ROS 2** | *Robot Operating System*: conjunto de ferramentas muito usado em robótica. O ROS 2 também usa DDS. |
+| **RSA** | Criptografia assimétrica (chave pública e privada), aqui usada só para trocar a chave AES. |
+| **SDK** | *Software Development Kit*: o kit oficial da Unitree (`unitree_sdk2`), que usa DDS direto. |
+| **SDP** | *Session Description Protocol*: texto que descreve a conexão WebRTC, trocado no início ("oferta" e "resposta"). |
+| **SLAM** | *Simultaneous Localization and Mapping*: mapear o ambiente e se localizar nele ao mesmo tempo. |
+| **SN** | *Serial Number*: número de série do robô. |
+| **SPDP / SEDP** | *Simple Participant / Endpoint Discovery Protocol*: como os participantes do DDS se descobrem na rede, por multicast. |
+| **SSH** | Acesso remoto ao terminal de outro computador. |
+| **STA / AP / STA-T** | Modos de rede: STA (o robô entra no Wi-Fi do roteador), AP (o robô cria o próprio Wi-Fi), STA-T (remoto, pela nuvem da Unitree). |
+| **TCP / UDP** | Protocolos de transporte da internet. TCP garante a entrega; UDP é mais rápido e não garante. |
+| **Tópico** | Nome de um canal de mensagens (ex.: `rt/api/sport/request`). |
+| **USB / HDMI** | Conectores de dados e de vídeo. |
+| **UUID** | Identificador único gerado aleatoriamente (ex.: o id de um áudio no robô). |
+| **UWB** | *Ultra-Wideband*: rádio de curto alcance para posicionamento preciso (a mesma tecnologia de AirTags). |
+| **VUI** | Nome que a Unitree dá ao serviço de volume, brilho e LED do Go2 (o significado da sigla não está documentado na lib). |
+| **WASM / wasmtime** | WebAssembly (WASM): formato de programa compilado e portátil. `wasmtime` roda WASM dentro do Python. |
+| **WebGL** | Tecnologia de gráficos 3D do navegador. |
+| **WebRTC** | *Web Real-Time Communication*: protocolo de comunicação em tempo real. É o túnel até o DDS do robô. |
+| **WebSocket (WS)** | Conexão que fica aberta, por onde o servidor manda dados continuamente. |
+| **Nomes próprios** | **NEURON**: grupo de pesquisa do projeto, na UFLA (Universidade Federal de Lavras). **TV Box**: aparelho de baixo custo usado como cliente no pipeline de voz. **G1 / R1**: robôs humanoides da Unitree. **BenBen**: assistente de voz de fábrica do Go2. **GPT**: modelo de linguagem da OpenAI. **WSO2**: empresa de software (citada como relato de campo). **Galaxy S20**: celular Samsung, imitado pela lib no modo remoto. **Anker PowerConf S3**: microfone externo usado no projeto. **MIT**: licença open source permissiva. **TheRoboVerse / QRE Docs**: comunidade e documentação de terceiros sobre o Go2. **ISS 2.0**: nome comercial da Unitree para o modo de seguir; o significado da sigla não está documentado. **`rt/qt_*`**: prefixo de tópicos de mapeamento; o significado de "qt" não está documentado. |
