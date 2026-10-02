@@ -107,15 +107,15 @@ Logo: existe um processo que segura a conexão e fala HTTP/WS com o resto. Isso 
        ─────── HTTP / WS ─────
                   ▼
             ┌───────────┐
-            │  go2-api  │  ← dona da única conexão, faz lease e fila
+            │  go2-api  │  ← dona da única conexão (lease e fila: planejados, #7)
             └─────┬─────┘
-                  ▼  Transport (interface)
+                  ▼  RobotConnection (hoje) → Transport (interface, ideia)
          WebRTCTransport   (DDSTransport, se um dia)
                   ▼
               [  Go2  ]
 ```
 
-O `Transport` como interface é o que mantém a discussão do DDS irrelevante pro resto do sistema: se um dia destravar, escreve-se outra implementação e nenhum consumidor percebe.
+Hoje a conexão é a classe concreta `RobotConnection` (`app/robot.py`). Extrair uma interface `Transport` é a ideia que manteria a discussão do DDS irrelevante pro resto do sistema: se um dia destravar, escreve-se outra implementação e nenhum consumidor percebe. Ainda não foi feito, e só vale a pena quando existir uma segunda implementação.
 
 ---
 
