@@ -97,3 +97,19 @@ Também **não implementados**. Têm risco real de queda e vão exigir `"confirm
 - [`docs/lib_unitree_webrtc_connect.md`](docs/lib_unitree_webrtc_connect.md): comportamento real da lib 2.2.0 (pub/sub, timeouts, vídeo, lidar).
 
 Índice completo em [`docs/README.md`](docs/README.md).
+
+## Termos
+
+| Termo | Significado |
+|---|---|
+| **API** | *Application Programming Interface*: aqui, este serviço, que recebe pedidos HTTP e fala com o robô. |
+| **HTTP / `GET` / `POST` / `PUT`** | Protocolo de pedido e resposta da web, e os tipos de pedido: ler, disparar, substituir. |
+| **202 / 422 / 503** | Códigos de resposta: aceito (não quer dizer executado), corpo inválido, sem conexão com o robô. |
+| **WebRTC** | Protocolo de comunicação em tempo real: o túnel entre a API e o robô. Só uma conexão por vez. |
+| **LocalSTA / LocalAP** | Robô no Wi-Fi do roteador (IP pode mudar) / robô criando a própria rede (IP fixo `192.168.12.1`). |
+| **IP / serial** | Endereço do robô na rede / número de série dele (`B42D...`), que a lib usa para achá-lo. |
+| **`damp`** | Postura que desliga os motores: o robô cai se estiver de pé. |
+| **MVP** | *Minimum Viable Product*: a primeira versão, só com o essencial. |
+| **NEURON / UFLA** | Grupo de pesquisa do projeto / Universidade Federal de Lavras. |
+
+Mais termos em [`docs/essencial/glossario.md`](docs/essencial/glossario.md).
