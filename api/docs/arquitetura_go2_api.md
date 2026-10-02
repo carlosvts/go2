@@ -1,8 +1,10 @@
-# Arquitetura proposta — `go2-api`
+# Arquitetura — `go2-api`
+
+> O que está implementado e o que é plano estão separados na seção 4 (coluna **Status**). Para o comportamento da lib por baixo, ver [`lib_unitree_webrtc_connect.md`](lib_unitree_webrtc_connect.md).
 
 ## Resumo em uma frase
 
-A `go2-api` é uma camada nova, fina, que fica **entre** a biblioteca `unitree_webrtc_connect` (que já existe e continua sendo usada, sem mudança) e **todo mundo que hoje precisa falar com o robô** — incluindo o próprio projeto de controle por voz de vocês, que passa a ser *cliente* da API em vez de dono da conexão com o robô.
+A `go2-api` é uma camada nova, fina, que fica **entre** a biblioteca `unitree_webrtc_connect` (que já existe e continua sendo usada, sem mudança) e **todo mundo que hoje precisa falar com o robô** — incluindo o projeto de controle por voz do NEURON, que passa a ser *cliente* da API em vez de dono da conexão com o robô.
 
 ---
 
@@ -18,7 +20,7 @@ flowchart TB
         B["Handshake WebRTC · SPORT_CMD · AudioHub · decoders de LiDAR"]
     end
 
-    subgraph API["go2-api (NOVO — o que vocês vão construir)"]
+    subgraph API["go2-api"]
         C["Dona única da conexão WebRTC com o robô<br/>REST → comandos discretos<br/>WebSocket → streams"]
     end
 
@@ -45,7 +47,7 @@ flowchart TB
     class CONSUMERS,D1,D2,D3,D4 consumer
 ```
 
-*Cinza = já existe hoje · roxo = novo, é o que vocês vão construir · verde-azulado = consumidores da API.*
+*Cinza = dependências externas · roxo = `go2-api` · verde-azulado = consumidores da API.*
 
 **A resposta direta pra "onde minha API entra":** ela não substitui a `unitree_webrtc_connect` — ela **assume a responsabilidade que hoje está espalhada dentro do `robot_control`**, generaliza, e vira o único ponto de contato com o robô. Tudo que hoje precisa saber WebRTC/AES/`aiortc` passa a precisar saber só HTTP e WebSocket.
 
@@ -65,7 +67,7 @@ TV Box → TCP → inferência (Whisper + SentenceTransformer) → Redis "go2:co
 ```
 TV Box → TCP → inferência (sem mudança) ──HTTP direto, não-bloqueante──▶ go2-api
                                                                           │
-                                                              POST /commands/sport
+                                                              POST /commands/{posture,gesture,move,...}
                                                                           │
                                                           unitree_webrtc_connect → Go2
 ```
@@ -84,65 +86,83 @@ TV Box → TCP → inferência (sem mudança) ──HTTP direto, não-bloqueante
 
 ## 3. Por que isso resolve um problema estrutural, não só estético
 
-O WebRTC é ponto-a-ponto — **só uma conexão por vez** com o robô (é a causa do `RobotBusyError` que vocês já tratam). Isso significa que, hoje, se dois processos quisessem falar com o robô ao mesmo tempo, um dos dois perderia.
+O WebRTC é ponto-a-ponto — **só uma conexão por vez** com o robô (é a causa do `RobotBusyError`). Isso significa que, hoje, se dois processos quisessem falar com o robô ao mesmo tempo, um dos dois perderia.
 
 A `go2-api`, sendo a **única dona da conexão WebRTC**, resolve isso por construção: ela mantém 1 conexão física com o robô, mas multiplexa quantos consumidores HTTP/WS quiserem — o pipeline de voz, o modo chat, um projeto novo de outro colega do NEURON, tudo ao mesmo tempo, sem brigar pela mesma conexão. Isso não é só "mais bonito", é a solução pro limite físico do protocolo.
 
 ---
 
-## 4. Superfície da API v1 — mapeamento completo do que já existe na lib
+## 4. Superfície da API — implementado e planejado
 
-Organizado em cinco grupos: os quatro primeiros são REST (comando pontual), o quinto é WebSocket (fluxo contínuo).
+Cinco grupos: os quatro primeiros são REST (comando pontual), o quinto é WebSocket (fluxo contínuo).
+
+**Status:** ✅ implementado · 🔜 planejado para o v1 · ⏸ registrado, fora do v1 (`todo-later`). Os números são issues do GitHub.
+
+Convenções que valem para todo o REST (`README.md`): comandos respondem `202` ao **aceitar** o comando (não ao fim da execução física), `503` sem conexão com o robô e `504` quando um comando que espera resposta estoura `GO2_REQUEST_TIMEOUT_S`.
 
 ### 4.1 Postura e movimento
-| Já existe na lib | Endpoint sugerido | Nota |
-|---|---|---|
-| `SPORT_CMD["StandUp"/"StandDown"/"Sit"/"RiseSit"/"BalanceStand"/"RecoveryStand"/"Damp"]` | `POST /commands/posture` `{"cmd": "stand_up"}` | Um endpoint, `cmd` como enum — mapeamento direto do que o `robot_control` já faz. |
-| `SPORT_CMD["Move"]` | `POST /commands/move` `{"vx","vy","vyaw","duration_s"}` | A API cuida do reenvio a 20-50Hz internamente. Exige token de controle (seção 13 do dossiê). |
-| `SPORT_CMD["StopMove"]` | `POST /commands/stop` | **Bypassa fila e lease** — sempre executa na hora, de qualquer cliente. |
-| `SwitchGait`, `SpeedLevel`/`GetSpeedLevel` | `PUT/GET /commands/speed` | |
+| Na lib | Endpoint | Status | Nota |
+|---|---|---|---|
+| `SPORT_CMD["StandUp"/"StandDown"/"Sit"/"RiseSit"/"BalanceStand"/"RecoveryStand"/"Damp"]` | `POST /commands/posture` `{"cmd": "stand_up"}` | ✅ | `cmd` como enum. Cancela um `move` em curso. |
+| `SPORT_CMD["Move"]` | `POST /commands/move` `{"vx","vy","vyaw","duration_s"}` | ✅ | A API reenvia a `GO2_MOVE_RATE_HZ` (20–50 Hz) e manda `StopMove` no fim. Limites configuráveis → `422`. **Sem lease:** um `move` novo substitui o anterior (lease em #7). |
+| `SPORT_CMD["StopMove"]` | `POST /commands/stop` | ✅ | Sempre executa, de qualquer cliente. |
+| `SpeedLevel`/`GetSpeedLevel` | `PUT/GET /commands/speed` | ✅ | Único endpoint que espera resposta do robô (`504` em timeout). Payload pendente de validação física. |
 
 ### 4.2 Gestos e "truques"
-| Já existe | Endpoint sugerido | Nota |
-|---|---|---|
-| `Hello`, `Stretch`, `FingerHeart`, `WiggleHips`, `Content`, `Dance1/2`, `Scrape`, `Pose` | `POST /commands/gesture` `{"cmd": "hello"}` | Baixo risco físico, já testado em produção pelo `robot_control`. |
-| `FrontFlip`, `BackFlip`, `Handstand`, `MoonWalk`, `Bound` | `POST /commands/trick` `{"cmd": "front_flip", "confirm": true}` | **Separado deliberadamente do grupo acima** — risco real de queda/dano físico; exige flag de confirmação explícita. Nunca testados por vocês. |
-| `SPORT_CMD_MCF` (marcha avançada: `TrotRun`, `StaticWalk`) | — | **Fora do v1** — exige trocar o robô pro modo MCF primeiro (`motion_switcher`, ainda não reverso-engenheirado — dossiê 12.2/12.3). |
+| Na lib | Endpoint | Status | Nota |
+|---|---|---|---|
+| `Hello`, `Stretch`, `FingerHeart`, `WiggleHips`, `Content`, `Dance1/2`, `Scrape`, `Pose` | `POST /commands/gesture` `{"cmd": "hello"}` | ✅ | Baixo risco físico. |
+| `FrontFlip`, `BackFlip`, `Handstand`, `MoonWalk`, `Bound` | `POST /commands/trick` `{"cmd": "front_flip", "confirm": true}` | 🔜 #1 | Separado de propósito: risco real de queda. Exige confirmação explícita. Nenhum foi testado ainda. Os ids diferem entre `SPORT_CMD` e `SPORT_CMD_MCF`; confirmar qual espaço vale para o robô. |
+| `SPORT_CMD_MCF` (`TrotRun`, `StaticWalk`, …) | — | fora do v1 | Exige trocar o robô para o modo MCF (`motion_switcher`, não mapeado; dossiê 12.2/12.3). |
 
 ### 4.3 Dispositivo (áudio, LED, volume)
-| Já existe | Endpoint sugerido | Nota |
-|---|---|---|
-| `WebRTCAudioHub` (upload, play, pause, resume, delete, megafone) | `POST /audio/upload`, `POST /audio/play`, `POST /audio/pause`, `.../resume`, `DELETE /audio/{id}`, `POST /audio/megaphone` | Classe já pronta na lib, zero engenharia reversa — é só empacotar. Substitui o `CMD_PLAY_AUDIO` do modo chat. |
-| `VUI` volume (api_id `1003`/`1004`) | `PUT/GET /device/volume` `{"level"}` | Payload confirmado no exemplo oficial. |
-| `VUI` brilho (api_id `1005`/`1006`) | `PUT/GET /device/brightness` | |
-| `VUI` cor/pisca (api_id `1007`) | `PUT /device/led` `{"color","duration_s","flash_cycle_ms"}` | |
+| Na lib | Endpoint | Status | Nota |
+|---|---|---|---|
+| `WebRTCAudioHub` (lista, upload, play, pause, resume, delete, megafone) | `/audio/*` | 🔜 #2 | Classe pronta, mas sem timeout, upload por caminho de arquivo e megafone em 3 chamadas (ver `lib_unitree_webrtc_connect.md` §7). Substitui o `CMD_PLAY_AUDIO` do modo chat. |
+| `RTC_TOPIC["VUI"]` volume/brilho/LED | `PUT/GET /device/volume`, `PUT/GET /device/brightness`, `PUT /device/led` | 🔜 #3 | **api_ids (1003–1007) e payloads a confirmar:** não estão nas constantes da lib 2.2.0. |
 
 ### 4.4 Segurança e controle
-| Já existe | Endpoint sugerido | Nota |
-|---|---|---|
-| `OBSTACLES_AVOID_API` (`SWITCH_SET`/`SWITCH_GET`) | `PUT/GET /safety/obstacle-avoidance` `{"enabled"}` | Payload confirmado no exemplo oficial — **saiu da lista de lacunas**, já é v1. |
-| — (design nosso, não da lib) | `POST /control/acquire`, `POST /control/release` | O lease com token+expiração desenhado na seção 13 do dossiê. |
-| `SPORT_MOD_STATE`/`LOW_STATE` | `GET /status` | Snapshot pontual (bateria, modo, conectado) — versão contínua vai pro grupo 4.5. |
+| Na lib | Endpoint | Status | Nota |
+|---|---|---|---|
+| `SPORT_MOD_STATE`/`LOW_STATE` | `GET /status` | ✅ | Snapshot do cache em memória; sempre `200`, com `connected: false` se o robô estiver fora. `?raw=true` devolve os payloads crus. |
+| `OBSTACLES_AVOID_API` (`SWITCH_SET`/`SWITCH_GET`) | `PUT/GET /safety/obstacle-avoidance` `{"enabled"}` | ⏸ #8 | Não está confirmado que o desvio filtra o `SPORT_CMD["Move"]` usado pela API (dossiê 12.1). |
+| — (design próprio) | `POST /control/acquire`, `POST /control/release` | ⏸ #7 | Lease com token e expiração (dossiê seção 13). |
 
 ### 4.5 Streams (WebSocket)
-| Já existe | Canal sugerido | Nota |
-|---|---|---|
-| `ULIDAR_ARRAY` + decoder `native` | `/ws/lidar` | **Trocar o decoder padrão antes de expor** — `libvoxel` devolve malha, não pontos (dossiê seção 3.1). |
-| `WebRTCVideoChannel` | `/ws/video` | |
-| `LOW_STATE`/`SPORT_MOD_STATE` em alta frequência | `/ws/telemetry` | IMU, força nas patas, posição/velocidade em tempo real. |
+| Fonte | Canal | Status | Nota |
+|---|---|---|---|
+| `LOW_STATE`/`SPORT_MOD_STATE` | `/ws/telemetry` | 🔜 #5 | Os tópicos acessíveis pelo WebRTC são os de baixa frequência (dossiê 12.4); a taxa real será medida. |
+| `WebRTCVideoChannel` (track) | `/ws/video` | 🔜 #4 | Codificar quadros fora do event loop; formato no WS a decidir. |
+| `ULIDAR_ARRAY` + decoder `native` | `/ws/lidar` | 🔜 #6 | O decoder padrão (`libvoxel`) devolve malha, não pontos. Basta `set_decoder("native")` a cada conexão; sem patch na lib. |
+
+### 4.6 Desenho interno dos streams (planejado)
+
+```
+callbacks da lib ──publish──▶ TopicHub ──subscribe──▶ 1 asyncio.Queue por cliente WS
+ (event loop, #12)            (#9, em memória)          (cheia → descarta a mais antiga)
+```
+
+- **`TopicHub` (#9):** `Topic(str, Enum)`, `subscribe(topic, maxsize=32) -> Queue`, `unsubscribe(topic, q)` (idempotente) e `publish(topic, data)` (síncrono, `put_nowait`). Envelope enviado aos clientes: `{"topic", "ts", "data"}`, com `ts = time.time()` no `publish`. Funciona só com um processo (`uvicorn` sem `--workers`).
+- **Ponte driver → hub (#12):** reaproveita os callbacks que já alimentam o `/status`. A lib guarda **um callback por tópico**, e um segundo `subscribe` silenciaria o `/status`.
+- **Refcount (#13):** assina no robô no primeiro cliente e cancela no último. `LOW_STATE`/`SPORT_MOD_STATE` nunca são cancelados, porque o `/status` depende deles.
+- **Estado da conexão (#14):** tópico `connection` com `connected`/`disconnected` (e `reconnecting` quando houver reconexão automática).
+- **Apoio ao desenvolvimento:** `FakeHub` (#10) gera dados simulados sem o robô; `scripts/ws_client.py` (#11) imprime mensagens e mede a taxa.
 
 ### Fora do escopo do v1
-Navegação autônoma (`uslam`), UWB/side-follow, modo MCF — payloads ainda não reverso-engenheirados (dossiê seção 12.2/12.3). Entram como v2+, se fizer sentido investir nisso depois.
+Navegação autônoma (`uslam`), UWB/side-follow e modo MCF: payloads ainda não mapeados (dossiê seção 12.2/12.3). Entram como v2+, se fizer sentido investir nisso depois. Reconexão automática ao robô também ficou fora do MVP (README, "Limitações atuais").
 
 ---
 
-## 5. Fases de implementação (ordem sugerida, reaproveitando o que já existe)
+## 5. Ordem de implementação
 
-1. **Grupos 4.1 + 4.4 (postura/movimento + controle)** primeiro — é o que o `robot_control` já faz, só reorganizado; risco mínimo, e já traz o mecanismo de lease resolvido desde o início.
-2. **Grupo 4.3 (dispositivo — áudio/LED/volume)** — biblioteca já pronta na lib (`WebRTCAudioHub`, `VUI`), ganho rápido, esforço baixo.
-3. **Grupo 4.5 (streams)** — mais trabalho de implementação (gerenciar múltiplos assinantes WebSocket), mas nenhuma engenharia reversa pendente.
-4. **Grupo 4.2, parte "trick"** — só depois de testar fisicamente cada comando, dado o risco de queda; entra atrás de tudo que é seguro.
-5. **MCF, navegação, UWB** — fica de fora propositalmente, é território ainda não mapeado (dossiê seção 12.2/12.3).
+1. ✅ **Postura, movimento, velocidade, gestos e `/status`** (4.1, parte de 4.2 e 4.4): o que o `robot_control` já fazia, reorganizado.
+2. 🔜 **Infraestrutura de streams** (4.6: #9, #10, #11, #12) e depois **`/ws/telemetry`** (#5), o stream mais simples, que valida o desenho.
+3. 🔜 **Refcount e estado da conexão** (#13, #14), pré-requisitos para lidar e vídeo não gerarem tráfego e CPU à toa.
+4. 🔜 **`/ws/lidar` e `/ws/video`** (#6, #4).
+5. 🔜 **Dispositivo** (#2, #3), depois de confirmar os payloads do VUI.
+6. 🔜 **Truques** (#1), só depois de testar cada comando fisicamente.
+7. ⏸ **Lease e desvio de obstáculo** (#7, #8), junto com a decisão sobre controle de acesso.
+8. Fora do v1: MCF, navegação, UWB.
 
 ---
 
@@ -150,9 +170,9 @@ Navegação autônoma (`uslam`), UWB/side-follow, modo MCF — payloads ainda n�
 
 A `go2-api` é uma camada de organização, não mágica — ela herda tudo que o dossiê já documentou:
 - Ainda só uma conexão física com o robô por vez (é a razão de ela existir, não algo que ela resolve na origem).
-- Ainda sujeita a quebrar se a Unitree mudar o protocolo (os IDs de `SPORT_CMD` já mostraram isso).
+- Ainda sujeita a quebrar se a Unitree mudar o protocolo (por exemplo, o mesmo comando já tem ids diferentes entre o modo normal e o MCF).
 - Ainda não alcança `rt/lowcmd` (controle por junta) — segue exigindo o SDK oficial se algum dia isso for necessário.
-- Ainda herda o modelo de "confiança por protocolo, não por identidade" descrito no dossiê seção 7.4 — no firmware de vocês, qualquer um na rede local com a chave estática consegue parear. Vale a `go2-api` adicionar sua **própria** camada de autenticação (ex: API key simples) para quem se conecta *nela*, já que o robô não oferece isso de fábrica no firmware de vocês.
+- Ainda herda o modelo de "confiança por protocolo, não por identidade" descrito no dossiê seção 7.4 — no firmware do robô do projeto (< 1.1.15), qualquer um na rede local com a chave estática consegue parear. Vale a `go2-api` adicionar sua **própria** camada de autenticação (ex: API key simples) para quem se conecta *nela*, já que o robô não oferece isso de fábrica nesse firmware.
 
 ---
 
