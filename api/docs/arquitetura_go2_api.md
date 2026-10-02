@@ -177,3 +177,40 @@ A `go2-api` é uma camada de organização, não mágica — ela herda tudo que 
 ---
 
 *Documento complementar ao `dossie_go2.md` — usa as descobertas de código-fonte já registradas lá como base técnica.*
+
+---
+
+## Glossário deste documento
+
+| Termo | Significado |
+|---|---|
+| **API** | *Application Programming Interface*: a interface que um programa oferece a outros. Aqui, a `go2-api`. |
+| **Callback** | Função entregue a alguém para ser chamada depois, quando algo acontecer. |
+| **Container** | Processo isolado (ex.: Docker) com seu próprio ambiente. Se um cai, os outros seguem. |
+| **CPU** | *Central Processing Unit*: o processador. |
+| **Decoder** | Código que transforma o dado comprimido que chega do robô em algo utilizável. |
+| **Envelope** | Formato das mensagens dos WebSockets da API: `{"topic", "ts", "data"}`. |
+| **Event loop** | O "motor" do `asyncio`: executa as tarefas uma de cada vez, numa única thread. Se uma demora, todas esperam. |
+| **Fan-out** | Uma mensagem que chega é copiada para vários destinatários. |
+| **GET / POST / PUT / DELETE** | Tipos de pedido HTTP: ler, criar ou disparar, substituir, apagar. |
+| **HTTP / REST** | HTTP: protocolo de pedido e resposta da web. REST: estilo de API em que cada endereço representa um recurso. |
+| **Lease** | "Posse" temporária do controle do robô, com token e prazo de validade (planejado, #7). |
+| **MCF** | *Multi-Control Framework*: modo de locomoção do Go2 com ids de comando próprios. |
+| **Mermaid** | Linguagem para desenhar diagramas em texto, que o GitHub renderiza. |
+| **MVP** | *Minimum Viable Product*: a primeira versão, só com o essencial. |
+| **Nuvem de pontos** | Conjunto de pontos `(x, y, z)` medidos pelo LiDAR. |
+| **Pub/sub** | *Publish/subscribe*: quem produz dados publica num tópico; quem quer, assina e recebe. Um não conhece o outro. |
+| **Redis** | Banco de dados em memória que o projeto usava como fila de mensagens entre processos. |
+| **Refcount** | Contagem de quantos usam algo. Quando chega a zero, o recurso é liberado. |
+| **SDK** | *Software Development Kit*: o kit oficial da Unitree (`unitree_sdk2`), que usa DDS direto. |
+| **TCP / UDP** | Protocolos de transporte da internet. TCP garante a entrega; UDP é mais rápido e não garante. |
+| **Timeout** | Limite de tempo de espera. Passou do limite, desiste com erro. |
+| **Token** | Código secreto que prova que você tem uma permissão (ex.: o lease). |
+| **Tópico** | Nome de um canal de mensagens (ex.: `rt/api/sport/request`). |
+| **Track** | Fluxo de mídia (vídeo ou áudio) dentro da conexão WebRTC. |
+| **TTS** | *Text-to-Speech*: síntese de voz a partir de texto. |
+| **UWB** | *Ultra-Wideband*: rádio de curto alcance para posicionamento preciso (a mesma tecnologia de AirTags). |
+| **VUI** | Nome que a Unitree dá ao serviço de volume, brilho e LED do Go2 (o significado da sigla não está documentado na lib). |
+| **WebSocket (WS)** | Conexão que fica aberta, por onde o servidor manda dados continuamente. |
+| **Workers (uvicorn)** | Cópias do processo da API. A `go2-api` precisa rodar com **um** só. |
+| **Nomes próprios** | **NEURON**: grupo de pesquisa do projeto, na UFLA (Universidade Federal de Lavras). **TV Box**: aparelho de baixo custo usado como cliente no pipeline de voz. **G1 / R1**: robôs humanoides da Unitree. **BenBen**: assistente de voz de fábrica do Go2. **GPT**: modelo de linguagem da OpenAI. **WSO2**: empresa de software (citada como relato de campo). **Galaxy S20**: celular Samsung, imitado pela lib no modo remoto. **Anker PowerConf S3**: microfone externo usado no projeto. **MIT**: licença open source permissiva. **TheRoboVerse / QRE Docs**: comunidade e documentação de terceiros sobre o Go2. **ISS 2.0**: nome comercial da Unitree para o modo de seguir; o significado da sigla não está documentado. **`rt/qt_*`**: prefixo de tópicos de mapeamento; o significado de "qt" não está documentado. |
