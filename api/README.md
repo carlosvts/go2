@@ -59,7 +59,7 @@ Disponíveis em `POST /commands/posture`:
 | `stand_down` | Deita. |
 | `sit` | Senta. |
 | `rise_sit` | Levanta depois de sentar. |
-| `balance_stand` | Fica de pé em modo de equilíbrio, pronto para andar. |
+| `balance_stand` | Fica de pé em modo de equilíbrio, pronto para andar. **Necessário antes de `move`**: só `stand_up` não basta ([ficha](docs/essencial/balance-stand-vs-stand-up.md)). |
 | `recovery_stand` | Levanta depois de uma queda. |
 | `damp` | Desliga a força dos motores; o robô cai se estiver de pé. |
 
@@ -86,11 +86,14 @@ Também **não implementados**. Têm risco real de queda e vão exigir `"confirm
 
 - **Sem autenticação:** quem alcança a porta controla o robô. Use só na rede do laboratório.
 - **Sem arbitragem entre clientes:** o último `move` enviado substitui o anterior.
-- **Sem reconexão automática:** se a conexão cair, reinicie a API.
+- **Sem reconexão automática (por enquanto):** se a conexão cair, reinicie a API. Decisão de escopo do MVP; a reconexão está prevista para depois.
 - **Pendente de validação com o robô ligado:** os payloads de `Move`/`SpeedLevel` e a leitura de bateria/modo.
 
 ## Documentação
 
 - [`docs/go2_modelo_mental.md`](docs/go2_modelo_mental.md): visão geral e modos de rede.
-- [`docs/arquitetura_go2_api.md`](docs/arquitetura_go2_api.md): arquitetura e endpoints planejados.
+- [`docs/arquitetura_go2_api.md`](docs/arquitetura_go2_api.md): arquitetura, endpoints implementados e planejados.
 - [`docs/dossie_go2.md`](docs/dossie_go2.md): specs, protocolo e tópicos do robô.
+- [`docs/lib_unitree_webrtc_connect.md`](docs/lib_unitree_webrtc_connect.md): comportamento real da lib 2.2.0 (pub/sub, timeouts, vídeo, lidar).
+
+Índice completo em [`docs/README.md`](docs/README.md).
