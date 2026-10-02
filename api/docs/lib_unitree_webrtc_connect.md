@@ -173,3 +173,32 @@ outro consumidor desses tópicos (por exemplo, o hub de WebSocket) precisa
 `uv sync` compila o `pyaudio`, que precisa dos headers do PortAudio
 (`portaudio-devel` no Fedora, `portaudio19-dev` no Debian/Ubuntu). A lib também
 depende de `sounddevice`, `opencv-python`, `pydub` e `wasmtime`.
+
+---
+
+## Glossário deste documento
+
+| Termo | Significado |
+|---|---|
+| **aiortc / aioice** | Bibliotecas Python que implementam WebRTC e ICE. A lib do projeto é construída em cima delas. |
+| **base64** | Forma de escrever dados binários como texto (usada para mandar arquivos dentro de JSON). |
+| **Bloco (chunk)** | Pedaço de um arquivo grande enviado em partes. |
+| **Callback** | Função entregue a alguém para ser chamada depois, quando algo acontecer. |
+| **Decoder** | Código que transforma o dado comprimido que chega do robô em algo utilizável. |
+| **Event loop** | O "motor" do `asyncio`: executa as tarefas uma de cada vez, numa única thread. Se uma demora, todas esperam. |
+| **ffmpeg** | Programa de conversão de áudio e vídeo (o `pydub` precisa dele para MP3). |
+| **Future** | Objeto que representa um resultado que ainda vai chegar. `await` espera por ele. |
+| **JSON** | *JavaScript Object Notation*: formato de texto para dados, como `{"chave": "valor"}`. |
+| **MCF** | *Multi-Control Framework*: modo de locomoção do Go2 com ids de comando próprios. |
+| **MP3 / WAV** | Formatos de arquivo de áudio. |
+| **ndarray / numpy** | numpy: biblioteca de cálculo numérico em Python. `ndarray` é a matriz dela. |
+| **Pub/sub** | *Publish/subscribe*: quem produz dados publica num tópico; quem quer, assina e recebe. Um não conhece o outro. |
+| **Thread** | Linha de execução. Duas threads rodam "ao mesmo tempo" no mesmo processo. |
+| **Timeout** | Limite de tempo de espera. Passou do limite, desiste com erro. |
+| **Tópico** | Nome de um canal de mensagens (ex.: `rt/api/sport/request`). |
+| **Track** | Fluxo de mídia (vídeo ou áudio) dentro da conexão WebRTC. |
+| **UUID** | Identificador único gerado aleatoriamente (ex.: o id de um áudio no robô). |
+| **VUI** | Nome que a Unitree dá ao serviço de volume, brilho e LED do Go2 (o significado da sigla não está documentado na lib). |
+| **WASM / wasmtime** | WebAssembly (WASM): formato de programa compilado e portátil. `wasmtime` roda WASM dentro do Python. |
+| **WebGL** | Tecnologia de gráficos 3D do navegador. |
+| **WebRTC** | *Web Real-Time Communication*: protocolo de comunicação em tempo real. É o túnel até o DDS do robô. |
