@@ -1,0 +1,43 @@
+default_install_hook_types: [pre-commit, commit-msg]
+default_language_version:
+  python: python3.12
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: debug-statements
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: no-commit-to-branch
+        args: [--branch, main]
+      - id: trailing-whitespace
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.14
+    hooks:
+      - id: ruff-check
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.12.10
+    hooks:
+      - id: uv-lock
+
+  - repo: local
+    hooks:
+      # Roda no ambiente do projeto (o mypy precisa enxergar pydantic, fastapi
+      # e a lib da Unitree), por isso é `local` e não o mirror do mypy.
+      - id: mypy
+        name: mypy
+        entry: uv run --locked mypy
+        language: system
+        types: [python]
+        pass_filenames: false
