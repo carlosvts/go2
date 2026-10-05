@@ -19,7 +19,7 @@ class PubSub(Protocol):
         """Registra `callback` para as mensagens de `topic`."""
 
     def publish_without_callback(
-        self, topic: str, data: Any = None, msg_type: str | None = None
+        self, topic: str, data: object = None, msg_type: str | None = None
     ) -> None:
         """Publica `data` em `topic` sem aguardar resposta."""
 

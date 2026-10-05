@@ -18,7 +18,7 @@ from app.exceptions import (
 )
 
 
-class _CustomTimeout(RobotTimeoutError):
+class _CustomTimeoutError(RobotTimeoutError):
     """Subclasse não registrada: deve herdar o status da classe mapeada."""
 
 
@@ -51,7 +51,7 @@ async def test_excecao_mapeada_vira_o_status_configurado(
 async def test_subclasse_de_excecao_mapeada_herda_o_status(
     request_stub: Request,
 ) -> None:
-    resposta = await ErrorHandlers._handle(request_stub, _CustomTimeout("lento"))
+    resposta = await ErrorHandlers._handle(request_stub, _CustomTimeoutError("lento"))
 
     assert resposta.status_code == HTTPStatus.GATEWAY_TIMEOUT
 

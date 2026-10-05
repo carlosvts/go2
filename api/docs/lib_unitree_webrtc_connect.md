@@ -123,7 +123,7 @@ outro consumidor desses tópicos (por exemplo, o hub de WebSocket) precisa
 - Para obter **pontos**, sem patch na lib:
 
   ```python
-  conn.datachannel.set_decoder("native")          # webrtc_datachannel.py:202-213
+  conn.datachannel.set_decoder("native")  # webrtc_datachannel.py:202-213
   await asyncio.wait_for(conn.datachannel.disableTrafficSaving(True), timeout)
   conn.datachannel.pub_sub.subscribe(RTC_TOPIC["ULIDAR_ARRAY"], on_lidar)
   ```

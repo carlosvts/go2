@@ -17,7 +17,9 @@ from app.robot.speed import SpeedReading
         ({"data": "2"}, 2),
     ],
 )
-def test_extrai_o_nivel_dos_formatos_conhecidos(data: dict[str, Any], nivel: int) -> None:
+def test_extrai_o_nivel_dos_formatos_conhecidos(
+    data: dict[str, Any], nivel: int
+) -> None:
     leitura = SpeedReading.from_response({"data": data})
 
     assert leitura.level == nivel

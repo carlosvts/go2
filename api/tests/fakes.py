@@ -79,7 +79,7 @@ class FakeConnection:
 
     def __init__(self, connect_error: Exception | None = None) -> None:
         """Cria a conexão, opcionalmente fadada a falhar ao conectar."""
-        self.isConnected = False  # noqa: N815 - nome ditado pela lib
+        self.isConnected = False
         self.datachannel = FakeDataChannel()
         self.connect_error = connect_error
         self.disconnected = False

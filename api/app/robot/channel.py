@@ -27,7 +27,7 @@ class SportChannel:
         self._link = link
         self._request_timeout_s = request_timeout_s
 
-    def send(self, command_name: str, parameter: Any = None) -> None:
+    def send(self, command_name: str, parameter: object = None) -> None:
         """Envia o comando sem esperar a resposta do robô.
 
         Raises:
@@ -42,7 +42,9 @@ class SportChannel:
             DATA_CHANNEL_TYPE["REQUEST"],
         )
 
-    async def request(self, command_name: str, parameter: Any = None) -> dict[str, Any]:
+    async def request(
+        self, command_name: str, parameter: object = None
+    ) -> dict[str, Any]:
         """Envia o comando e aguarda a resposta, com timeout próprio.
 
         Raises:

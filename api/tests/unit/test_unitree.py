@@ -45,7 +45,9 @@ def test_local_ap_usa_o_metodo_local_ap(recorded: type[_RecordedConnection]) -> 
     assert connection.args == (WebRTCConnectionMethod.LocalAP,)
 
 
-def test_cada_chamada_cria_uma_conexao_nova(recorded: type[_RecordedConnection]) -> None:
+def test_cada_chamada_cria_uma_conexao_nova(
+    recorded: type[_RecordedConnection],
+) -> None:
     factory = unitree.UnitreeConnectionFactory(
         Settings(_env_file=None, robot_serial_number="B42D0000")
     )

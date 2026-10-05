@@ -1,13 +1,11 @@
 """Leitura tolerante de payloads cujo formato não está fixado."""
 
-from typing import Any
-
 
 class PayloadReader:
     """Navega em payloads aninhados sem assumir um formato único."""
 
     @staticmethod
-    def first_path(payload: Any, *paths: tuple[str, ...]) -> Any:
+    def first_path(payload: object, *paths: tuple[str, ...]) -> object:
         """Devolve o valor do primeiro caminho existente em `payload`, ou `None`.
 
         O formato exato de `rt/sportmodestate`, `rt/lf/lowstate` e das respostas
@@ -26,7 +24,7 @@ class PayloadReader:
         return None
 
     @staticmethod
-    def _follow(payload: Any, path: tuple[str, ...]) -> Any:
+    def _follow(payload: object, path: tuple[str, ...]) -> object:
         """Segue `path` em `payload`; `None` se qualquer chave faltar."""
         cursor = payload
         for key in path:

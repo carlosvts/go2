@@ -40,7 +40,9 @@ class RobotLink:
         connection = self._connection
         if connection is None:
             return False
-        return bool(connection.isConnected and connection.datachannel.data_channel_opened)
+        return bool(
+            connection.isConnected and connection.datachannel.data_channel_opened
+        )
 
     @property
     def pub_sub(self) -> PubSub:
