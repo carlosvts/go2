@@ -41,6 +41,17 @@ class DataChannel(Protocol):
         """Canal publish/subscribe deste data channel."""
 
 
+class PeerConnection(Protocol):
+    """`RTCPeerConnection` do aiortc, um `EventEmitter` do pyee."""
+
+    @property
+    def connectionState(self) -> str:  # noqa: N802 - nome ditado pelo aiortc
+        """`new`, `connecting`, `connected`, `disconnected`, `failed` ou `closed`."""
+
+    def on(self, event: str, handler: Callable[[], object], /) -> object:
+        """Acrescenta `handler` aos ouvintes de `event`, sem substituir os outros."""
+
+
 class WebRTCConnection(Protocol):
     """Conexão WebRTC com o robô (subconjunto usado pela API)."""
 
@@ -51,6 +62,10 @@ class WebRTCConnection(Protocol):
     @property
     def datachannel(self) -> DataChannel:
         """Data channel da conexão."""
+
+    @property
+    def pc(self) -> PeerConnection:
+        """Peer WebRTC; só existe depois de `connect()`."""
 
     async def connect(self) -> None:
         """Abre a conexão."""

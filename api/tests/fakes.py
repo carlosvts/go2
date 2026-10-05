@@ -6,6 +6,7 @@ o comportamento HTTP da API; a validação contra o robô físico é manual.
 
 import asyncio
 import json
+from collections.abc import Callable
 from typing import Any
 
 from app.robot.ports import StateCallback
@@ -74,6 +75,26 @@ class FakeDataChannel:
         self.pub_sub = FakePubSub()
 
 
+class FakePeerConnection:
+    """Imita o `on`/`emit` do `RTCPeerConnection` (pyee) sem abrir nada."""
+
+    def __init__(self) -> None:
+        """Começa em `new`, sem ouvintes."""
+        self.connectionState = "new"
+        self.handlers: dict[str, list[Callable[[], object]]] = {}
+
+    def on(self, event: str, handler: Callable[[], object], /) -> object:
+        """Acrescenta `handler` aos ouvintes de `event`, como o pyee."""
+        self.handlers.setdefault(event, []).append(handler)
+        return handler
+
+    def emit_state(self, state: str) -> None:
+        """Muda `connectionState` e dispara `connectionstatechange`."""
+        self.connectionState = state
+        for handler in self.handlers.get("connectionstatechange", []):
+            handler()
+
+
 class FakeConnection:
     """Conexão WebRTC falsa."""
 
@@ -81,6 +102,7 @@ class FakeConnection:
         """Cria a conexão, opcionalmente fadada a falhar ao conectar."""
         self.isConnected = False
         self.datachannel = FakeDataChannel()
+        self.pc = FakePeerConnection()
         self.connect_error = connect_error
         self.disconnected = False
 
@@ -89,11 +111,13 @@ class FakeConnection:
         if self.connect_error is not None:
             raise self.connect_error
         self.isConnected = True
+        self.pc.connectionState = "connected"
 
     async def disconnect(self) -> None:
-        """Marca como desconectada."""
+        """Marca como desconectada; o peer emite `closed`, como no aiortc."""
         self.disconnected = True
         self.isConnected = False
+        self.pc.emit_state("closed")
 
 
 class FakeConnectionFactory:
