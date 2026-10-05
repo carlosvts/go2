@@ -1,70 +1,89 @@
-"""App factory da go2-api."""
+"""App factory da go2-api.
 
-from __future__ import annotations
+Suba com `uvicorn app.main:create_app --factory`. Não há instância global de
+`app`: importar este módulo não lê configuração nem cria conexões.
+"""
 
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
-from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
 
-from app.config import Settings, get_settings
-from app.robot import RobotConnection, RobotTimeoutError, RobotUnavailableError
-from app.routers import gesture, posture, status as status_router
+from app import __version__
+from app.config import Settings
+from app.error_handlers import ErrorHandlers
+from app.robot.ports import ConnectionFactory
+from app.robot.service import Go2Robot
+from app.routers import gesture, movement, posture, speed
+from app.routers import status as status_router
 
 log = logging.getLogger(__name__)
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
-    settings = settings or get_settings()
+class RobotLifespan:
+    """Cria o robô na subida da app e o encerra na descida."""
+
+    def __init__(
+        self,
+        settings: Settings,
+        connection_factory: ConnectionFactory | None = None,
+    ) -> None:
+        """Recebe a configuração e, opcionalmente, uma fábrica de conexões."""
+        self._settings = settings
+        self._connection_factory = connection_factory
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        robot = RobotConnection(settings)
+    async def __call__(self, app: FastAPI) -> AsyncIterator[None]:
+        """Disponibiliza `app.state.robot` durante a vida da app."""
+        robot = Go2Robot.from_settings(self._settings, self._connection_factory)
         app.state.robot = robot
-
-        if settings.connect_on_startup:
-            try:
-                await robot.connect()
-            except Exception:
-                # Subir mesmo assim é proposital: com o robô desligado a API
-                # ainda precisa responder `GET /status` com `connected: false`.
-                # Não há reconexão automática — ver `app/robot.py`.
-                log.exception("❌ Não foi possível conectar ao robô na inicialização.")
-        else:
-            log.warning("GO2_CONNECT_ON_STARTUP=false — subindo sem conectar.")
-
+        await self._connect(robot)
         try:
             yield
         finally:
             await robot.disconnect()
 
+    async def _connect(self, robot: Go2Robot) -> None:
+        """Conecta na subida, sem impedir a API de subir se falhar.
+
+        Subir mesmo assim é proposital: com o robô desligado a API ainda
+        precisa responder `GET /status` com `connected: false`. Não há
+        reconexão automática — ver :class:`~app.robot.link.RobotLink`.
+        """
+        if not self._settings.connect_on_startup:
+            log.warning("GO2_CONNECT_ON_STARTUP=false — subindo sem conectar.")
+            return
+        try:
+            await robot.connect()
+        except Exception:
+            log.exception("❌ Não foi possível conectar ao robô na inicialização.")
+
+
+def create_app(
+    settings: Settings | None = None,
+    *,
+    connection_factory: ConnectionFactory | None = None,
+) -> FastAPI:
+    """Monta a aplicação FastAPI.
+
+    Args:
+        settings: Configuração. Se omitida, é lida do ambiente / `.env`.
+        connection_factory: Fábrica de conexões com o robô. Existe para os
+            testes injetarem uma conexão falsa; em produção fica omitida.
+    """
+    resolved = settings if settings is not None else Settings()
     app = FastAPI(
         title="go2-api",
-        version="0.1.0",
+        version=__version__,
         summary="Dona única da conexão WebRTC com o Unitree Go2.",
-        lifespan=lifespan,
+        lifespan=RobotLifespan(resolved, connection_factory),
     )
-
-    @app.exception_handler(RobotUnavailableError)
-    async def _unavailable(_: Request, exc: RobotUnavailableError) -> JSONResponse:
-        return JSONResponse(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"detail": str(exc)},
-        )
-
-    @app.exception_handler(RobotTimeoutError)
-    async def _timeout(_: Request, exc: RobotTimeoutError) -> JSONResponse:
-        return JSONResponse(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            content={"detail": str(exc)},
-        )
-
+    app.state.settings = resolved
+    ErrorHandlers.register(app)
     app.include_router(status_router.router)
     app.include_router(posture.router)
     app.include_router(gesture.router)
+    app.include_router(movement.router)
+    app.include_router(speed.router)
     return app
-
-
-app = create_app()

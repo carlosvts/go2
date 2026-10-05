@@ -8,13 +8,15 @@ API HTTP que mantém e multiplexa a **única conexão WebRTC** com o Unitree Go2
 ```bash
 cp .env.example .env    # preencha GO2_ROBOT_SERIAL_NUMBER ou GO2_ROBOT_IP
 uv sync
-uv run uvicorn app.main:app --reload
+uv run uvicorn app.main:create_app --factory --reload
 ```
 
 - Documentação interativa: `http://127.0.0.1:8000/docs`
-- Testes (não precisam do robô): `uv run pytest`
+- Testes (não precisam do robô): `uv run pytest --cov`
+- Qualidade: `uv run ruff check . && uv run ruff format --check . && uv run mypy`
+- Hooks: `uv run pre-commit install`
 
-Prefira o **serial** ao IP. 
+Prefira o **serial** ao IP.
 
 > [!NOTE]
 > `192.168.123.x` é a rede interna do robô.
@@ -33,17 +35,28 @@ A API sobe sem tentar conectar. O `GET /status` responde `200` com `connected: f
 > [!NOTE]
 > Com `LocalSTA`, a API exige `GO2_ROBOT_IP` ou `GO2_ROBOT_SERIAL_NUMBER` mesmo sem conectar. Por isso o exemplo usa `LocalAP`.
 
+## Arquitetura
+
+| Módulo                            | Responsabilidade                                                                                |
+| --------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `app/main.py`                     | App factory (`create_app`) e lifespan.                                                          |
+| `app/routers/`                    | Wrappers HTTP finos, um por grupo de endpoints.                                                 |
+| `app/requests/`, `app/responses/` | Corpos de entrada/saída; entrada inválida nem chega a existir.                                  |
+| `app/robot/`                      | Tudo que fala com o robô, sem HTTP: `link`, `channel`, `movement`, `state`, fachada `Go2Robot`. |
+| `app/robot/unitree.py`            | Única fronteira com a lib da Unitree.                                                           |
+| `app/error_handlers.py`           | Exceção de domínio → status HTTP, num só lugar.                                                 |
+
 ## Endpoints
 
-| Endpoint | Corpo | O que faz |
-|---|---|---|
-| `GET /status` | — | Conexão, bateria e modo. Sempre `200`; `?raw=true` inclui os payloads crus. |
-| `POST /commands/posture` | `{"cmd": "stand_up"}` | Muda a postura ([lista abaixo](#posturas)). |
-| `POST /commands/gesture` | `{"cmd": "hello"}` | Executa um gesto ([lista abaixo](#gestos)). |
-| `POST /commands/move` | `{"vx", "vy", "vyaw", "duration_s"}` | Move o robô durante `duration_s` e para. |
-| `POST /commands/stop` | — | Interrompe o `move` em andamento e envia `StopMove`: o robô para de andar e fica de pé onde está, sem mudar de postura. Não desliga os motores (para isso, use a postura `damp`). |
-| `PUT /commands/speed` | `{"level": 1}` | Define o nível de velocidade. |
-| `GET /commands/speed` | — | Lê o nível de velocidade. |
+| Endpoint                 | Corpo                                | O que faz                                                                                                                                                                         |
+| ------------------------ | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /status`            | —                                    | Conexão, bateria e modo. Sempre `200`; `?raw=true` inclui os payloads crus.                                                                                                       |
+| `POST /commands/posture` | `{"cmd": "stand_up"}`                | Muda a postura ([lista abaixo](#posturas)).                                                                                                                                       |
+| `POST /commands/gesture` | `{"cmd": "hello"}`                   | Executa um gesto ([lista abaixo](#gestos)).                                                                                                                                       |
+| `POST /commands/move`    | `{"vx", "vy", "vyaw", "duration_s"}` | Move o robô durante `duration_s` e para.                                                                                                                                          |
+| `POST /commands/stop`    | —                                    | Interrompe o `move` em andamento e envia `StopMove`: o robô para de andar e fica de pé onde está, sem mudar de postura. Não desliga os motores (para isso, use a postura `damp`). |
+| `PUT /commands/speed`    | `{"level": 1}`                       | Define o nível de velocidade.                                                                                                                                                     |
+| `GET /commands/speed`    | —                                    | Lê o nível de velocidade.                                                                                                                                                         |
 
 Os comandos respondem `202` quando são enviados, sem esperar o robô terminar. Com o robô desconectado, respondem `503`.
 
@@ -53,30 +66,30 @@ Os comandos respondem `202` quando são enviados, sem esperar o robô terminar. 
 
 Disponíveis em `POST /commands/posture`:
 
-| `cmd` | O que faz |
-|---|---|
-| `stand_up` | Fica de pé. |
-| `stand_down` | Deita. |
-| `sit` | Senta. |
-| `rise_sit` | Levanta depois de sentar. |
-| `balance_stand` | Fica de pé em modo de equilíbrio, pronto para andar. **Necessário antes de `move`**: só `stand_up` não basta ([ficha](docs/essencial/balance-stand-vs-stand-up.md)). |
-| `recovery_stand` | Levanta depois de uma queda. |
-| `damp` | Desliga a força dos motores; o robô cai se estiver de pé. |
+| `cmd`            | O que faz                                                                                                                                                            |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stand_up`       | Fica de pé.                                                                                                                                                          |
+| `stand_down`     | Deita.                                                                                                                                                               |
+| `sit`            | Senta.                                                                                                                                                               |
+| `rise_sit`       | Levanta depois de sentar.                                                                                                                                            |
+| `balance_stand`  | Fica de pé em modo de equilíbrio, pronto para andar. **Necessário antes de `move`**: só `stand_up` não basta ([ficha](docs/essencial/balance-stand-vs-stand-up.md)). |
+| `recovery_stand` | Levanta depois de uma queda.                                                                                                                                         |
+| `damp`           | Desliga a força dos motores; o robô cai se estiver de pé.                                                                                                            |
 
 ### Gestos
 
 Disponíveis em `POST /commands/gesture`. Um movimento em curso é cancelado antes do gesto.
 
-| `cmd` | O que faz |
-|---|---|
-| `hello` | Acena com a pata. |
-| `stretch` | Se espreguiça. |
-| `finger_heart` | Faz um coração com as patas. |
-| `wiggle_hips` | Rebola. |
-| `content` | Demonstra contentamento. |
-| `dance1`, `dance2` | Danças. |
-| `scrape` | Arranha o chão. |
-| `pose` | Faz uma pose. |
+| `cmd`              | O que faz                    |
+| ------------------ | ---------------------------- |
+| `hello`            | Acena com a pata.            |
+| `stretch`          | Se espreguiça.               |
+| `finger_heart`     | Faz um coração com as patas. |
+| `wiggle_hips`      | Rebola.                      |
+| `content`          | Demonstra contentamento.     |
+| `dance1`, `dance2` | Danças.                      |
+| `scrape`           | Arranha o chão.              |
+| `pose`             | Faz uma pose.                |
 
 ### Truques (planejado)
 
@@ -100,16 +113,16 @@ Também **não implementados**. Têm risco real de queda e vão exigir `"confirm
 
 ## Termos
 
-| Termo | Significado |
-|---|---|
-| **API** | *Application Programming Interface*: aqui, este serviço, que recebe pedidos HTTP e fala com o robô. |
-| **HTTP / `GET` / `POST` / `PUT`** | Protocolo de pedido e resposta da web, e os tipos de pedido: ler, disparar, substituir. |
-| **202 / 422 / 503** | Códigos de resposta: aceito (não quer dizer executado), corpo inválido, sem conexão com o robô. |
-| **WebRTC** | Protocolo de comunicação em tempo real: o túnel entre a API e o robô. Só uma conexão por vez. |
-| **LocalSTA / LocalAP** | Robô no Wi-Fi do roteador (IP pode mudar) / robô criando a própria rede (IP fixo `192.168.12.1`). |
-| **IP / serial** | Endereço do robô na rede / número de série dele (`B42D...`), que a lib usa para achá-lo. |
-| **`damp`** | Postura que desliga os motores: o robô cai se estiver de pé. |
-| **MVP** | *Minimum Viable Product*: a primeira versão, só com o essencial. |
-| **NEURON / UFLA** | Grupo de pesquisa do projeto / Universidade Federal de Lavras. |
+| Termo                             | Significado                                                                                         |
+| --------------------------------- | --------------------------------------------------------------------------------------------------- |
+| **API**                           | _Application Programming Interface_: aqui, este serviço, que recebe pedidos HTTP e fala com o robô. |
+| **HTTP / `GET` / `POST` / `PUT`** | Protocolo de pedido e resposta da web, e os tipos de pedido: ler, disparar, substituir.             |
+| **202 / 422 / 503**               | Códigos de resposta: aceito (não quer dizer executado), corpo inválido, sem conexão com o robô.     |
+| **WebRTC**                        | Protocolo de comunicação em tempo real: o túnel entre a API e o robô. Só uma conexão por vez.       |
+| **LocalSTA / LocalAP**            | Robô no Wi-Fi do roteador (IP pode mudar) / robô criando a própria rede (IP fixo `192.168.12.1`).   |
+| **IP / serial**                   | Endereço do robô na rede / número de série dele (`B42D...`), que a lib usa para achá-lo.            |
+| **`damp`**                        | Postura que desliga os motores: o robô cai se estiver de pé.                                        |
+| **MVP**                           | _Minimum Viable Product_: a primeira versão, só com o essencial.                                    |
+| **NEURON / UFLA**                 | Grupo de pesquisa do projeto / Universidade Federal de Lavras.                                      |
 
 Mais termos em [`docs/essencial/glossario.md`](docs/essencial/glossario.md).

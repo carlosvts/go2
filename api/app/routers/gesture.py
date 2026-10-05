@@ -1,15 +1,10 @@
-"""Grupo 4.2 — gestos (`docs/arquitetura_go2_api.md`).
-
-Só os gestos de baixo risco físico; os "tricks" entram depois, em endpoint
-próprio e com confirmação explícita.
-"""
-
-from __future__ import annotations
+"""Grupo 4.2 — gestos (`docs/arquitetura_go2_api.md`)."""
 
 from fastapi import APIRouter, status
 
 from app.dependencies import RobotDep
-from app.models import CommandAccepted, GestureRequest
+from app.requests import GestureRequest
+from app.responses import CommandAccepted
 
 router = APIRouter(prefix="/commands", tags=["commands"])
 
@@ -20,12 +15,12 @@ router = APIRouter(prefix="/commands", tags=["commands"])
     response_model=CommandAccepted,
     summary="Executa um gesto",
 )
-async def gesture(body: GestureRequest, robot: RobotDep) -> CommandAccepted:
-    """Despacha o gesto e responde na hora — a duração de cada um é decidida
-    pelo robô, e a API não acompanha o fim da execução.
+async def perform_gesture(body: GestureRequest, robot: RobotDep) -> CommandAccepted:
+    """Despacha o gesto e responde na hora.
 
-    Como na postura, um movimento em curso é cancelado antes: o robô não anda e
-    gesticula ao mesmo tempo.
+    A duração de cada gesto é decidida pelo robô, e a API não acompanha o fim
+    da execução. Como na postura, um movimento em curso é cancelado antes: o
+    robô não anda e gesticula ao mesmo tempo.
     """
-    await robot.gesture(body.cmd.sport_cmd)
+    await robot.execute(body.cmd)
     return CommandAccepted(cmd=body.cmd.sport_cmd)
