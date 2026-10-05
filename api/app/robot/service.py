@@ -6,6 +6,7 @@ from typing import Any, Self
 from app.config import Settings
 from app.robot.channel import SportChannel
 from app.robot.commands import MoveCommand, SportCommand
+from app.robot.connection import ConnectionListener, ConnectionSnapshot
 from app.robot.link import RobotLink
 from app.robot.movement import MoveController
 from app.robot.ports import ConnectionFactory
@@ -77,14 +78,25 @@ class Go2Robot:
 
     @property
     def is_connected(self) -> bool:
-        """Há conexão viva com o robô."""
+        """Há conexão viva com o robô; decide se os comandos levam `503`."""
         return self._link.is_connected
+
+    @property
+    def connection(self) -> ConnectionSnapshot:
+        """Estado publicado da conexão e o momento da última transição."""
+        return self._link.state.current
+
+    def subscribe_connection(self, listener: ConnectionListener) -> None:
+        """Registra `listener` para receber `{"state", "reason"}` a cada transição."""
+        self._link.state.subscribe(listener)
 
     # ─── Estado ────────────────────────────────────────────────────────────
 
     def status(self) -> RobotStatus:
         """Snapshot do cache de estado; nunca fala com o robô."""
-        return self._state.snapshot(connected=self.is_connected)
+        return self._state.snapshot(
+            connected=self.is_connected, connection=self.connection
+        )
 
     @property
     def raw_state(self) -> dict[str, dict[str, Any] | None]:

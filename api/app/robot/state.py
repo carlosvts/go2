@@ -3,8 +3,10 @@
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, ClassVar
 
+from app.robot.connection import ConnectionSnapshot, ConnectionState
 from app.robot.payload import PayloadReader
 from app.robot.ports import PubSub
 from app.robot.unitree import RTC_TOPIC
@@ -15,6 +17,8 @@ class RobotStatus:
     """Snapshot lido do cache em memória — não gera tráfego novo com o robô."""
 
     connected: bool
+    state: ConnectionState
+    since: datetime
     battery_percent: int | None
     mode: int | None
     sport_state_age_s: float | None
@@ -76,13 +80,22 @@ class StateCache:
         """Guarda o último `rt/lf/lowstate`."""
         self._low.store(message.get("data"), self._clock())
 
-    def snapshot(self, *, connected: bool) -> RobotStatus:
-        """Extrai bateria, modo e idades do cache. Campo ilegível vira `None`."""
+    def snapshot(
+        self, *, connected: bool, connection: ConnectionSnapshot
+    ) -> RobotStatus:
+        """Extrai bateria, modo e idades do cache. Campo ilegível vira `None`.
+
+        Args:
+            connected: Se a conexão aceita comandos (`is_connected`).
+            connection: Estado publicado da conexão e desde quando vale.
+        """
         now = self._clock()
         battery = PayloadReader.first_path(self._low.data, *self._BATTERY_PATHS)
         mode = PayloadReader.first_path(self._sport.data, *self._MODE_PATHS)
         return RobotStatus(
             connected=connected,
+            state=connection.state,
+            since=connection.since,
             battery_percent=battery if isinstance(battery, int) else None,
             mode=mode if isinstance(mode, int) else None,
             sport_state_age_s=self._sport.age(now),
