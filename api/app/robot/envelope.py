@@ -18,7 +18,7 @@ class SportRequestBuilder:
     _MAX_JITTER: ClassVar[int] = 1000
 
     @classmethod
-    def build(cls, api_id: int, parameter: Any = None) -> dict[str, Any]:
+    def build(cls, api_id: int, parameter: object = None) -> dict[str, Any]:
         """Monta o envelope de um comando.
 
         Args:

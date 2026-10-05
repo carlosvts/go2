@@ -5,6 +5,7 @@ Organização (cada módulo tem uma única responsabilidade):
 - `ports`: contratos (`Protocol`) exigidos da conexão WebRTC.
 - `unitree`: única fronteira com a lib `unitree_webrtc_connect`.
 - `link`: ciclo de vida da conexão.
+- `connection`: estado publicado da conexão e suas transições.
 - `envelope` e `channel`: formato e envio dos comandos esportivos.
 - `commands`: vocabulário de comandos e objetos de valor.
 - `movement`: reenvio periódico do comando `Move`.

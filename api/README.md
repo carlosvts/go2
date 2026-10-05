@@ -50,7 +50,7 @@ A API sobe sem tentar conectar. O `GET /status` responde `200` com `connected: f
 
 | Endpoint                 | Corpo                                | O que faz                                                                                                                                                                         |
 | ------------------------ | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /status`            | —                                    | Conexão, bateria e modo. Sempre `200`; `?raw=true` inclui os payloads crus.                                                                                                       |
+| `GET /status`            | —                                    | Conexão (`connected`, `state`, `since`), bateria e modo. Sempre `200`; `?raw=true` inclui os payloads crus.                                                                       |
 | `POST /commands/posture` | `{"cmd": "stand_up"}`                | Muda a postura ([lista abaixo](#posturas)).                                                                                                                                       |
 | `POST /commands/gesture` | `{"cmd": "hello"}`                   | Executa um gesto ([lista abaixo](#gestos)).                                                                                                                                       |
 | `POST /commands/move`    | `{"vx", "vy", "vyaw", "duration_s"}` | Move o robô durante `duration_s` e para.                                                                                                                                          |
@@ -100,6 +100,7 @@ Também **não implementados**. Têm risco real de queda e vão exigir `"confirm
 - **Sem autenticação:** quem alcança a porta controla o robô. Use só na rede do laboratório.
 - **Sem arbitragem entre clientes:** o último `move` enviado substitui o anterior.
 - **Sem reconexão automática (por enquanto):** se a conexão cair, reinicie a API. Decisão de escopo do MVP; a reconexão está prevista para depois.
+- **Queda só visível por polling:** o `GET /status` mostra `state` (`connected`/`disconnected`) e `since`, mas ainda não há WebSocket que avise da queda: o tópico `connection` depende do hub (#9, #12). O `connected` é o que decide os `503` e pode demorar mais que o `state` para refletir uma falha.
 - **Pendente de validação com o robô ligado:** os payloads de `Move`/`SpeedLevel` e a leitura de bateria/modo.
 
 ## Documentação

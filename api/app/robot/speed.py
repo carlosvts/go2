@@ -21,7 +21,7 @@ class SpeedReading:
     )
 
     @classmethod
-    def from_response(cls, response: Any) -> Self:
+    def from_response(cls, response: object) -> Self:
         """Extrai o nível por tentativa; `level` é `None` se nenhum caminho bater.
 
         A resposta vem embrulhada em `data`, igual às mensagens de estado

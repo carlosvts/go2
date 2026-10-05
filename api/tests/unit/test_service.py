@@ -7,6 +7,7 @@ import pytest
 from app.exceptions import RobotTimeoutError, RobotUnavailableError
 from app.requests import GestureRequest, PostureRequest
 from app.robot.commands import MoveCommand, MoveLimits
+from app.robot.connection import ConnectionState
 from app.robot.service import Go2Robot
 from app.robot.unitree import RTC_TOPIC, SPORT_CMD
 from tests.fakes import FakeConnectionFactory, FakePubSub
@@ -45,6 +46,30 @@ async def test_disconnect_encerra_conexao_e_movimento(
 async def test_robo_desligado_nao_esta_conectado(offline_robot: Go2Robot) -> None:
     assert offline_robot.is_connected is False
     assert offline_robot.status().connected is False
+
+
+async def test_conectar_publica_connected(robot: Go2Robot) -> None:
+    assert robot.connection.state is ConnectionState.connected
+    assert robot.status().state is ConnectionState.connected
+
+
+async def test_robo_desligado_fica_disconnected(offline_robot: Go2Robot) -> None:
+    status = offline_robot.status()
+
+    assert status.state is ConnectionState.disconnected
+    assert status.since == offline_robot.connection.since
+
+
+async def test_subscribe_connection_recebe_as_transicoes(
+    robot: Go2Robot, factory: FakeConnectionFactory
+) -> None:
+    recebidas: list[dict[str, str]] = []
+    robot.subscribe_connection(recebidas.append)
+
+    factory.connection.pc.emit_state("failed")
+
+    assert recebidas == [{"state": "disconnected", "reason": "failed"}]
+    assert robot.status().state is ConnectionState.disconnected
 
 
 # ─── Postura e gesto ───────────────────────────────────────────────────────

@@ -94,8 +94,7 @@ class MoveCommand:
             problems.append("duration_s deve ser positivo")
         elif self.duration_s > limits.max_duration_s:
             problems.append(
-                f"duration_s excede GO2_MOVE_MAX_DURATION_S "
-                f"({limits.max_duration_s}s)"
+                f"duration_s excede GO2_MOVE_MAX_DURATION_S ({limits.max_duration_s}s)"
             )
         speeds = {
             "vx": (self.vx, limits.max_vx),

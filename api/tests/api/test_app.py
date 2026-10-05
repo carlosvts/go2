@@ -40,7 +40,7 @@ def test_falha_ao_conectar_nao_impede_a_api_de_subir(
 
 def test_importar_o_modulo_nao_le_configuracao() -> None:
     """Não há `app` global: nada acontece (nem exige `.env`) ao importar."""
-    import app.main as main
+    from app import main  # noqa: PLC0415 - o import é o objeto do teste
 
     assert not hasattr(main, "app")
 
