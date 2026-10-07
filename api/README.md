@@ -35,6 +35,21 @@ A API sobe sem tentar conectar. O `GET /status` responde `200` com `connected: f
 > [!NOTE]
 > Com `LocalSTA`, a API exige `GO2_ROBOT_IP` ou `GO2_ROBOT_SERIAL_NUMBER` mesmo sem conectar. Por isso o exemplo usa `LocalAP`.
 
+### Testando os WebSockets
+
+O `/docs` não exercita WebSocket. Para olhar um stream, use o cliente de linha de comando:
+
+```bash
+uv run python scripts/ws_client.py ws://127.0.0.1:8000/ws/telemetry            # imprime cada mensagem
+uv run python scripts/ws_client.py --summary --every 5 ws://127.0.0.1:8000/ws/telemetry  # só a taxa, a cada 5 s
+```
+
+- A cada `--every` segundos (padrão `1`) mostra `msgs/s` e o total. Ctrl+C encerra com um resumo (total, duração, média) e código `0`.
+- Se o envelope tiver `data.seq`, conta os buracos na sequência (mensagens descartadas).
+- Se o envelope tiver `ts`, mostra a latência média (`time.time() - ts`). Só vale com cliente e servidor na mesma máquina ou com os relógios sincronizados.
+- Quadros binários (vídeo, lidar) aparecem como `<binário N bytes>`; texto que não é JSON sai cru.
+- Se o servidor fechar a conexão, mostra o código e o motivo do close e sai com código `1`. Não reconecta.
+
 ## Arquitetura
 
 | Módulo                            | Responsabilidade                                                                                |
