@@ -55,7 +55,7 @@ exclude_also = ["if TYPE_CHECKING:", "@(abc\\.)?abstractmethod", "\\.\\.\\.$"]
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
-files = ["app", "tests"]
+files = ["app", "scripts", "tests"]
 warn_unreachable = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 
