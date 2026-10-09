@@ -149,7 +149,7 @@ callbacks da lib ──publish──▶ TopicHub ──subscribe──▶ 1 asyn
 - **Apoio ao desenvolvimento:** `FakeHub` (#10) gera dados simulados sem o robô; `scripts/ws_client.py` (#11) imprime mensagens e mede a taxa.
 
 ### Fora do escopo do v1
-Navegação autônoma (`uslam`), UWB/side-follow e modo MCF: payloads ainda não mapeados (dossiê seção 12.2/12.3). Entram como v2+, se fizer sentido investir nisso depois. Reconexão automática ao robô também ficou fora do MVP (README, "Limitações atuais").
+Navegação autônoma (`uslam`), UWB/side-follow e modo MCF: payloads ainda não mapeados (dossiê seção 12.2/12.3). Entram como v2+, se fizer sentido investir nisso depois. Reconexão automática ao robô ficou fora do MVP e entrou depois (`Go2Robot.keep_connected`, em `app/robot/service.py`).
 
 ---
 

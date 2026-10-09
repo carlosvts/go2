@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     connect_on_startup: bool = True
     """Se falso, a API sobe sem tentar conectar (útil para testes sem robô)."""
 
+    reconnect_interval_s: float = Field(default=5.0, gt=0)
+    """Intervalo entre as verificações da conexão. Se ela caiu, cada verificação
+    é também uma tentativa de reconectar. Ver `Go2Robot.keep_connected`."""
+
     # ─── Comportamento de comando ──────────────────────────────────────────
     request_timeout_s: float = Field(default=5.0, gt=0)
     """Teto para comandos que esperam resposta do robô (só `GET /commands/speed`).

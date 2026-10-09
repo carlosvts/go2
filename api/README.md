@@ -18,6 +18,15 @@ uv run uvicorn app.main:create_app --factory --reload
 
 Prefira o **serial** ao IP.
 
+### Com Docker
+
+```bash
+cp .env.example .env
+docker compose --profile api up -d --build
+```
+
+O container usa a rede do próprio PC (só Linux). Detalhes, reconexão e checklist de teste com o robô na [ficha](docs/essencial/rodar-com-docker.md).
+
 > [!NOTE]
 > `192.168.123.x` é a rede interna do robô.
 
@@ -51,6 +60,7 @@ A API sobe sem tentar conectar. O `GET /status` responde `200` com `connected: f
 | Endpoint                 | Corpo                                | O que faz                                                                                                                                                                         |
 | ------------------------ | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /status`            | —                                    | Conexão (`connected`, `state`, `since`), bateria e modo. Sempre `200`; `?raw=true` inclui os payloads crus.                                                                       |
+| `GET /capabilities`      | —                                    | Lista os comandos que a API aceita (nome, método, rota e campos do corpo) e um `version` que muda quando a lista muda. Não depende do robô. |
 | `POST /commands/posture` | `{"cmd": "stand_up"}`                | Muda a postura ([lista abaixo](#posturas)).                                                                                                                                       |
 | `POST /commands/gesture` | `{"cmd": "hello"}`                   | Executa um gesto ([lista abaixo](#gestos)).                                                                                                                                       |
 | `POST /commands/move`    | `{"vx", "vy", "vyaw", "duration_s"}` | Move o robô durante `duration_s` e para.                                                                                                                                          |
@@ -99,7 +109,7 @@ Também **não implementados**. Têm risco real de queda e vão exigir `"confirm
 
 - **Sem autenticação:** quem alcança a porta controla o robô. Use só na rede do laboratório.
 - **Sem arbitragem entre clientes:** o último `move` enviado substitui o anterior.
-- **Sem reconexão automática (por enquanto):** se a conexão cair, reinicie a API. Decisão de escopo do MVP; a reconexão está prevista para depois.
+- **Reconexão sem reenvio:** se a conexão cair, a API tenta de novo sozinha a cada `GO2_RECONNECT_INTERVAL_S` (`state: reconnecting` no `GET /status`). Enquanto isso os comandos respondem `503` e não são guardados para depois.
 - **Queda só visível por polling:** o `GET /status` mostra `state` (`connected`/`disconnected`) e `since`, mas ainda não há WebSocket que avise da queda: o tópico `connection` depende do hub (#9, #12). O `connected` é o que decide os `503` e pode demorar mais que o `state` para refletir uma falha.
 - **Pendente de validação com o robô ligado:** os payloads de `Move`/`SpeedLevel` e a leitura de bateria/modo.
 
@@ -123,7 +133,6 @@ Também **não implementados**. Têm risco real de queda e vão exigir `"confirm
 | **LocalSTA / LocalAP**            | Robô no Wi-Fi do roteador (IP pode mudar) / robô criando a própria rede (IP fixo `192.168.12.1`).   |
 | **IP / serial**                   | Endereço do robô na rede / número de série dele (`B42D...`), que a lib usa para achá-lo.            |
 | **`damp`**                        | Postura que desliga os motores: o robô cai se estiver de pé.                                        |
-| **MVP**                           | _Minimum Viable Product_: a primeira versão, só com o essencial.                                    |
 | **NEURON / UFLA**                 | Grupo de pesquisa do projeto / Universidade Federal de Lavras.                                      |
 
 Mais termos em [`docs/essencial/glossario.md`](docs/essencial/glossario.md).

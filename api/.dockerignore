@@ -1,0 +1,7 @@
+# Tudo fora, menos o que a imagem realmente usa. O `.env` nunca entra na
+# imagem: a configuração chega por variáveis de ambiente no `docker run`.
+*
+!app
+!pyproject.toml
+!uv.lock
+**/__pycache__

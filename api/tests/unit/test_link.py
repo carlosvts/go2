@@ -36,6 +36,17 @@ async def test_falha_ao_conectar_nao_guarda_a_conexao() -> None:
         _ = link.pub_sub
 
 
+async def test_falha_ao_conectar_fecha_a_conexao_pela_metade() -> None:
+    """Sem isso cada tentativa de reconexão deixaria um peer aberto."""
+    factory = FakeConnectionFactory(FakeConnection(connect_error=OSError("sem rede")))
+    link = RobotLink(factory)
+
+    with pytest.raises(OSError, match="sem rede"):
+        await link.connect()
+
+    assert factory.connection.disconnected is True
+
+
 async def test_datachannel_fechado_conta_como_desconectado(
     factory: FakeConnectionFactory,
 ) -> None:

@@ -13,8 +13,9 @@ class RobotLink:
     """Dona da conexão: abre, fecha e informa se ela está viva.
 
     O WebRTC é ponto-a-ponto — só existe uma conexão por vez com o robô —, então
-    esta classe é instanciada uma única vez por processo. Não há reconexão
-    automática: uma queda só se resolve reiniciando a API (decisão do MVP).
+    esta classe é instanciada uma única vez por processo. Ela não reconecta
+    sozinha: quem decide tentar de novo é
+    :meth:`~app.robot.service.Go2Robot.keep_connected`.
     """
 
     def __init__(
@@ -30,10 +31,18 @@ class RobotLink:
     async def connect(self) -> None:
         """Cria e abre a conexão; só a guarda se a abertura der certo.
 
-        Se a abertura falha, o estado publicado continua `disconnected`.
+        Se a abertura falha, o estado publicado não muda e a conexão que
+        ficou pela metade é fechada — sem isso cada tentativa de reconexão
+        deixaria um peer aberto para trás.
         """
         connection = self._factory()
-        await connection.connect()
+        try:
+            await connection.connect()
+        except BaseException:
+            # BaseException: inclui o cancelamento da tarefa no meio da abertura.
+            with contextlib.suppress(Exception):
+                await connection.disconnect()
+            raise
         self._connection = connection
         peer = connection.pc
         # O pyee aceita vários ouvintes por evento: o da lib, que atualiza
