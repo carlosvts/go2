@@ -59,8 +59,9 @@ USER go2
 
 # "healthy" = a API responde. NÃO quer dizer que o robô está conectado: isso é
 # o campo `connected` de `GET /status`. O timeout é folgado porque cada
-# tentativa de reconexão trava a API por alguns segundos.
-HEALTHCHECK --interval=15s --timeout=10s --start-period=20s --retries=3 \
+# tentativa de reconexão trava a API por alguns segundos, e o start-period
+# cobre a primeira tentativa de conexão, feita antes de a API começar a responder.
+HEALTHCHECK --interval=15s --timeout=10s --start-period=30s --retries=3 \
     CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ['UVICORN_PORT'] + '/status', timeout=8)"]
 
 # Forma exec (lista): o uvicorn vira o processo principal e recebe o SIGTERM do
