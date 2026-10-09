@@ -84,6 +84,7 @@ def test_documenta_os_endpoints_no_openapi(settings: Settings) -> None:
 
     assert set(schema["paths"]) == {
         "/status",
+        "/capabilities",
         "/commands/posture",
         "/commands/gesture",
         "/commands/move",
