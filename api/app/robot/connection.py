@@ -19,8 +19,7 @@ class ConnectionState(StrEnum):
 
     connected = "connected"
     disconnected = "disconnected"
-    # Reservado para a reconexão automática: já faz parte do contrato com os
-    # clientes, mas nunca é publicado enquanto a reconexão não existir.
+    # A conexão caiu (ou ainda não abriu) e a API está tentando de novo.
     reconnecting = "reconnecting"
 
 

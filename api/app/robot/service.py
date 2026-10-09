@@ -1,12 +1,17 @@
 """Fachada da camada do robô, usada pela API."""
 
+import asyncio
 import logging
 from typing import Any, Self
 
 from app.config import Settings
 from app.robot.channel import SportChannel
 from app.robot.commands import MoveCommand, SportCommand
-from app.robot.connection import ConnectionListener, ConnectionSnapshot
+from app.robot.connection import (
+    ConnectionListener,
+    ConnectionSnapshot,
+    ConnectionState,
+)
 from app.robot.link import RobotLink
 from app.robot.movement import MoveController
 from app.robot.ports import ConnectionFactory
@@ -75,6 +80,47 @@ class Go2Robot:
         """Cancela o movimento em curso e encerra a conexão."""
         await self._movement.cancel()
         await self._link.disconnect()
+
+    async def keep_connected(self, interval_s: float) -> None:
+        """Mantém a conexão viva: roda para sempre, em segundo plano.
+
+        A cada `interval_s` confere a conexão e, se ela caiu, tenta abrir uma
+        nova. Nenhum comando é guardado nem reenviado: até a conexão voltar
+        eles levam `503`, e o robô volta parado.
+
+        Limitação: a descoberta e a sinalização da lib são síncronas, então
+        cada tentativa trava o event loop por alguns segundos com o robô fora
+        do ar.
+
+        Args:
+            interval_s: Segundos entre as verificações.
+        """
+        while True:
+            await asyncio.sleep(interval_s)
+            if not self._is_healthy:
+                await self._reconnect()
+
+    @property
+    def _is_healthy(self) -> bool:
+        """A conexão aceita comandos e o peer não avisou que caiu.
+
+        O estado publicado entra na conta porque a lib mantém `isConnected`
+        em `True` quando o peer vai para `failed`.
+        """
+        return self.is_connected and self.connection.state is ConnectionState.connected
+
+    async def _reconnect(self) -> None:
+        """Descarta a conexão antiga e tenta abrir uma nova.
+
+        A fábrica cria uma conexão do zero a cada tentativa: com serial
+        configurado, isso refaz a descoberta e acompanha uma troca de IP.
+        """
+        await self.disconnect()
+        self._link.state.update(ConnectionState.reconnecting, reason="retry")
+        try:
+            await self.connect()
+        except Exception as exc:
+            log.warning("❌ Sem conexão com o robô (%s). Tentando de novo.", exc)
 
     @property
     def is_connected(self) -> bool:

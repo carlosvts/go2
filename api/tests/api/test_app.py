@@ -1,5 +1,6 @@
 """Testes da app factory, do lifespan e da injeção de dependências."""
 
+import time
 from collections.abc import Iterator
 
 import pytest
@@ -11,7 +12,7 @@ from app.dependencies import get_robot
 from app.main import create_app
 from app.robot.commands import SportCommand
 from app.robot.service import Go2Robot
-from tests.fakes import FakeConnectionFactory
+from tests.fakes import FakeConnection, FakeConnectionFactory
 
 
 def test_lifespan_conecta_na_subida_e_desconecta_na_descida(
@@ -36,6 +37,23 @@ def test_falha_ao_conectar_nao_impede_a_api_de_subir(
     offline_client: TestClient, caplog: pytest.LogCaptureFixture
 ) -> None:
     assert offline_client.get("/status").status_code == 200
+
+
+def test_reconecta_sozinho_quando_o_robo_aparece(settings: Settings) -> None:
+    connection = FakeConnection(connect_error=OSError("sem robô"))
+    app = create_app(
+        settings.model_copy(update={"reconnect_interval_s": 0.01}),
+        connection_factory=FakeConnectionFactory(connection),
+    )
+
+    with TestClient(app) as client:
+        time.sleep(0.1)
+        assert client.get("/status").json()["state"] == "reconnecting"
+        assert client.post("/commands/stop").status_code == 503
+
+        connection.connect_error = None  # o robô ligou
+        time.sleep(0.1)
+        assert client.get("/status").json()["connected"] is True
 
 
 def test_importar_o_modulo_nao_le_configuracao() -> None:

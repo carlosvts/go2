@@ -4,6 +4,8 @@ Suba com `uvicorn app.main:create_app --factory`. Não há instância global de
 `app`: importar este módulo não lê configuração nem cria conexões.
 """
 
+import asyncio
+import contextlib
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -39,17 +41,31 @@ class RobotLifespan:
         robot = Go2Robot.from_settings(self._settings, self._connection_factory)
         app.state.robot = robot
         await self._connect(robot)
+        keeper = self._start_keeper(robot)
         try:
             yield
         finally:
+            if keeper is not None:
+                keeper.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await keeper
             await robot.disconnect()
+
+    def _start_keeper(self, robot: Go2Robot) -> asyncio.Task[None] | None:
+        """Liga a reconexão automática, a menos que a API suba sem conectar."""
+        if not self._settings.connect_on_startup:
+            return None
+        return asyncio.create_task(
+            robot.keep_connected(self._settings.reconnect_interval_s)
+        )
 
     async def _connect(self, robot: Go2Robot) -> None:
         """Conecta na subida, sem impedir a API de subir se falhar.
 
         Subir mesmo assim é proposital: com o robô desligado a API ainda
-        precisa responder `GET /status` com `connected: false`. Não há
-        reconexão automática — ver :class:`~app.robot.link.RobotLink`.
+        precisa responder `GET /status` com `connected: false`. As tentativas
+        seguintes ficam por conta de
+        :meth:`~app.robot.service.Go2Robot.keep_connected`.
         """
         if not self._settings.connect_on_startup:
             log.warning("GO2_CONNECT_ON_STARTUP=false — subindo sem conectar.")
