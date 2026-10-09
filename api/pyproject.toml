@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.141.1",
     "pydantic-settings>=2.15.0",
-    "unitree-webrtc-connect>=2.2.0",
+    "unitree-webrtc-connect==2.2.0",
     "uvicorn[standard]>=0.53.0",
 ]
 
