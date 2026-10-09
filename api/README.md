@@ -111,6 +111,21 @@ Disponíveis em `POST /commands/gesture`. Um movimento em curso é cancelado ant
 
 Também **não implementados**. Têm risco real de queda e vão exigir `"confirm": true` em `POST /commands/trick`: `front_flip`, `back_flip`, `handstand`, `moon_walk`, `bound`.
 
+### Comandos da lib ainda não expostos
+
+A lib (`SPORT_CMD`, versão 2.2.0) tem 49 comandos e a API expõe 21. Os demais **não foram implementados ainda pelo risco de dano físico** ao robô (queda, impacto na carcaça e nos sensores) e só entram depois de testados um a um com o robô. Alguns também dependem de parâmetros que a lib não documenta.
+
+| Grupo                        | Comandos na lib                                                                                                   | Situação                                                                                               |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Rolar no chão                | `Wallow`                                                                                                          | Sem parâmetro, mas o robô rola de costas: risco para a carcaça e os sensores do topo. Tratar como truque. |
+| Saltos e investidas          | `FrontJump`, `FrontPounce`                                                                                        | Sem parâmetro, mas o robô salta para a frente. Mesmo cuidado dos truques.                              |
+| Truques                      | `FrontFlip`, `BackFlip`, `LeftFlip`, `RightFlip`, `Handstand`, `MoonWalk`, `Bound`, `CrossStep`, `OnesidedStep`   | Risco real de queda. Planejados para `POST /commands/trick` com `"confirm": true`.                     |
+| Modos de andar               | `SwitchGait`, `ContinuousGait`, `EconomicGait`, `FreeWalk`, `LeadFollow`, `CrossWalk`, `StandOut`, `Standup`      | Não são gestos: mudam como o robô anda ou ligam um modo. Vários pedem parâmetro. `StandOut` e `Standup` não têm descrição na lib: efeito a confirmar. |
+| Ajustes do corpo             | `Euler`, `BodyHeight`, `FootRaiseHeight`, `SwitchJoystick`, `Trigger`, `TrajectoryFollow`                         | Pedem parâmetro, e o formato não está documentado.                                                     |
+| Consultas                    | `GetState`, `GetBodyHeight`, `GetFootRaiseHeight`                                                                 | Leituras, sem risco físico; ainda não expostas.                                                        |
+
+Estar na lib não garante que o robô aceite o comando: a lista é a mesma para vários firmwares. Na lib, `FreeWalk` e `LeadFollow` têm o mesmo número (1045), então um dos dois está errado.
+
 ## Limitações atuais
 
 - **Sem autenticação:** quem alcança a porta controla o robô. Use só na rede do laboratório.
@@ -142,6 +157,8 @@ Também **não implementados**. Têm risco real de queda e vão exigir `"confirm
 | **LocalSTA / LocalAP**            | Robô no Wi-Fi do roteador (IP pode mudar) / robô criando a própria rede (IP fixo `192.168.12.1`).   |
 | **IP / serial**                   | Endereço do robô na rede / número de série dele (`B42D...`), que a lib usa para achá-lo.            |
 | **`damp`**                        | Postura que desliga os motores: o robô cai se estiver de pé.                                        |
+| **Lib / `SPORT_CMD`**             | A biblioteca `unitree_webrtc_connect` / a tabela dela com o nome e o número de cada comando.        |
+| **Firmware**                      | O software de fábrica que roda dentro do robô. A versão dele muda o que o robô aceita.              |
 | **NEURON / UFLA**                 | Grupo de pesquisa do projeto / Universidade Federal de Lavras.                                      |
 
 Mais termos em [`docs/essencial/glossario.md`](docs/essencial/glossario.md).
