@@ -106,7 +106,7 @@ Convenções que valem para todo o REST (`README.md`): comandos respondem `202` 
 | `SPORT_CMD["StandUp"/"StandDown"/"Sit"/"RiseSit"/"BalanceStand"/"RecoveryStand"/"Damp"]` | `POST /commands/posture` `{"cmd": "stand_up"}` | ✅ | `cmd` como enum. Cancela um `move` em curso. |
 | `SPORT_CMD["Move"]` | `POST /commands/move` `{"vx","vy","vyaw","duration_s"}` | ✅ | A API reenvia a `GO2_MOVE_RATE_HZ` (20–50 Hz) e manda `StopMove` no fim. Limites configuráveis → `422`. **Sem lease:** um `move` novo substitui o anterior (lease em #7). |
 | `SPORT_CMD["StopMove"]` | `POST /commands/stop` | ✅ | Sempre executa, de qualquer cliente. |
-| `SpeedLevel`/`GetSpeedLevel` | `PUT/GET /commands/speed` | ✅ | Único endpoint que espera resposta do robô (`504` em timeout). Payload pendente de validação física. |
+| `SpeedLevel`/`GetSpeedLevel` | `PUT/GET /commands/speed` | ✅ | O `GET` espera resposta do robô (`504` em timeout). Payload pendente de validação física. |
 
 ### 4.2 Gestos e "truques"
 | Na lib | Endpoint | Status | Nota |
@@ -125,7 +125,7 @@ Convenções que valem para todo o REST (`README.md`): comandos respondem `202` 
 | Na lib | Endpoint | Status | Nota |
 |---|---|---|---|
 | `SPORT_MOD_STATE`/`LOW_STATE` | `GET /status` | ✅ | Snapshot do cache em memória; sempre `200`, com `connected: false` se o robô estiver fora. `?raw=true` devolve os payloads crus. |
-| `OBSTACLES_AVOID_API` (`SWITCH_SET`/`SWITCH_GET`) | `PUT/GET /safety/obstacle-avoidance` `{"enabled"}` | ⏸ #8 | Não está confirmado que o desvio filtra o `SPORT_CMD["Move"]` usado pela API (dossiê 12.1). |
+| `OBSTACLES_AVOID_API` (`SWITCH_SET`/`SWITCH_GET`) | `PUT/GET /safety/obstacle-avoidance` `{"enabled"}` | ✅ #8 | Implementado; formato da resposta do `GET` pendente de validação física. Não está confirmado que o desvio filtra o `SPORT_CMD["Move"]` usado pela API (dossiê 12.1). |
 | — (design próprio) | `POST /control/acquire`, `POST /control/release` | ⏸ #7 | Lease com token e expiração (dossiê seção 13). |
 
 ### 4.5 Streams (WebSocket)
@@ -161,7 +161,7 @@ Navegação autônoma (`uslam`), UWB/side-follow e modo MCF: payloads ainda não
 4. 🔜 **`/ws/lidar` e `/ws/video`** (#6, #4).
 5. 🔜 **Dispositivo** (#2, #3), depois de confirmar os payloads do VUI.
 6. 🔜 **Truques** (#1), só depois de testar cada comando fisicamente.
-7. ⏸ **Lease e desvio de obstáculo** (#7, #8), junto com a decisão sobre controle de acesso.
+7. ⏸ **Lease** (#7), junto com a decisão sobre controle de acesso. O **desvio de obstáculo** (#8) já tem o liga/desliga; falta validar no robô se ele filtra o `move`.
 8. Fora do v1: MCF, navegação, UWB.
 
 ---

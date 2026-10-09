@@ -67,7 +67,8 @@ class Settings(BaseSettings):
 
     # ─── Comportamento de comando ──────────────────────────────────────────
     request_timeout_s: float = Field(default=5.0, gt=0)
-    """Teto para comandos que esperam resposta do robô (só `GET /commands/speed`).
+    """Teto para comandos que esperam resposta do robô (os `GET` de velocidade e
+    de desvio de obstáculo).
     A lib não impõe timeout nenhum por conta própria."""
 
     move_rate_hz: float = Field(default=30.0, ge=20.0, le=50.0)

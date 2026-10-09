@@ -8,6 +8,7 @@ from typing import Any, ClassVar
 
 from unitree_webrtc_connect import (
     DATA_CHANNEL_TYPE,
+    OBSTACLES_AVOID_API,
     RTC_TOPIC,
     SPORT_CMD,
     UnitreeWebRTCConnection,
@@ -19,6 +20,7 @@ from app.robot.ports import WebRTCConnection
 
 __all__ = [
     "DATA_CHANNEL_TYPE",
+    "OBSTACLES_AVOID_API",
     "RTC_TOPIC",
     "SPORT_CMD",
     "UnitreeConnectionFactory",

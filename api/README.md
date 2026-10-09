@@ -70,7 +70,9 @@ A API sobe sem tentar conectar. O `GET /status` responde `200` com `connected: f
 | `POST /commands/move`    | `{"vx", "vy", "vyaw", "duration_s"}` | Move o robô durante `duration_s` e para. Acima dos limites configurados (`GO2_MAX_*`, `GO2_MOVE_MAX_DURATION_S`) responde `422`. Um `move` novo substitui o anterior.             |
 | `POST /commands/stop`    | —                                    | Interrompe o `move` em andamento e envia `StopMove`: o robô para de andar e fica de pé onde está, sem mudar de postura. Não desliga os motores (para isso, use a postura `damp`). |
 | `PUT /commands/speed`    | `{"level": 1}`                       | Define o nível de velocidade.                                                                                                                                                     |
-| `GET /commands/speed`    | —                                    | Lê o nível de velocidade. Único que espera resposta do robô: `504` se ele não responder em `GO2_REQUEST_TIMEOUT_S`.                                                               |
+| `GET /commands/speed`    | —                                    | Lê o nível de velocidade. Espera resposta do robô: `504` se ele não responder em `GO2_REQUEST_TIMEOUT_S`.                                                               |
+| `PUT /safety/obstacle-avoidance` | `{"enabled": true}`                  | Liga ou desliga o desvio de obstáculo nativo do robô. Não espera confirmação: confira com o `GET`.                                                                                |
+| `GET /safety/obstacle-avoidance` | —                                    | Lê se o desvio está ligado: `{"enabled", "raw"}`. Espera resposta do robô (`504` em timeout); `enabled` vem `null` se a resposta não for reconhecida.                             |
 
 Os comandos respondem `202` quando são enviados, sem esperar o robô terminar. Com o robô desconectado, respondem `503`. Comando desconhecido ou corpo inválido responde `422` e nada é enviado ao robô.
 
@@ -126,13 +128,34 @@ A lib (`SPORT_CMD`, versão 2.2.0) tem 49 comandos e a API expõe 21. Os demais 
 
 Estar na lib não garante que o robô aceite o comando: a lista é a mesma para vários firmwares. Na lib, `FreeWalk` e `LeadFollow` têm o mesmo número (1045), então um dos dois está errado.
 
+## Testar o desvio de obstáculo
+
+Com o robô de pé, em área livre, e alguém pronto para o `POST /commands/stop`:
+
+```bash
+API=http://localhost:8000
+curl -X PUT $API/safety/obstacle-avoidance -H 'Content-Type: application/json' -d '{"enabled": true}'
+curl $API/safety/obstacle-avoidance      # esperado: {"enabled": true, "raw": ...}
+```
+
+1. Se o `GET` devolver `enabled: null`, anote o `raw`: é o formato real da resposta, e o caminho de extração em `app/robot/safety.py` precisa ser ajustado a ele.
+2. Com `enabled: true`, ponha um obstáculo (uma caixa) a cerca de 1 m na frente do robô e mande-o andar devagar na direção dela:
+
+   ```bash
+   curl -X POST $API/commands/move -H 'Content-Type: application/json' \
+     -d '{"vx": 0.3, "vy": 0, "vyaw": 0, "duration_s": 3}'
+   ```
+
+3. Repita com `{"enabled": false}`. Se o robô para ou desvia só com o desvio ligado, o `Move` é filtrado. Se ele encosta na caixa nos dois casos, o desvio não vale para o `Move` da API, e o movimento terá de ir por outro canal (o `MOVE` da própria API de desvio ou o controle simulado).
+
 ## Limitações atuais
 
 - **Sem autenticação:** quem alcança a porta controla o robô. Use só na rede do laboratório.
 - **Sem arbitragem entre clientes:** o último `move` enviado substitui o anterior.
 - **Reconexão sem reenvio:** se a conexão cair, a API tenta de novo sozinha a cada `GO2_RECONNECT_INTERVAL_S` (`state: reconnecting` no `GET /status`). Enquanto isso os comandos respondem `503` e não são guardados para depois.
 - **Queda só visível por polling:** o `GET /status` mostra `state` (`connected`/`disconnected`/`reconnecting`) e `since`, mas ainda não há WebSocket que avise da queda: o tópico `connection` depende do hub (#9, #12). O `connected` é o que decide os `503` e pode demorar mais que o `state` para refletir uma falha.
-- **Pendente de validação com o robô ligado:** os payloads de `Move`/`SpeedLevel` e a leitura de bateria/modo.
+- **Desvio de obstáculo não comprovado para o `move`:** ligar o desvio com `PUT /safety/obstacle-avoidance` **não garante** que `POST /commands/move` desvie ou pare. A API anda pelo `SPORT_CMD["Move"]`, e o que o serviço de desvio comprovadamente filtra é o canal do controle. Teste com o robô antes de confiar ([como testar](#testar-o-desvio-de-obstáculo)).
+- **Pendente de validação com o robô ligado:** os payloads de `Move`/`SpeedLevel`, a leitura de bateria/modo e o formato da resposta do desvio de obstáculo.
 
 ## Documentação
 

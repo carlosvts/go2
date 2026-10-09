@@ -17,7 +17,7 @@ from app.config import Settings
 from app.error_handlers import ErrorHandlers
 from app.robot.ports import ConnectionFactory
 from app.robot.service import Go2Robot
-from app.routers import capabilities, gesture, movement, posture, speed
+from app.routers import capabilities, gesture, movement, posture, safety, speed
 from app.routers import status as status_router
 
 log = logging.getLogger(__name__)
@@ -103,4 +103,5 @@ def create_app(
     app.include_router(gesture.router)
     app.include_router(movement.router)
     app.include_router(speed.router)
+    app.include_router(safety.router)
     return app

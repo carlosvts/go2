@@ -90,6 +90,7 @@ def test_documenta_os_endpoints_no_openapi(settings: Settings) -> None:
         "/commands/move",
         "/commands/stop",
         "/commands/speed",
+        "/safety/obstacle-avoidance",
     }
 
 
