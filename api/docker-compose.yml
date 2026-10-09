@@ -1,0 +1,23 @@
+services:
+  go2-api:
+    build: .
+    image: go2-api:local
+    container_name: go2-api
+
+    # Só sobe quando pedido: `docker compose --profile api up -d`.
+    profiles: ["api"]
+
+    # Toda a configuração vem do `.env` (modelo em `.env.example`).
+    env_file: .env
+
+    # Rede do host, sem isolamento: o container enxerga a LAN como o PC enxerga.
+    # Necessário porque (1) a descoberta do robô por serial usa multicast, que
+    # não atravessa a rede bridge do Docker, e (2) em bridge o WebRTC anunciaria
+    # ao robô o IP interno do container (172.x), que ele não alcança.
+    # Só funciona assim em Linux. Com host, `ports:` não se aplica: a porta é a
+    # de UVICORN_PORT, direto no PC.
+    network_mode: host
+
+    # Volta sozinho após queda do processo ou reboot do PC, a menos que alguém
+    # tenha dado `docker compose stop`.
+    restart: unless-stopped
