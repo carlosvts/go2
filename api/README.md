@@ -18,6 +18,9 @@ uv run uvicorn app.main:create_app --factory --reload
 
 Prefira o **serial** ao IP.
 
+> [!NOTE]
+> `192.168.123.x` é a rede interna do robô.
+
 ### Com Docker
 
 ```bash
@@ -25,10 +28,11 @@ cp .env.example .env
 docker compose --profile api up -d --build
 ```
 
-O container usa a rede do próprio PC (só Linux). Detalhes, reconexão e checklist de teste com o robô na [ficha](docs/essencial/rodar-com-docker.md).
+O container usa a rede do próprio PC (só Linux) e tem um healthcheck que indica se a API está no ar (não se o robô está conectado: isso é o `connected` do `GET /status`). Detalhes, reconexão e checklist de teste com o robô na [ficha](docs/essencial/rodar-com-docker.md).
 
-> [!NOTE]
-> `192.168.123.x` é a rede interna do robô.
+### Configuração
+
+Tudo por variáveis de ambiente (ou `.env`), comentadas em [`.env.example`](.env.example): modo de conexão e IP/serial do robô (`GO2_CONNECTION_METHOD`, `GO2_ROBOT_IP`, `GO2_ROBOT_SERIAL_NUMBER`), conexão na subida e intervalo de reconexão (`GO2_CONNECT_ON_STARTUP`, `GO2_RECONNECT_INTERVAL_S`), limites do `move` (`GO2_MAX_VX`, `GO2_MAX_VY`, `GO2_MAX_VYAW`, `GO2_MOVE_MAX_DURATION_S`, `GO2_MOVE_RATE_HZ`), espera por resposta do robô (`GO2_REQUEST_TIMEOUT_S`) e endereço/porta do servidor (`UVICORN_HOST`, `UVICORN_PORT`).
 
 ### Sem o robô
 
@@ -59,16 +63,18 @@ A API sobe sem tentar conectar. O `GET /status` responde `200` com `connected: f
 
 | Endpoint                 | Corpo                                | O que faz                                                                                                                                                                         |
 | ------------------------ | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /status`            | —                                    | Conexão (`connected`, `state`, `since`), bateria e modo. Sempre `200`; `?raw=true` inclui os payloads crus.                                                                       |
-| `GET /capabilities`      | —                                    | Lista os comandos que a API aceita (nome, método, rota e campos do corpo) e um `version` que muda quando a lista muda. Não depende do robô. |
-| `POST /commands/posture` | `{"cmd": "stand_up"}`                | Muda a postura ([lista abaixo](#posturas)).                                                                                                                                       |
-| `POST /commands/gesture` | `{"cmd": "hello"}`                   | Executa um gesto ([lista abaixo](#gestos)).                                                                                                                                       |
-| `POST /commands/move`    | `{"vx", "vy", "vyaw", "duration_s"}` | Move o robô durante `duration_s` e para.                                                                                                                                          |
+| `GET /status`            | —                                    | Conexão (`connected`, `state`, `since`), bateria e modo. `state` é `connected`, `disconnected` ou `reconnecting`. Sempre `200`; `?raw=true` inclui os payloads crus.             |
+| `GET /capabilities`      | —                                    | Lista os comandos que a API aceita (nome, método, rota e campos do corpo) e um `version` que muda quando a lista muda. Não depende do robô.                                       |
+| `POST /commands/posture` | `{"cmd": "stand_up"}`                | Muda a postura ([lista abaixo](#posturas)). Cancela o `move` em andamento.                                                                                                        |
+| `POST /commands/gesture` | `{"cmd": "hello"}`                   | Executa um gesto ([lista abaixo](#gestos)). Cancela o `move` em andamento.                                                                                                        |
+| `POST /commands/move`    | `{"vx", "vy", "vyaw", "duration_s"}` | Move o robô durante `duration_s` e para. Acima dos limites configurados (`GO2_MAX_*`, `GO2_MOVE_MAX_DURATION_S`) responde `422`. Um `move` novo substitui o anterior.             |
 | `POST /commands/stop`    | —                                    | Interrompe o `move` em andamento e envia `StopMove`: o robô para de andar e fica de pé onde está, sem mudar de postura. Não desliga os motores (para isso, use a postura `damp`). |
 | `PUT /commands/speed`    | `{"level": 1}`                       | Define o nível de velocidade.                                                                                                                                                     |
-| `GET /commands/speed`    | —                                    | Lê o nível de velocidade.                                                                                                                                                         |
+| `GET /commands/speed`    | —                                    | Lê o nível de velocidade. Único que espera resposta do robô: `504` se ele não responder em `GO2_REQUEST_TIMEOUT_S`.                                                               |
 
-Os comandos respondem `202` quando são enviados, sem esperar o robô terminar. Com o robô desconectado, respondem `503`.
+Os comandos respondem `202` quando são enviados, sem esperar o robô terminar. Com o robô desconectado, respondem `503`. Comando desconhecido ou corpo inválido responde `422` e nada é enviado ao robô.
+
+Se a conexão com o robô cair, a API reconecta sozinha em segundo plano ([ficha](docs/essencial/rodar-com-docker.md)).
 
 ## Comandos
 
@@ -110,7 +116,7 @@ Também **não implementados**. Têm risco real de queda e vão exigir `"confirm
 - **Sem autenticação:** quem alcança a porta controla o robô. Use só na rede do laboratório.
 - **Sem arbitragem entre clientes:** o último `move` enviado substitui o anterior.
 - **Reconexão sem reenvio:** se a conexão cair, a API tenta de novo sozinha a cada `GO2_RECONNECT_INTERVAL_S` (`state: reconnecting` no `GET /status`). Enquanto isso os comandos respondem `503` e não são guardados para depois.
-- **Queda só visível por polling:** o `GET /status` mostra `state` (`connected`/`disconnected`) e `since`, mas ainda não há WebSocket que avise da queda: o tópico `connection` depende do hub (#9, #12). O `connected` é o que decide os `503` e pode demorar mais que o `state` para refletir uma falha.
+- **Queda só visível por polling:** o `GET /status` mostra `state` (`connected`/`disconnected`/`reconnecting`) e `since`, mas ainda não há WebSocket que avise da queda: o tópico `connection` depende do hub (#9, #12). O `connected` é o que decide os `503` e pode demorar mais que o `state` para refletir uma falha.
 - **Pendente de validação com o robô ligado:** os payloads de `Move`/`SpeedLevel` e a leitura de bateria/modo.
 
 ## Documentação
@@ -128,7 +134,10 @@ Também **não implementados**. Têm risco real de queda e vão exigir `"confirm
 | --------------------------------- | --------------------------------------------------------------------------------------------------- |
 | **API**                           | _Application Programming Interface_: aqui, este serviço, que recebe pedidos HTTP e fala com o robô. |
 | **HTTP / `GET` / `POST` / `PUT`** | Protocolo de pedido e resposta da web, e os tipos de pedido: ler, disparar, substituir.             |
-| **202 / 422 / 503**               | Códigos de resposta: aceito (não quer dizer executado), corpo inválido, sem conexão com o robô.     |
+| **202 / 422 / 503 / 504**         | Códigos de resposta: aceito (não quer dizer executado), corpo inválido, sem conexão com o robô, robô não respondeu a tempo. |
+| **Docker / container**            | Programa que roda a API num processo isolado (container), já com tudo de que ela precisa.           |
+| **Healthcheck**                   | Teste que o Docker repete para saber se o container está respondendo.                               |
+| **Polling**                       | Perguntar de tempos em tempos (aqui, chamar `GET /status` repetidamente) em vez de ser avisado.     |
 | **WebRTC**                        | Protocolo de comunicação em tempo real: o túnel entre a API e o robô. Só uma conexão por vez.       |
 | **LocalSTA / LocalAP**            | Robô no Wi-Fi do roteador (IP pode mudar) / robô criando a própria rede (IP fixo `192.168.12.1`).   |
 | **IP / serial**                   | Endereço do robô na rede / número de série dele (`B42D...`), que a lib usa para achá-lo.            |
