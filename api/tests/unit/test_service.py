@@ -72,6 +72,79 @@ async def test_subscribe_connection_recebe_as_transicoes(
     assert robot.status().state is ConnectionState.disconnected
 
 
+# ─── Reconexão em segundo plano ────────────────────────────────────────────
+
+
+async def _run_keeper(robot: Go2Robot, seconds: float = 0.05) -> None:
+    """Deixa `keep_connected` rodar por um instante e o encerra."""
+    keeper = asyncio.create_task(robot.keep_connected(0.01))
+    await asyncio.sleep(seconds)
+    keeper.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await keeper
+
+
+async def test_keep_connected_nao_mexe_em_conexao_saudavel(
+    robot: Go2Robot, factory: FakeConnectionFactory
+) -> None:
+    await _run_keeper(robot)
+
+    assert factory.calls == 1
+    assert factory.connection.disconnected is False
+
+
+async def test_keep_connected_reconecta_quando_o_peer_cai(
+    robot: Go2Robot, factory: FakeConnectionFactory
+) -> None:
+    recebidas: list[dict[str, str]] = []
+    robot.subscribe_connection(recebidas.append)
+    factory.connection.pc.emit_state("failed")
+
+    await _run_keeper(robot)
+
+    assert factory.calls == 2  # reconectou uma vez e parou de tentar
+    assert robot.is_connected is True
+    assert [r["state"] for r in recebidas] == [
+        "disconnected",
+        "reconnecting",
+        "connected",
+    ]
+
+
+async def test_keep_connected_insiste_ate_o_robo_voltar(
+    offline_robot: Go2Robot, factory: FakeConnectionFactory
+) -> None:
+    factory.connection.connect_error = OSError("sem robô")
+
+    await _run_keeper(offline_robot)
+
+    assert factory.calls >= 2
+    assert offline_robot.connection.state is ConnectionState.reconnecting
+    assert offline_robot.is_connected is False
+
+    factory.connection.connect_error = None  # o robô voltou
+    await _run_keeper(offline_robot)
+
+    status = offline_robot.status()
+    assert status.state is ConnectionState.connected
+    assert status.connected is True
+    await offline_robot.disconnect()
+
+
+async def test_reconectar_nao_reenvia_comandos(
+    robot: Go2Robot, factory: FakeConnectionFactory, pub_sub: FakePubSub
+) -> None:
+    """O robô volta parado: nada é guardado para depois."""
+    await robot.start_move(_move())
+    enviados = len(pub_sub.fire_and_forget)
+    factory.connection.pc.emit_state("failed")
+
+    await _run_keeper(robot)
+
+    assert robot.is_connected is True
+    assert len(pub_sub.fire_and_forget) == enviados
+
+
 # ─── Postura e gesto ───────────────────────────────────────────────────────
 
 

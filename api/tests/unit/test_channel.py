@@ -1,11 +1,16 @@
-"""Testes de `SportChannel`."""
+"""Testes de `SportChannel` e `ObstacleAvoidChannel`."""
 
 import pytest
 
 from app.exceptions import RobotTimeoutError, RobotUnavailableError
-from app.robot.channel import SportChannel
+from app.robot.channel import ObstacleAvoidChannel, SportChannel
 from app.robot.link import RobotLink
-from app.robot.unitree import DATA_CHANNEL_TYPE, RTC_TOPIC, SPORT_CMD
+from app.robot.unitree import (
+    DATA_CHANNEL_TYPE,
+    OBSTACLES_AVOID_API,
+    RTC_TOPIC,
+    SPORT_CMD,
+)
 from tests.fakes import FakeConnectionFactory, FakePubSub
 
 
@@ -87,3 +92,17 @@ async def test_request_sem_conexao_levanta_unavailable(
 
     with pytest.raises(RobotUnavailableError):
         await channel.request("GetSpeedLevel")
+
+
+async def test_canal_do_desvio_usa_o_proprio_topico_e_a_propria_tabela(
+    link: RobotLink, pub_sub: FakePubSub
+) -> None:
+    channel = ObstacleAvoidChannel(link, request_timeout_s=0.1)
+    pub_sub.response = {"data": {"data": {"enable": True}}}
+
+    channel.send("SWITCH_SET", {"enable": True})
+    await channel.request("SWITCH_GET")
+
+    assert [msg["topic"] for msg in pub_sub.sent] == [RTC_TOPIC["OBSTACLES_AVOID"]] * 2
+    assert pub_sub.api_ids == [OBSTACLES_AVOID_API["SWITCH_SET"]]
+    assert pub_sub.sent[1]["options"] == {"api_id": OBSTACLES_AVOID_API["SWITCH_GET"]}

@@ -1,15 +1,21 @@
 """Fachada da camada do robô, usada pela API."""
 
+import asyncio
 import logging
 from typing import Any, Self
 
 from app.config import Settings
-from app.robot.channel import SportChannel
+from app.robot.channel import ObstacleAvoidChannel, SportChannel
 from app.robot.commands import MoveCommand, SportCommand
-from app.robot.connection import ConnectionListener, ConnectionSnapshot
+from app.robot.connection import (
+    ConnectionListener,
+    ConnectionSnapshot,
+    ConnectionState,
+)
 from app.robot.link import RobotLink
 from app.robot.movement import MoveController
 from app.robot.ports import ConnectionFactory
+from app.robot.safety import ObstacleAvoidanceReading
 from app.robot.speed import SpeedReading
 from app.robot.state import RobotStatus, StateCache
 from app.robot.unitree import UnitreeConnectionFactory
@@ -30,12 +36,14 @@ class Go2Robot:
         *,
         link: RobotLink,
         channel: SportChannel,
+        obstacle_avoid: ObstacleAvoidChannel,
         state: StateCache,
         movement: MoveController,
     ) -> None:
         """Recebe os colaboradores já montados (ver :meth:`from_settings`)."""
         self._link = link
         self._channel = channel
+        self._obstacle_avoid = obstacle_avoid
         self._state = state
         self._movement = movement
 
@@ -58,6 +66,7 @@ class Go2Robot:
         return cls(
             link=link,
             channel=channel,
+            obstacle_avoid=ObstacleAvoidChannel(link, settings.request_timeout_s),
             state=StateCache(),
             movement=MoveController(channel, settings.move_rate_hz),
         )
@@ -75,6 +84,47 @@ class Go2Robot:
         """Cancela o movimento em curso e encerra a conexão."""
         await self._movement.cancel()
         await self._link.disconnect()
+
+    async def keep_connected(self, interval_s: float) -> None:
+        """Mantém a conexão viva: roda para sempre, em segundo plano.
+
+        A cada `interval_s` confere a conexão e, se ela caiu, tenta abrir uma
+        nova. Nenhum comando é guardado nem reenviado: até a conexão voltar
+        eles levam `503`, e o robô volta parado.
+
+        Limitação: a descoberta e a sinalização da lib são síncronas, então
+        cada tentativa trava o event loop por alguns segundos com o robô fora
+        do ar.
+
+        Args:
+            interval_s: Segundos entre as verificações.
+        """
+        while True:
+            await asyncio.sleep(interval_s)
+            if not self._is_healthy:
+                await self._reconnect()
+
+    @property
+    def _is_healthy(self) -> bool:
+        """A conexão aceita comandos e o peer não avisou que caiu.
+
+        O estado publicado entra na conta porque a lib mantém `isConnected`
+        em `True` quando o peer vai para `failed`.
+        """
+        return self.is_connected and self.connection.state is ConnectionState.connected
+
+    async def _reconnect(self) -> None:
+        """Descarta a conexão antiga e tenta abrir uma nova.
+
+        A fábrica cria uma conexão do zero a cada tentativa: com serial
+        configurado, isso refaz a descoberta e acompanha uma troca de IP.
+        """
+        await self.disconnect()
+        self._link.state.update(ConnectionState.reconnecting, reason="retry")
+        try:
+            await self.connect()
+        except Exception as exc:
+            log.warning("❌ Sem conexão com o robô (%s). Tentando de novo.", exc)
 
     @property
     def is_connected(self) -> bool:
@@ -138,3 +188,20 @@ class Go2Robot:
     async def get_speed_level(self) -> SpeedReading:
         """Consulta o nível de velocidade, aguardando a resposta do robô."""
         return SpeedReading.from_response(await self._channel.request("GetSpeedLevel"))
+
+    # ─── Segurança ─────────────────────────────────────────────────────────
+
+    async def set_obstacle_avoidance(self, *, enabled: bool) -> None:
+        """Liga ou desliga o desvio de obstáculo nativo, sem esperar resposta.
+
+        A API diz `enabled`; o robô espera `enable`. Pendente de validação
+        física: se o desvio ligado filtra o `Move` despachado por
+        :meth:`start_move` (dossiê 12.1).
+        """
+        self._obstacle_avoid.send("SWITCH_SET", {"enable": enabled})
+
+    async def get_obstacle_avoidance(self) -> ObstacleAvoidanceReading:
+        """Consulta se o desvio está ligado, aguardando a resposta do robô."""
+        return ObstacleAvoidanceReading.from_response(
+            await self._obstacle_avoid.request("SWITCH_GET")
+        )

@@ -17,8 +17,8 @@ class StatusResponse(BaseModel):
         "decide se os comandos são aceitos ou levam `503`."
     )
     state: ConnectionState = Field(
-        description="Estado publicado da conexão. `reconnecting` está reservado "
-        "para a reconexão automática e ainda não é usado."
+        description="Estado publicado da conexão. `reconnecting`: a conexão "
+        "caiu e a API está tentando de novo, sozinha."
     )
     since: datetime = Field(description="Momento (UTC) da última transição de `state`.")
     battery_percent: int | None = Field(

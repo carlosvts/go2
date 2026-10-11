@@ -1,16 +1,25 @@
-"""Envio de comandos esportivos pelo data channel."""
+"""Envio de comandos pelo data channel."""
 
 import asyncio
+from collections.abc import Mapping
 from typing import Any
 
 from app.exceptions import RobotTimeoutError
 from app.robot.envelope import SportRequestBuilder
 from app.robot.link import RobotLink
-from app.robot.unitree import DATA_CHANNEL_TYPE, RTC_TOPIC, SPORT_CMD
+from app.robot.unitree import (
+    DATA_CHANNEL_TYPE,
+    OBSTACLES_AVOID_API,
+    RTC_TOPIC,
+    SPORT_CMD,
+)
 
 
-class SportChannel:
-    """Despacha comandos esportivos, referidos pelo nome em `SPORT_CMD`.
+class ApiChannel:
+    """Despacha os comandos de um serviço do robô, referidos pelo nome.
+
+    Cada serviço tem um tópico de request e uma tabela nome → `api_id`; o
+    envelope é o mesmo em todos.
 
     Duas formas de envio, com propósitos diferentes:
 
@@ -22,10 +31,19 @@ class SportChannel:
     - :meth:`request`, aguardando resposta com timeout próprio.
     """
 
-    def __init__(self, link: RobotLink, request_timeout_s: float) -> None:
-        """Recebe a conexão e o teto de espera de :meth:`request`."""
+    def __init__(
+        self,
+        link: RobotLink,
+        request_timeout_s: float,
+        *,
+        topic: str,
+        api_ids: Mapping[str, int],
+    ) -> None:
+        """Recebe a conexão, o teto de :meth:`request` e o serviço atendido."""
         self._link = link
         self._request_timeout_s = request_timeout_s
+        self._topic = topic
+        self._api_ids = api_ids
 
     def send(self, command_name: str, parameter: object = None) -> None:
         """Envia o comando sem esperar a resposta do robô.
@@ -34,11 +52,11 @@ class SportChannel:
             RobotUnavailableError: se não há conexão viva.
         """
         pub_sub = self._link.ensure_connected()
-        # Padrão exigido pelo webrtc_bridge: tópico `rt/api/sport/request` com
+        # Padrão exigido pelo webrtc_bridge: tópico de request com
         # `type: "req"` — como `msg` (default da lib) o comando não executa.
         pub_sub.publish_without_callback(
-            RTC_TOPIC["SPORT_MOD"],
-            SportRequestBuilder.build(SPORT_CMD[command_name], parameter),
+            self._topic,
+            SportRequestBuilder.build(self._api_ids[command_name], parameter),
             DATA_CHANNEL_TYPE["REQUEST"],
         )
 
@@ -52,15 +70,38 @@ class SportChannel:
             RobotTimeoutError: se o robô não responde dentro do teto.
         """
         pub_sub = self._link.ensure_connected()
-        options: dict[str, Any] = {"api_id": SPORT_CMD[command_name]}
+        options: dict[str, Any] = {"api_id": self._api_ids[command_name]}
         if parameter is not None:
             options["parameter"] = parameter
         try:
             return await asyncio.wait_for(
-                pub_sub.publish_request_new(RTC_TOPIC["SPORT_MOD"], options),
+                pub_sub.publish_request_new(self._topic, options),
                 timeout=self._request_timeout_s,
             )
         except TimeoutError as exc:
             raise RobotTimeoutError(
                 f"❌ Robô não respondeu em {self._request_timeout_s}s."
             ) from exc
+
+
+class SportChannel(ApiChannel):
+    """Comandos esportivos (`SPORT_CMD`) em `rt/api/sport/request`."""
+
+    def __init__(self, link: RobotLink, request_timeout_s: float) -> None:
+        """Recebe a conexão e o teto de espera de :meth:`request`."""
+        super().__init__(
+            link, request_timeout_s, topic=RTC_TOPIC["SPORT_MOD"], api_ids=SPORT_CMD
+        )
+
+
+class ObstacleAvoidChannel(ApiChannel):
+    """Desvio de obstáculo (`OBSTACLES_AVOID_API`), em tópico próprio."""
+
+    def __init__(self, link: RobotLink, request_timeout_s: float) -> None:
+        """Recebe a conexão e o teto de espera de :meth:`request`."""
+        super().__init__(
+            link,
+            request_timeout_s,
+            topic=RTC_TOPIC["OBSTACLES_AVOID"],
+            api_ids=OBSTACLES_AVOID_API,
+        )

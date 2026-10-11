@@ -23,6 +23,7 @@ Fichas curtas, uma ideia cada, no máximo uma tela. Para o detalhe, cada ficha a
 
 ## Desenvolvimento
 - [Rodar e testar sem o robô](rodar-sem-robo.md)
+- [Rodar com Docker](rodar-com-docker.md): subir, health, reconexão e checklist de teste.
 - [O que é um LiDAR](o-que-e-lidar.md)
 - [LiDAR: malha vs. pontos](lidar-malha-vs-pontos.md): trocar o decoder.
 - [Pegadinhas da lib em uma tela](pegadinhas-da-lib.md)

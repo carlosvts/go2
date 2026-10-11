@@ -10,5 +10,10 @@ class CommandAccepted(BaseModel):
     de executá-lo fisicamente (`docs/arquitetura_go2_api.md` seção 2).
     """
 
-    cmd: str = Field(description="Nome do comando despachado, como em `SPORT_CMD`.")
+    cmd: str = Field(
+        description=(
+            "Nome do comando despachado: a chave em `SPORT_CMD` ou, fora dos "
+            "comandos esportivos, o nome do recurso (`ObstacleAvoidance`)."
+        )
+    )
     accepted: bool = True

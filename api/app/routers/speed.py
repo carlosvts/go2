@@ -27,7 +27,7 @@ async def set_speed(body: SpeedLevelRequest, robot: RobotDep) -> CommandAccepted
     summary="Lê o nível de velocidade do robô",
 )
 async def get_speed(robot: RobotDep) -> SpeedLevelResponse:
-    """Único endpoint desta versão que espera resposta do robô.
+    """Espera a resposta do robô.
 
     Sujeito a `504` se ele não responder dentro de `GO2_REQUEST_TIMEOUT_S`.
     """

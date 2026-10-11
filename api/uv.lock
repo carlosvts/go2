@@ -729,7 +729,7 @@ dev = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.141.1" },
     { name = "pydantic-settings", specifier = ">=2.15.0" },
-    { name = "unitree-webrtc-connect", specifier = ">=2.2.0" },
+    { name = "unitree-webrtc-connect", specifier = "==2.2.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.53.0" },
 ]
 
