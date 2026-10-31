@@ -1,0 +1,25 @@
+name: Setup
+description: Dependências de sistema, uv e ambiente do projeto
+
+inputs:
+  python-version:
+    description: Versão do Python (padrão do .python-version se omitida)
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    # O pyaudio (dependência de unitree-webrtc-connect) compila contra o PortAudio.
+    - name: Instalar PortAudio
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install --yes --no-install-recommends portaudio19-dev
+    - uses: astral-sh/setup-uv@v8.1.0
+      with:
+        enable-cache: true
+        python-version: ${{ inputs.python-version }}
+    - name: Instalar dependências
+      shell: bash
+      run: uv sync

@@ -1,0 +1,44 @@
+# Anatomia de um comando
+
+**Em uma frase:** um comando é uma mensagem JSON publicada no tópico `rt/api/sport/request`, com o `api_id` do comando e um `parameter` que é **string** JSON.
+
+```json
+{
+  "type": "req",
+  "topic": "rt/api/sport/request",
+  "data": {
+    "header": { "identity": { "id": 1759300000123, "api_id": 1008 } },
+    "parameter": "{\"x\": 0.3, \"y\": 0.0, \"z\": 0.5}"
+  }
+}
+```
+
+| Campo | Regra |
+|---|---|
+| `type` | `"req"`. Com `"msg"` (o padrão da lib), o comando **não executa**. |
+| `header.identity.id` | Número do pedido. O robô o devolve na resposta, para dizer a qual pedido está respondendo. |
+| `header.identity.api_id` | O comando (`SPORT_CMD["Move"]` = 1008, `StandUp` = 1004...). |
+| `parameter` | Sempre presente. String vazia `""` sem argumento, ou JSON **serializado como string**. |
+
+## Na prática
+
+Quem monta isso é `RobotConnection._build_request` (`app/robot.py`). Os endpoints só escolhem o `api_id` e o parâmetro.
+
+## Pegadinha
+
+No `Move`, o yaw vai no campo **`z`**, não em `yaw`. Com `yaw`, o robô ignora o comando.
+
+## Mais detalhes
+
+`app/robot.py` (`_build_request`, `send_sport`) · [`lib_unitree_webrtc_connect.md`](../lib_unitree_webrtc_connect.md) §3
+
+## Termos desta ficha
+
+- **JSON**: *JavaScript Object Notation*: formato de texto para dados, como `{"chave": "valor"}`.
+- **Tópico**: Nome de um canal de mensagens (ex.: `rt/api/sport/request`).
+- **`api_id`**: Número que identifica qual comando executar (ex.: `Move` = 1008).
+- **Request / `req`**: Pedido. `"type": "req"` marca a mensagem como pedido de execução.
+- **String**: Texto. "JSON serializado como string" = o JSON escrito dentro de um texto, entre aspas.
+- **`SPORT_CMD`**: Dicionário da lib com o `api_id` de cada comando de alto nível.
+- **Endpoint**: Um endereço da API que aceita pedidos (ex.: `POST /commands/move`).
+- **Yaw**: Rotação em torno do eixo vertical: virar para a esquerda ou para a direita.
