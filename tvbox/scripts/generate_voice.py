@@ -7,7 +7,7 @@ síntese em tempo de execução (zero CPU a mais, uns 0,5 MB de disco).
     pip install piper-tts numpy
     python -m piper.download_voices pt_BR-faber-medium --download-dir voices
     python scripts/generate_voice.py --voice voices/pt_BR-faber-medium.onnx
-    scp media/*.wav minipc@aml-s9xx-box:~/go2-tvbox/media/
+    scp media/*.wav minipc@aml-s9xx-box:~/go2/tvbox/media/
 
 Cada som pode ter várias frases. A primeira vira `<nome>.wav` e as outras
 `<nome>_2.wav`, `<nome>_3.wav`...; a TV Box sorteia uma a cada vez, sem repetir

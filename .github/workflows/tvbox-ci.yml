@@ -1,0 +1,40 @@
+name: tvbox CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tvbox/**"
+      - ".github/workflows/tvbox-ci.yml"
+  pull_request:
+    paths:
+      - "tvbox/**"
+      - ".github/workflows/tvbox-ci.yml"
+
+concurrency:
+  group: tvbox-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  UV_LOCKED: "1"
+
+defaults:
+  run:
+    working-directory: tvbox
+
+jobs:
+  test:
+    name: Testes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+          working-directory: tvbox
+      # Sem o extra `capture`: os testes não usam microfone (PyAudio).
+      - run: uv sync --extra recognition
+      - run: uv run pytest

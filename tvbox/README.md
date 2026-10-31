@@ -1,6 +1,6 @@
 # Go2 Sense — TV Box
 
-Cliente de voz do Go2. Roda na TV Box: captura o microfone Anker, espera a wake word ("hey jarvis") e manda o áudio do comando falado ao servidor de inferência ([go2-server](https://github.com/carlosvts/go2-server)), que transcreve, interpreta e leva o comando até a [go2-api](https://github.com/carlosvts/go2-api).
+Cliente de voz do Go2. Roda na TV Box: captura o microfone Anker, espera a wake word ("hey jarvis") e manda o áudio do comando falado ao servidor de inferência ([go2-server](../server/)), que transcreve, interpreta e leva o comando até a [go2-api](../api/).
 
 ```
 [Anker] → TV Box: wake word + gravação do comando ── áudio ──HTTP──▶ go2-server ──HTTP──▶ go2-api ──▶ Go2
@@ -15,7 +15,6 @@ A TV Box não reconhece comando nenhum, não tem fila e não executa nada do que
 ## Índice
 
 - [Como rodar](#como-rodar)
-  - [Como serviço na TV Box](#como-serviço-na-tv-box)
   - [O que esperar no log](#o-que-esperar-no-log)
 - [Como funciona](#como-funciona)
 - [Sons de retorno](#sons-de-retorno)
@@ -31,7 +30,16 @@ A TV Box não reconhece comando nenhum, não tem fila e não executa nada do que
 
 O go2-server precisa estar no ar e alcançável pela rede (`curl http://<IP_DO_SERVIDOR>:9000/health` responde 200). Requer Python 3.10; o [uv](https://docs.astral.sh/uv/) baixa um se o sistema não tiver.
 
-Na TV Box, dentro do repo:
+Na TV Box, o disco raiz não comporta o monorepo inteiro: clone só esta pasta e `specs/contracts`, com um clone parcial e sparse checkout:
+
+```bash
+git clone --filter=blob:none --sparse git@github.com:carlosvts/go2.git
+cd go2
+git sparse-checkout set tvbox specs/contracts
+cd tvbox
+```
+
+Os passos abaixo rodam dentro de `go2/tvbox/`.
 
 1. Instale as dependências de sistema (o PyAudio compila do fonte em aarch64):
 
@@ -69,17 +77,6 @@ Na TV Box, dentro do repo:
 
 **Vindo de uma instalação com o modo edge:** apague `SENSE_MODE` do `.env` (com `edge` o Sense não sobe; `thin` ainda é aceito). As outras chaves do edge são ignoradas. `uv sync` tira o Vosk do ambiente, e o modelo dele pode ser apagado para liberar ~50 MB: `rm -rf models/vosk-model-small-pt-0.3`.
 
-### Como serviço na TV Box
-
-As instruções de instalação do serviço systemd estão no topo de `deploy/go2-sense.service`; ajuste ali o usuário e o caminho do repo. Depois:
-
-```bash
-sudo systemctl restart go2-sense        # aplica uma mudança no .env
-journalctl --namespace=go2-sense -f     # acompanha os logs
-```
-
-Os logs do serviço ficam num journal próprio, limitado a 20 MB.
-
 ### O que esperar no log
 
 No boot, o log mostra a branch e o commit em execução e a configuração em vigor:
@@ -89,7 +86,7 @@ Sense iniciando | código=main@1a2b3c4
 Configuração: server_url=http://192.168.0.10:9000 api_url=http://192.168.0.10:8000 chunk_ms=30 ...
 ```
 
-Configuração inválida (`SERVER_URL` faltando, número fora da faixa) derruba o processo na partida, com todos os problemas listados. Como serviço, ele para sem ficar reiniciando.
+Configuração inválida (`SERVER_URL` faltando, número fora da faixa) derruba o processo na partida, com todos os problemas listados.
 
 ## Como funciona
 
@@ -110,7 +107,7 @@ Só um comando fica em voo por vez. Da resposta são lidos `status`, `transcript
 
 A parada falada passa pelo servidor e exige a wake word antes. Para os testes, tenha a [parada manual](#parada-manual) à mão.
 
-Cada interação gera uma linha de log em JSON, e o encerramento (`systemctl stop` ou Ctrl+C) loga um resumo:
+Cada interação gera uma linha de log em JSON, e o encerramento (Ctrl+C) loga um resumo:
 
 ```
 Interação: {"utterance_id": "...", "wake_at": ..., "speech_end_at": ..., "audio_s": 2.1, "sent_at": ..., "reply_at": ..., "reply_latency_s": 0.40, "result": "enqueued", "outcome": "confirmed", "transcript": "Senta!", "error": null, "reject_reason": null}
@@ -187,7 +184,6 @@ Chama `POST /commands/stop` na go2-api (`GO2_API_URL`) e, em paralelo, avisa o s
 | Intervalo do log de diagnóstico | `STATS_INTERVAL_S` | `sense/stats.py` | 60 s |
 | Taxa de captura do microfone | `CAPTURE_RATE` | `sense/audio.py` | 48000 Hz |
 | Sons e o substituto de cada um quando falta WAV | `MEDIA_DIR`, `SOUND_FALLBACKS` | `sense/audio.py` | `media/`, `blocked → rejected` |
-| Tamanho máximo dos logs do serviço | `SystemMaxUse` | `deploy/journald@go2-sense.conf` | 20 MB |
 
 ## Diagnóstico
 
@@ -232,7 +228,8 @@ Diagnóstico: cpu=62% ram_pico=203MB | chunks_dropped_late=0 fallback_confirmed=
 │   ├── add_lead_silence.py    # põe o silêncio inicial em falas já geradas
 │   ├── generate_sounds.py     # tons simples antigos (sobrescreve as falas de mesmo nome)
 │   └── download_models.py     # baixa o modelo hey_jarvis
-├── deploy/                    # serviço systemd e limites do journal
+>>>
+
 ├── docs/checklist-laboratorio.md
 └── tests/
 ```

@@ -2,12 +2,6 @@
 
 Objetivo: rodar o Sense na TV Box real com o go2-server e a go2-api, e medir RAM, CPU e latência por 10+ minutos.
 
-Em todos os comandos, `LOGS` é:
-
-```bash
-journalctl --namespace=go2-sense --since "<hora de início da rodada>"
-```
-
 ## Segurança
 
 - [ ] Robô **deitado ou suspenso** nas primeiras rodadas. "desligar os motores" manda `damp`: de pé, o robô cai.
@@ -21,11 +15,10 @@ journalctl --namespace=go2-sense --since "<hora de início da rodada>"
 - [ ] `sudo apt install portaudio19-dev gcc python3-dev`
 - [ ] `uv sync --no-dev --extra capture --extra recognition` e `uv run python scripts/download_models.py` sem erro.
 - [ ] `cp .env.example .env`, com `SERVER_URL` e `GO2_API_URL` reais.
-- [ ] Serviço instalado conforme o topo de `deploy/go2-sense.service` (ajustar `User` e caminhos).
 
 ## 1. Rodada de voz
 
-- [ ] `sudo systemctl restart go2-sense`; anote a hora.
+- [ ] `uv run python -m sense`; anote a hora.
 - [ ] O log mostra `Sense iniciando` com o commit esperado, `Wake word pronta`, `Servidor de inferência no ar` e `Microfone aberto: ...` com `card ALSA:` diferente de `None`.
 - [ ] `uv run python -m sense.say --all` toca o beep e todas as falas no Anker, sem cortar o começo.
 - [ ] "hey jarvis", pausa, comando: beep, "processando" e o som do resultado. O log traz `Comando gravado: X.Xs de áudio` e uma linha `Interação: {...}`.
@@ -41,7 +34,7 @@ journalctl --namespace=go2-sense --since "<hora de início da rodada>"
 - [ ] Com TV ou música ao fundo, e com outra pessoa falando.
 - [ ] Deixe rodando **1 hora** sem chamar, com ruído normal da sala: `wake_detections` deve ficar em 0.
 - [ ] Com o robô andando: anote `wake_without_speech`, escutas truncadas e o nível de ruído (motores e lidar no microfone).
-- [ ] Pare o serviço e anote a linha `Encerrando. Resumo: ...`.
+- [ ] Pare o Sense (Ctrl+C) e anote a linha `Encerrando. Resumo: ...`.
 
 Medições da rodada:
 
@@ -55,10 +48,7 @@ Medições da rodada:
 
 ## 2. Fechamento
 
-- [ ] `journalctl --namespace=go2-sense --disk-usage` está abaixo de 20 MB.
-- [ ] Teste de configuração inválida: `SERVER_URL=xyz` no `.env` e restart. O log lista o problema e `systemctl status go2-sense` mostra o serviço parado (sem ficar reiniciando). Volte o valor correto.
-- [ ] Reinicie a TV Box: o serviço sobe sozinho.
-- [ ] Desconecte o Anker por 10 s e reconecte: o serviço reinicia sozinho e volta a ouvir.
+- [ ] Teste de configuração inválida: `SERVER_URL=xyz` no `.env` e rode de novo. O log lista o problema e o processo sai. Volte o valor correto.
 
 ## Já validado (24/10/2026, sem robô e sem go2-api)
 
@@ -74,7 +64,6 @@ Detalhes em `claude/resultados-teste-thin-gpu.md` no projeto Go2.
 
 1. **Robô e go2-api.** Nenhum comando chegou a um Go2 por este caminho. Parada falada nunca testada.
 2. **Ruído do Go2** (motores, lidar) no microfone e no limiar do VAD.
-3. **Serviço systemd.** A unit não foi instalada: usuário `minipc`, caminho `/home/minipc/go2-tvbox`, grupo `audio`, `LogNamespace` no Debian 11 e a ordem de boot em relação ao USB do Anker.
-4. **Wake word a distância e falsos disparos em horas de ruído.**
-5. **Uma escuta que durou 8 s** (o VAD não fechou) em 50: causa não identificada.
-6. **Falas de `blocked`**: ainda não geradas; até lá toca `rejected` no lugar.
+3. **Wake word a distância e falsos disparos em horas de ruído.**
+4. **Uma escuta que durou 8 s** (o VAD não fechou) em 50: causa não identificada.
+5. **Falas de `blocked`**: ainda não geradas; até lá toca `rejected` no lugar.
