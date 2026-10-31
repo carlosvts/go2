@@ -1,4 +1,4 @@
-# Build a partir da raiz do repo:  docker build -f deploy/Dockerfile -t go2-server:local .
+# Build a partir de server/:  docker build -f deploy/Dockerfile -t go2-server:local .
 FROM python:3.12-slim
 
 COPY --from=ghcr.io/astral-sh/uv:0.8 /uv /usr/local/bin/uv

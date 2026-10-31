@@ -1,6 +1,6 @@
 # go2-server
 
-Servidor de inferência e despacho dos comandos de voz do Go2 (NEURON/UFLA). Roda no mesmo PC da [go2-api](https://github.com/carlosvts/go2-api). A TV Box ([go2-tvbox](https://github.com/carlosvts/go2-tvbox)) só detecta a wake word e manda o áudio da frase; este servidor transcreve, interpreta, mantém a fila de execução e chama a go2-api.
+Servidor de inferência e despacho dos comandos de voz do Go2 (NEURON/UFLA). Roda no mesmo PC da [go2-api](../api/). A TV Box ([go2-tvbox](../tvbox/)) só detecta a wake word e manda o áudio da frase; este servidor transcreve, interpreta, mantém a fila de execução e chama a go2-api.
 
 ```
 TV Box ──áudio──▶ go2-server: transcrição → interpretação → fila ──HTTP──▶ go2-api ──▶ robô
@@ -34,8 +34,8 @@ A interpretação **não usa LLM**. Ela só seleciona comandos de um catálogo f
 ### 2. Instale
 
 ```bash
-git clone git@github.com:carlosvts/go2-server.git
-cd go2-server
+git clone git@github.com:carlosvts/go2.git
+cd go2/server
 uv sync
 ```
 
@@ -84,7 +84,7 @@ A primeira linha faz o robô sentar: teste com ele num lugar seguro. `--say` sin
 
 ### 7. Aponte a TV Box para o servidor
 
-No `.env` do [go2-tvbox](https://github.com/carlosvts/go2-tvbox):
+No `.env` do [go2-tvbox](../tvbox/):
 
 ```
 SERVER_URL=http://<IP_DO_PC>:9000
@@ -113,7 +113,7 @@ docker compose --profile server up -d --build
 docker compose logs -f go2-server
 ```
 
-O container usa a rede do host, como o da go2-api, e tem teto de 4 CPUs para não tirar processador do reenvio do `Move`. Para o container usar a GPU, instale o NVIDIA Container Toolkit e descomente `gpus: all` no `docker-compose.yml`. Como serviço systemd, sem Docker: instruções em `deploy/go2-server.service`.
+O container usa a rede do host, como o da go2-api, e tem teto de 4 CPUs para não tirar processador do reenvio do `Move`. Para o container usar a GPU, instale o NVIDIA Container Toolkit e descomente `gpus: all` no `docker-compose.yml`.
 
 ## Contrato
 
@@ -245,7 +245,7 @@ catalog.yaml         gerado
 discovery/           capabilities.json da go2-api, frases e inferred.yaml
 eval/phrases.yaml    conjunto rotulado
 scripts/             build_catalog, calibrate, bench_stt, send_wav, tts
-deploy/              Dockerfile e serviço systemd
+deploy/              Dockerfile
 docs/                divergencias.md, riscos.md
 tests/
 ```
