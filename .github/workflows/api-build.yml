@@ -1,18 +1,28 @@
-name: Build
+name: api Build
 
 on:
   pull_request:
     branches: [main]
+    paths:
+      - "api/**"
+      - ".github/workflows/api-build.yml"
   push:
     branches: [main]
     tags: ["v*"]
+    paths:
+      - "api/**"
+      - ".github/workflows/api-build.yml"
 
 concurrency:
-  group: build-${{ github.ref }}
+  group: api-build-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    working-directory: api
 
 jobs:
   package:
@@ -24,9 +34,10 @@ jobs:
       - uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
+          working-directory: api
       - run: uv build --no-sources
       - uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: dist/
+          path: api/dist/
           retention-days: 7

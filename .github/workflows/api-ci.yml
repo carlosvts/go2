@@ -1,12 +1,20 @@
-name: CI
+name: api CI
 
 on:
   push:
     branches: [main]
+    paths:
+      - "api/**"
+      - ".github/workflows/api-ci.yml"
+      - ".github/actions/api-setup/**"
   pull_request:
+    paths:
+      - "api/**"
+      - ".github/workflows/api-ci.yml"
+      - ".github/actions/api-setup/**"
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: api-ci-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -15,13 +23,17 @@ permissions:
 env:
   UV_LOCKED: "1"
 
+defaults:
+  run:
+    working-directory: api
+
 jobs:
   lint:
     name: Lint e formatação
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/api-setup
       - run: uv run ruff check --output-format=github .
       - run: uv run ruff format --check .
 
@@ -30,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/api-setup
       - run: uv run mypy
 
   test:
@@ -42,7 +54,7 @@ jobs:
         python-version: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/api-setup
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv run pytest --cov --cov-report=term-missing --cov-report=xml
@@ -50,14 +62,4 @@ jobs:
         if: matrix.python-version == '3.12'
         with:
           name: coverage-xml
-          path: coverage.xml
-
-  pre-commit:
-    name: Hooks do pre-commit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup
-      - run: uv run pre-commit run --all-files --show-diff-on-failure
-        env:
-          SKIP: no-commit-to-branch
+          path: api/coverage.xml

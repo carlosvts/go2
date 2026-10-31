@@ -1,9 +1,9 @@
-name: Setup
-description: Dependências de sistema, uv e ambiente do projeto
+name: Setup da api
+description: Dependências de sistema, uv e ambiente do projeto em api/
 
 inputs:
   python-version:
-    description: Versão do Python (padrão do .python-version se omitida)
+    description: Versão do Python (padrão do api/.python-version se omitida)
     required: false
     default: ""
 
@@ -20,6 +20,8 @@ runs:
       with:
         enable-cache: true
         python-version: ${{ inputs.python-version }}
+        working-directory: api
     - name: Instalar dependências
       shell: bash
+      working-directory: api
       run: uv sync

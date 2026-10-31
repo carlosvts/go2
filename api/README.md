@@ -14,7 +14,6 @@ uv run uvicorn app.main:create_app --factory --reload
 - Documentação interativa: `http://127.0.0.1:8000/docs`
 - Testes (não precisam do robô): `uv run pytest --cov`
 - Qualidade: `uv run ruff check . && uv run ruff format --check . && uv run mypy`
-- Hooks: `uv run pre-commit install`
 
 Prefira o **serial** ao IP.
 
