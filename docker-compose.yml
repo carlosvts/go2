@@ -1,0 +1,9 @@
+# Junta os composes da api e do server sem acoplar os dois: cada serviço continua
+# com o seu compose, o seu .env e os caminhos relativos à própria pasta.
+#
+#   docker compose --profile api --profile server up -d --build
+#
+# Sem perfil, nada sobe (o mesmo comportamento de dentro de cada pasta).
+include:
+  - api/docker-compose.yml
+  - server/docker-compose.yml
