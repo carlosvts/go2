@@ -34,6 +34,21 @@ uv run python -m sense          # cliente de voz
 uv run python -m sense.stop     # parada manual, direto na api
 ```
 
+### Catálogo do server
+
+O server usa o `server/catalog.yaml` commitado (embutido na imagem no build). Nada o regenera sozinho: nem o container, nem o server, nem o CI. Para rodar, não precisa fazer nada.
+
+Regenere à mão, em `server/`, e commite o `catalog.yaml` junto:
+
+```bash
+uv run python scripts/build_catalog.py                     # depois de editar discovery/
+uv run python scripts/build_catalog.py \
+    --capabilities http://127.0.0.1:8000/capabilities      # quando a api mudar os comandos (api no ar)
+docker compose --profile server up -d --build              # o catálogo novo só entra com rebuild
+```
+
+Editar `discovery/` sem regenerar não dá erro: o robô continua com o catálogo antigo.
+
 ## Spec-driven
 
 Comportamento e contratos ficam em `specs/` (regras em [`specs/README.md`](specs/README.md)); regras para agentes nos `AGENTS.md`. Skills em `.claude/skills/`:
