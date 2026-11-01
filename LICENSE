@@ -1,0 +1,20 @@
+Copyright (c) 2026 NEURON/UFLA. Todos os direitos reservados.
+
+Este software e todo o conteúdo deste repositório (código, documentação,
+configurações e arquivos de mídia) são propriedade do NEURON/UFLA.
+
+Nenhuma licença é concedida. É proibido usar, copiar, modificar, mesclar,
+publicar, distribuir, sublicenciar ou vender este software, no todo ou em
+parte, sem autorização prévia e por escrito do NEURON/UFLA.
+
+A disponibilidade do código para leitura não concede nenhum direito de uso.
+
+Componentes de terceiros
+------------------------
+As dependências instaladas pelos gerenciadores de pacotes (listadas nos
+arquivos pyproject.toml e uv.lock de cada serviço) continuam sob as suas
+próprias licenças, que não são alteradas por este aviso.
+
+O modelo de wake word "hey_jarvis" do openWakeWord, baixado na instalação e
+não incluído neste repositório, é licenciado sob Creative Commons
+Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0).

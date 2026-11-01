@@ -94,3 +94,7 @@ Atualizar: `cd ~/go2 && git pull`.
 ## Arquitetura
 
 Diagramas de como os serviços interagem, Docker, catálogo e CI em [`docs/arquitetura.md`](docs/arquitetura.md).
+
+## Licença
+
+Todos os direitos reservados ao NEURON/UFLA. Ver [`LICENSE`](LICENSE). As dependências de terceiros seguem as próprias licenças.
