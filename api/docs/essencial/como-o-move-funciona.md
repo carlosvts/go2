@@ -16,7 +16,7 @@ POST /commands/move {vx, vy, vyaw, duration_s}
 |---|---|
 | Unidades | Relativas ao robô: `vx` = frente/trás (m/s), `vy` = lados (m/s), `vyaw` = girar (rad/s; 1 rad/s ≈ 57°/s). |
 | Limites | `GO2_MAX_VX`, `GO2_MAX_VY`, `GO2_MAX_VYAW` e `GO2_MOVE_MAX_DURATION_S`. Acima disso → **422**, e nada é enviado. |
-| Um por vez | Um `move` novo **substitui** o anterior (sem lease ainda, #7). |
+| Um por vez | Um `move` novo **substitui** o anterior (sem lease ainda, carlosvts/go2-api#7). |
 | Interrupção | `stop`, qualquer postura ou gesto cancela o reenvio. |
 | Resposta | **202** na hora, sem esperar o fim do movimento. |
 
@@ -36,4 +36,4 @@ POST /commands/move {vx, vy, vyaw, duration_s}
 - **Yaw**: Rotação em torno do eixo vertical: virar para a esquerda ou para a direita.
 - **`StopMove`**: Comando que para o movimento e mantém o robô de pé.
 - **202 / 422 / 503 / 504**: Códigos de resposta HTTP. Ver [ficha](semantica-202-503-504.md).
-- **Lease**: "Posse" temporária do controle do robô, com prazo de validade (planejado, #7).
+- **Lease**: "Posse" temporária do controle do robô, com prazo de validade (planejado, carlosvts/go2-api#7).

@@ -14,7 +14,7 @@
 
 ## Pegadinha
 
-Os ids só divergem justamente nos **truques** (flips, handstand), os comandos de maior risco. Antes de implementar `/commands/trick` (#1), confirmar em qual modo o robô está, senão o robô pode executar o movimento errado.
+Os ids só divergem justamente nos **truques** (flips, handstand), os comandos de maior risco. Antes de implementar `/commands/trick` (carlosvts/go2-api#1), confirmar em qual modo o robô está, senão o robô pode executar o movimento errado.
 
 ## Mais detalhes
 

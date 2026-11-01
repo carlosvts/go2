@@ -19,7 +19,7 @@
 | **Firmware** | O software de fábrica que roda dentro do robô. A versão dele muda o que o robô aceita. |
 | **Handshake** | "Aperto de mão": a troca inicial de mensagens que abre a conexão. |
 | **HTTP** | Protocolo de pedido e resposta da web (é o que o navegador e o `curl` usam). |
-| **Hub (TopicHub)** | Distribuidor interno (planejado, #9) que leva os dados do robô a vários clientes WebSocket. |
+| **Hub (TopicHub)** | Distribuidor interno (planejado, carlosvts/go2-api#9) que leva os dados do robô a vários clientes WebSocket. |
 | **Hz** | Hertz: vezes por segundo. 30 Hz = 30 envios por segundo. |
 | **ICE** | Mecanismo do WebRTC que descobre um caminho de rede entre os dois lados. |
 | **IMU** | *Inertial Measurement Unit*: sensor de orientação e aceleração (inclinação, giro). |
@@ -28,7 +28,7 @@
 | **JSON** | *JavaScript Object Notation*: formato de texto para dados, como `{"chave": "valor"}`. |
 | **Junta** | Articulação do robô movida por um motor (o Go2 tem 12, 3 por pata). |
 | **LAN** | *Local Area Network*: a rede local (do laboratório), sem passar pela internet. |
-| **Lease** | "Posse" temporária do controle do robô, com token e expiração (planejado, #7). |
+| **Lease** | "Posse" temporária do controle do robô, com token e expiração (planejado, carlosvts/go2-api#7). |
 | **`lf`** | *Low frequency*. Ex.: `rt/lf/lowstate` é a versão de baixa frequência do estado. |
 | **Lib** | Biblioteca de código. Aqui, a `unitree_webrtc_connect`, que faz a conexão WebRTC com o robô. |
 | **LiDAR** | Sensor de distância a laser. Ver [ficha](o-que-e-lidar.md). |

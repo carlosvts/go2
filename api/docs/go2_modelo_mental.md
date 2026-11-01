@@ -145,7 +145,7 @@ Hoje a conexão é a classe concreta `RobotConnection` (`app/robot.py`). Extrair
 | **HTTP / REST** | HTTP: protocolo de pedido e resposta da web. REST: estilo de API em que cada endereço representa um recurso. |
 | **IP** | Endereço de um aparelho na rede. |
 | **LAN** | *Local Area Network*: a rede local, sem passar pela internet. |
-| **Lease** | "Posse" temporária do controle do robô, com token e prazo de validade (planejado, #7). |
+| **Lease** | "Posse" temporária do controle do robô, com token e prazo de validade (planejado, carlosvts/go2-api#7). |
 | **LiDAR / L1 / L2** | LiDAR (*Light Detection and Ranging*): sensor de distância a laser. L1 e L2 são os modelos da Unitree. Mid-360 (Livox) e XT16 (Hesai) são LiDARs de terceiros. |
 | **Monkey-patch** | Alterar, em tempo de execução, o código de outra biblioteca sem mexer no arquivo dela. |
 | **Multicast** | Mensagem enviada a todos os aparelhos da rede de uma vez. |

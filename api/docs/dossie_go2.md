@@ -216,9 +216,9 @@ Levantamento feito lendo o código-fonte real da versão 2.2.0 da lib, travada n
 | Comandos esportivos (mover, gestos) | `SPORT_CMD` no tópico `SPORT_MOD`. A `go2-api` envia com `publish_without_callback` (sem esperar resposta) e usa `publish_request_new` só onde precisa da resposta (`GetSpeedLevel`), sempre com timeout próprio — ver `app/robot.py`. |
 | Vídeo (recepção) | `WebRTCVideoChannel`, callback via `add_track_callback`. |
 | Áudio bidirecional (Pro/Edu) | `WebRTCAudioChannel`, callback via `add_track_callback`, liga/desliga com `switchAudioChannel`. |
-| **Biblioteca de áudio no robô** (upload de MP3/WAV, tocar por UUID, modo megafone) | `WebRTCAudioHub` — classe completa, pronta, ainda não usada pela `go2-api` (#2). Candidata natural pra substituir o `CMD_PLAY_AUDIO` customizado do modo chat. |
+| **Biblioteca de áudio no robô** (upload de MP3/WAV, tocar por UUID, modo megafone) | `WebRTCAudioHub` — classe completa, pronta, ainda não usada pela `go2-api` (carlosvts/go2-api#2). Candidata natural pra substituir o `CMD_PLAY_AUDIO` customizado do modo chat. |
 | **Desvio de obstáculo** (liga/desliga/consulta) | `OBSTACLES_AVOID_API`: `SWITCH_SET` (`{"enable": bool}`), `SWITCH_GET` (retorna `{"enable": bool}`). Payload visto no exemplo upstream `examples/go2/data_channel/obstacles_avoid/` e nos comentários de `constants.py`; o exemplo não vem no pacote 2.2.0. |
-| **LED e volume (VUI)** | `RTC_TOPIC["VUI"]` com api_ids diretos: `1003` define volume, `1004` lê volume, `1005` define brilho, `1006` lê brilho, `1007` define cor/pisca do LED (`VUI_COLOR` + `time` + `flash_cycle` opcional). Ids e payload vistos no exemplo upstream `examples/go2/data_channel/vui/`, que **não** vem no pacote 2.2.0; nenhum desses api_ids está em `constants.py`. **Revalidar no robô** antes de implementar (#3). |
+| **LED e volume (VUI)** | `RTC_TOPIC["VUI"]` com api_ids diretos: `1003` define volume, `1004` lê volume, `1005` define brilho, `1006` lê brilho, `1007` define cor/pisca do LED (`VUI_COLOR` + `time` + `flash_cycle` opcional). Ids e payload vistos no exemplo upstream `examples/go2/data_channel/vui/`, que **não** vem no pacote 2.2.0; nenhum desses api_ids está em `constants.py`. **Revalidar no robô** antes de implementar (carlosvts/go2-api#3). |
 | LiDAR (nuvem de pontos) | Assinar `ULIDAR_ARRAY`, com `set_decoder('native')` explicitamente (padrão é `libvoxel`, que devolve malha, não pontos — seção 3.1) e `disableTrafficSaving(True)` chamado antes. |
 | Descoberta do robô na rede | `multicast_scanner.discover_ip_sn()`. |
 
@@ -275,7 +275,7 @@ Pro escopo atual do projeto (voz, gestos, movimento, LiDAR, telemetria), nada da
 
 ## 13. Decisão de design registrada — controle de concorrência na `go2-api`
 
-> **Status:** desenho registrado, ainda não implementado. Hoje não há lease nem fila: o último `move` substitui o anterior (README, "Limitações atuais"). O lease é a issue #7 (`todo-later`).
+> **Status:** desenho registrado, ainda não implementado. Hoje não há lease nem fila: o último `move` substitui o anterior (README, "Limitações atuais"). O lease é a issue carlosvts/go2-api#7 (`todo-later`).
 
 Definido ao pensar em múltiplos projetos do NEURON usando o mesmo robô físico ao mesmo tempo (cenário real: dois times, comunicação falha entre eles, comandos conflitantes chegando juntos).
 
