@@ -12,14 +12,14 @@ Garante que `specs/contracts/` e o código dizem a mesma coisa.
 Exportar o OpenAPI direto do app, sem subir o servidor:
 
 ```bash
-# api
-cd api && uv run python -c "import json; from app.main import create_app; print(json.dumps(create_app().openapi(), indent=2, sort_keys=True, ensure_ascii=False))" > /tmp/api.openapi.json
+# api (modo sem robô: LocalSTA exige IP ou serial só para criar o app)
+cd api && GO2_CONNECTION_METHOD=LocalAP GO2_CONNECT_ON_STARTUP=false uv run python -c "import json; from app.main import create_app; print(json.dumps(create_app().openapi(), indent=2, sort_keys=True, ensure_ascii=False))" > /tmp/api.openapi.json
 
 # server
 cd server && uv run python -c "import json; from app.main import create_app; print(json.dumps(create_app().openapi(), indent=2, sort_keys=True, ensure_ascii=False))" > /tmp/server.openapi.json
 ```
 
-Se `create_app()` exigir variáveis de ambiente ou conexão, use as do modo sem robô (`GO2_CONNECTION_METHOD=LocalAP`, `GO2_CONNECT_ON_STARTUP=false` na api). Se algum import falhar, diga qual e não improvise outro caminho. Atenção: o comando da api **nunca foi testado** (o build do `pyaudio` exige PortAudio instalado); o do server provavelmente funciona. Se o da api falhar, reporte e proponha o ajuste em vez de contornar.
+Os dois comandos são os mesmos do workflow `.github/workflows/contracts-check.yml`. O da api precisa do PortAudio instalado para o `uv sync` compilar o `pyaudio` (sem ele: "you need to install a library that provides portaudio.h"); no CI, a composite action `.github/actions/api-setup` instala. Localmente, instale o pacote de desenvolvimento do PortAudio (`portaudio19-dev` no Debian/Ubuntu, `portaudio-devel` no Fedora) ou rode num container com ele. Se algum import falhar, diga qual e não improvise outro caminho.
 
 ## Modos
 

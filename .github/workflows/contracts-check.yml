@@ -1,0 +1,68 @@
+name: contracts-check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "api/**"
+      - "server/**"
+      - "specs/contracts/**"
+      - ".github/workflows/contracts-check.yml"
+      - ".github/actions/api-setup/**"
+  pull_request:
+    paths:
+      - "api/**"
+      - "server/**"
+      - "specs/contracts/**"
+      - ".github/workflows/contracts-check.yml"
+      - ".github/actions/api-setup/**"
+
+concurrency:
+  group: contracts-check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  UV_LOCKED: "1"
+  # Mesmo comando da skill check-contracts.
+  EXPORT_OPENAPI: >-
+    import json; from app.main import create_app;
+    print(json.dumps(create_app().openapi(), indent=2, sort_keys=True, ensure_ascii=False))
+
+jobs:
+  api:
+    name: Contrato da api
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      # PortAudio, uv e `uv sync` em api/, como no api-ci.yml.
+      - uses: ./.github/actions/api-setup
+      - name: Exportar o OpenAPI
+        working-directory: api
+        # Modo sem robô: LocalSTA exige IP ou serial só para criar o app.
+        env:
+          GO2_CONNECTION_METHOD: LocalAP
+          GO2_CONNECT_ON_STARTUP: "false"
+        run: uv run python -c "$EXPORT_OPENAPI" > ../specs/contracts/api.openapi.json
+      - name: Comparar com specs/contracts/
+        run: git diff --exit-code -- specs/contracts/api.openapi.json
+
+  server:
+    name: Contrato do server
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+          working-directory: server
+      - run: uv sync
+      - name: Exportar o OpenAPI
+        run: uv run python -c "$EXPORT_OPENAPI" > ../specs/contracts/server.openapi.json
+      - name: Comparar com specs/contracts/
+        run: git diff --exit-code -- ../specs/contracts/server.openapi.json
