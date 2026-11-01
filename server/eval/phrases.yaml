@@ -9,7 +9,7 @@
 # Estas frases foram escritas à mão, não vieram de fala real. Acrescente aqui
 # as transcrições capturadas com GO2S_SAVE_UTTERANCES=1, com o rótulo certo.
 
-# ─── Frases do edge (têm de passar todas) ──────────────────────────────────
+# ─── Frases de discovery/phrases.json (têm de passar todas) ────────────────
 - {text: "levanta", expect: [stand_up]}
 - {text: "senta", expect: [sit]}
 - {text: "deita", expect: [stand_down]}

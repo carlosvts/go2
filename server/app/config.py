@@ -20,8 +20,8 @@ class Settings(BaseSettings):
     # ─── go2-api ───────────────────────────────────────────────────────────
     go2_api_url: str = "http://127.0.0.1:8000"
     go2_api_timeout_s: float = Field(default=2.0, gt=0)
-    # Antes de um movimento, confere (e liga) o desvio de obstáculo do robô,
-    # como o edge faz. Sem a confirmação, o movimento não sai.
+    # Antes de um movimento, confere (e liga) o desvio de obstáculo do robô.
+    # Sem a confirmação, o movimento não sai.
     ensure_obstacle_avoidance: bool = True
     obstacle_avoidance_timeout_s: float = Field(default=4.0, gt=0)
     # Por quanto tempo uma confirmação do desvio de obstáculo vale.
@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     # Transcrições simultâneas, fora a faixa reservada para áudio curto.
     stt_workers: int = Field(default=1, ge=1)
     # Áudio até esta duração usa a faixa reservada: é onde chega a parada
-    # falada do modo thin, que não pode esperar atrás de uma frase longa.
+    # falada da TV Box, que não pode esperar atrás de uma frase longa.
     short_audio_s: float = Field(default=2.5, gt=0)
     # Rejeição de alucinação do Whisper (silêncio, ruído).
     no_speech_threshold: float = Field(default=0.6, ge=0, le=1)
@@ -66,8 +66,8 @@ class Settings(BaseSettings):
     ]
 
     # ─── Wake word ─────────────────────────────────────────────────────────
-    # Grafias que o motor de transcrição costuma produzir para a wake word do
-    # edge ("hey jarvis"). Comparadas com tolerância a erro pequeno.
+    # Grafias que o motor de transcrição costuma produzir para a wake word da
+    # TV Box ("hey jarvis"). Comparadas com tolerância a erro pequeno.
     wake_words: list[str] = [
         "hey jarvis",
         "ei jarvis",

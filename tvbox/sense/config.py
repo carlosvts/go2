@@ -100,13 +100,6 @@ def load_config(env: Mapping[str, str] | None = None) -> Config:
             problems.append(f"{name}={value!r} inválido (esperado algo como {example})")
         return value
 
-    # O modo edge foi removido; só sobrou o thin. Um SENSE_MODE=thin antigo no
-    # .env não atrapalha, mas qualquer outro valor é um .env de outra época.
-    mode = get("SENSE_MODE")
-    if mode and mode != "thin":
-        problems.append(
-            f"SENSE_MODE={mode!r}: o Sense só tem o modo thin agora; apague a linha do .env"
-        )
 
     save_dir = Path(get("SAVE_UTTERANCES_DIR")) if get("SAVE_UTTERANCES_DIR") else None
     if save_dir is not None and not save_dir.is_absolute():

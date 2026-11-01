@@ -122,9 +122,9 @@ O container usa a rede do host, como o da go2-api, e tem teto de 4 CPUs para nã
 | Campo | Conteúdo |
 |---|---|
 | `audio` | WAV mono 16 kHz PCM16 |
-| `meta` | JSON: `utterance_id`, `edge_id` (quem enviou, ex. a TV Box), `reason`, `local_hypothesis`, `local_confidence` |
+| `meta` | JSON: `utterance_id`, `edge_id` (quem enviou, ex. a TV Box), `reason` |
 
-A TV Box manda `reason="wake_word"` e `local_*` nulos. Outro `reason` é aceito e logado. Só responde `422` para áudio ausente ou em outro formato, `meta` ilegível e `utterance_id` ausente.
+A TV Box manda `reason="wake_word"`. Outro `reason` é aceito e logado. Só responde `422` para áudio ausente ou em outro formato, `meta` ilegível e `utterance_id` ausente.
 
 Resposta `200`:
 
@@ -146,7 +146,7 @@ A repetição de um `utterance_id` devolve a mesma resposta e não executa nada 
 
 ### `POST /v1/cancel`
 
-`{"reason": "stop" | "local_command", "edge_id": "…"}` (`edge_id` opcional). A parada manual da TV Box manda `{"reason": "stop"}`. Limpa a fila e interrompe o comando em andamento. Com `stop`, também chama `POST /commands/stop` na go2-api; repetir é inofensivo. Responde `{"cleared": n, "stop_sent": true|false|null}`.
+`{"reason": "stop", "edge_id": "…"}` (`edge_id` opcional). A parada manual da TV Box manda `{"reason": "stop"}`. Limpa a fila, interrompe o comando em andamento e chama `POST /commands/stop` na go2-api; repetir é inofensivo. Responde `{"cleared": n, "stop_sent": true|false}`.
 
 ### `GET /health` e `GET /v1/stats`
 

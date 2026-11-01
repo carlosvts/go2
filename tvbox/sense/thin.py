@@ -1,9 +1,8 @@
 """O laço da TV Box: só detecta a wake word e manda o áudio do comando.
 
-É o único modo do Sense (o nome "thin" ficou de quando havia também o modo edge,
-com reconhecimento local). Nenhuma inferência de comando roda aqui. Quem transcreve,
-interpreta, enfileira e chama a go2-api é o servidor de inferência; a resposta
-dele só vira som de retorno e log.
+Nenhuma inferência de comando roda aqui. Quem transcreve, interpreta, enfileira e
+chama a go2-api é o servidor de inferência; a resposta dele só vira som de retorno
+e log.
 
     OCIOSO ──wake word──▶ ESCUTA (até a fala acabar) ──▶ ENVIO ──resposta──▶ OCIOSO
        ▲                     │

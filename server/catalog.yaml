@@ -2,7 +2,7 @@
 # mora em discovery/inferred.yaml, e o resto vem da go2-api e de discovery/phrases.json.
 #
 # Marcas:
-#   # edge               frase que o usuário já fala (discovery/phrases.json)
+#   # discovery          frase que o usuário já fala (discovery/phrases.json)
 #   # INFERIDO           escolha deste servidor, sem respaldo nos repositórios
 #   # INFERIDO, REVISAR  idem, e precisa de conferência com o robô
 
@@ -12,7 +12,7 @@ go2_api_capabilities_version: 7e4008fc1641
 stop:
   id: stop
   call: {method: POST, endpoint: /commands/stop}
-  words: [para, pare, parar, stop]  # edge
+  words: [para, pare, parar, stop]  # discovery
 
 commands:
   stand_up:
@@ -22,7 +22,7 @@ commands:
     call: {method: POST, endpoint: /commands/posture, body: {cmd: stand_up}}
     max_duration_s: 3.0  # INFERIDO, REVISAR
     examples:
-      - levanta  # edge
+      - levanta  # discovery
       - levantar  # INFERIDO
       - levante  # INFERIDO
       - fica de pé  # INFERIDO
@@ -34,7 +34,7 @@ commands:
     call: {method: POST, endpoint: /commands/posture, body: {cmd: sit}}
     max_duration_s: 3.0  # INFERIDO, REVISAR
     examples:
-      - senta  # edge
+      - senta  # discovery
       - sentar  # INFERIDO
       - sente  # INFERIDO
   stand_down:
@@ -44,7 +44,7 @@ commands:
     call: {method: POST, endpoint: /commands/posture, body: {cmd: stand_down}}
     max_duration_s: 3.0  # INFERIDO, REVISAR
     examples:
-      - deita  # edge
+      - deita  # discovery
       - deitar  # INFERIDO
       - deite  # INFERIDO
   hello:
@@ -54,8 +54,8 @@ commands:
     call: {method: POST, endpoint: /commands/gesture, body: {cmd: hello}}
     max_duration_s: 5.0  # INFERIDO, REVISAR
     examples:
-      - cumprimentar  # edge
-      - cumprimente  # edge
+      - cumprimentar  # discovery
+      - cumprimente  # discovery
       - cumprimenta  # INFERIDO
       - acenar  # INFERIDO
       - acena  # INFERIDO
@@ -68,7 +68,7 @@ commands:
     call: {method: POST, endpoint: /commands/gesture, body: {cmd: stretch}}
     max_duration_s: 6.0  # INFERIDO, REVISAR
     examples:
-      - alonga  # edge
+      - alonga  # discovery
       - alongar  # INFERIDO
       - alongue  # INFERIDO
       - se alonga  # INFERIDO
@@ -81,7 +81,7 @@ commands:
     call: {method: POST, endpoint: /commands/gesture, body: {cmd: finger_heart}}
     max_duration_s: 6.0  # INFERIDO, REVISAR
     examples:
-      - coração  # edge
+      - coração  # discovery
       - faz um coração  # INFERIDO
       - fazer coração  # INFERIDO
       - coraçãozinho  # INFERIDO
@@ -92,7 +92,7 @@ commands:
     call: {method: POST, endpoint: /commands/posture, body: {cmd: damp}}
     max_duration_s: 2.0  # INFERIDO, REVISAR
     examples:
-      - desligar motores  # edge
+      - desligar motores  # discovery
       - desligar os motores  # INFERIDO
       - desliga os motores  # INFERIDO
       - desligue os motores  # INFERIDO
@@ -186,14 +186,14 @@ movement:
   settle_s: 0.5  # INFERIDO, REVISAR
   ignore: [para, a, o, à, ao]  # INFERIDO
   verbs:
-    andar: [andar, anda, ande, caminhar, caminha, caminhe, vai, vá]  # 1ª do edge, demais INFERIDAS
-    virar: [virar, vira, vire, girar, gira, gire]  # 1ª do edge, demais INFERIDAS
+    andar: [andar, anda, ande, caminhar, caminha, caminhe, vai, vá]  # 1ª de discovery/, demais INFERIDAS
+    virar: [virar, vira, vire, girar, gira, gire]  # 1ª de discovery/, demais INFERIDAS
   directions:
-    frente: [frente, adiante]  # 1ª do edge, demais INFERIDAS
-    trás: [trás, atrás, ré]  # 1ª do edge, demais INFERIDAS
-    direita: [direita]  # 1ª do edge, demais INFERIDAS
-    esquerda: [esquerda]  # 1ª do edge, demais INFERIDAS
-  # Velocidades e duração copiadas do edge. O `id` é INFERIDO.
+    frente: [frente, adiante]  # 1ª de discovery/, demais INFERIDAS
+    trás: [trás, atrás, ré]  # 1ª de discovery/, demais INFERIDAS
+    direita: [direita]  # 1ª de discovery/, demais INFERIDAS
+    esquerda: [esquerda]  # 1ª de discovery/, demais INFERIDAS
+  # Velocidades e duração de discovery/phrases.json. O `id` é INFERIDO.
   rules:
     - {id: move_forward, verb: andar, direction: frente, args: {vx: 0.3, vy: 0.0, vyaw: 0.0, duration_s: 1.0}}
     - {id: move_backward, verb: andar, direction: trás, args: {vx: -0.5, vy: 0.0, vyaw: 0.0, duration_s: 1.0}}

@@ -314,11 +314,9 @@ def test_servidor_recebe_wav_e_meta_do_thin(server):
     assert meta == {
         "edge_id": "tvbox-teste",
         "reason": "wake_word",
-        "local_hypothesis": None,
-        "local_confidence": None,
     }
     assert sounds == ["beep", "processing", "confirmed"]
-    assert server.others == []  # o thin não manda cancel nem executa nada
+    assert server.others == []  # o Sense não manda cancel nem executa nada
 
 
 def test_status_rejected_do_servidor_e_nao_entendi(server):
@@ -379,12 +377,6 @@ def test_servidor_e_obrigatorio_e_a_api_nao():
     with pytest.raises(ConfigError, match="SERVER_URL não definido"):
         load_config(env={"GO2_API_URL": "http://api:8000"})
     assert load_config(env={"SERVER_URL": "http://server:9000"}).api_url is None
-
-
-def test_sense_mode_antigo_thin_passa_e_edge_da_erro_claro():
-    assert load_config(env={**ENV, "SENSE_MODE": "thin"}).server_url == "http://server:9000"
-    with pytest.raises(ConfigError, match="SENSE_MODE='edge': o Sense só tem o modo thin"):
-        load_config(env={**ENV, "SENSE_MODE": "edge"})
 
 
 # ─── Parada manual ───────────────────────────────────────────────────────────

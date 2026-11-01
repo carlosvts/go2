@@ -32,8 +32,8 @@ _UNSET = object()
 
 
 class CancelRequest(BaseModel):
-    reason: Literal["stop", "local_command"]
-    # O edge atual não manda `edge_id` no cancel: é opcional.
+    reason: Literal["stop"]
+    # A parada manual da TV Box não manda `edge_id` no cancel: é opcional.
     edge_id: str | None = None
 
 
@@ -86,8 +86,6 @@ def _parse_meta(raw: object) -> Meta:
         utterance_id=utterance_id,
         edge_id=str(data.get("edge_id") or "unknown")[:64],
         reason=str(data.get("reason") or "unknown")[:64],
-        local_hypothesis=data.get("local_hypothesis"),
-        local_confidence=data.get("local_confidence"),
     )
 
 

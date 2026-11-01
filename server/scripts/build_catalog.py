@@ -12,8 +12,8 @@ Para atualizar `capabilities.json` a partir da API no ar:
     uv run python scripts/build_catalog.py --capabilities http://127.0.0.1:8000/capabilities
 
 Sem argumentos, só regenera o catálogo com o que já está em `discovery/`. O
-script falha (código 1) se o edge usar um comando que a API não tem ou que
-diverge dela, e imprime o resumo da reconciliação.
+script falha (código 1) se `commands.json` usar um comando que a API não tem ou
+que diverge dela, e imprime o resumo da reconciliação.
 """
 
 import argparse
@@ -60,7 +60,7 @@ def call_of(capability: dict) -> dict:
 
 def build() -> tuple[str, list[str], list[str]]:
     capabilities = json.loads((DISCOVERY / "capabilities.json").read_text(encoding="utf-8"))
-    edge = json.loads((DISCOVERY / "commands.json").read_text(encoding="utf-8"))
+    commands_json = json.loads((DISCOVERY / "commands.json").read_text(encoding="utf-8"))
     phrases = json.loads((DISCOVERY / "phrases.json").read_text(encoding="utf-8"))
     inferred = yaml.safe_load((DISCOVERY / "inferred.yaml").read_text(encoding="utf-8"))
 
@@ -68,32 +68,32 @@ def build() -> tuple[str, list[str], list[str]]:
     problems: list[str] = []
     notes: list[str] = []
 
-    # 1. Todo comando que o edge usa tem de existir na API, igual.
-    for name, entry in edge["commands"].items():
+    # 1. Todo comando que o commands.json usa tem de existir na API, igual.
+    for name, entry in commands_json["commands"].items():
         if name not in api:
-            problems.append(f"edge usa {name!r}, que a go2-api não tem")
+            problems.append(f"commands.json usa {name!r}, que a go2-api não tem")
         elif any(entry[key] != api[name][key] for key in ("method", "endpoint", "params")):
-            problems.append(f"{name!r} diverge entre o edge e a go2-api")
+            problems.append(f"{name!r} diverge entre o commands.json e a go2-api")
 
     stop_name = phrases["parada"]["comando"]
     move_name = phrases["movimentos"]["comando"]
     spoken = set(phrases["acoes"].values()) | {stop_name, move_name}
     unspoken = [name for name in api if name not in spoken]
     notes.append(f"go2-api: {len(api)} comandos (versão {capabilities['version']})")
-    notes.append(f"com frase no edge: {sorted(spoken)}")
-    notes.append(f"sem frase no edge: {unspoken}")
+    notes.append(f"com frase em discovery/: {sorted(spoken)}")
+    notes.append(f"sem frase em discovery/: {unspoken}")
 
-    # 2. Ações de verbo único: frases do edge + exemplos inferidos.
-    edge_examples: dict[str, list[str]] = {}
+    # 2. Ações de verbo único: frases de discovery/ + exemplos inferidos.
+    spoken_examples: dict[str, list[str]] = {}
     for phrase, name in phrases["acoes"].items():
-        edge_examples.setdefault(name, []).append(phrase)
+        spoken_examples.setdefault(name, []).append(phrase)
 
     out: list[str] = [
         "# GERADO por scripts/build_catalog.py. Não edite à mão: o que é inferido",
         "# mora em discovery/inferred.yaml, e o resto vem da go2-api e de discovery/phrases.json.",
         "#",
         "# Marcas:",
-        "#   # edge               frase que o usuário já fala (discovery/phrases.json)",
+        "#   # discovery          frase que o usuário já fala (discovery/phrases.json)",
         "#   # INFERIDO           escolha deste servidor, sem respaldo nos repositórios",
         "#   # INFERIDO, REVISAR  idem, e precisa de conferência com o robô",
         "",
@@ -103,7 +103,7 @@ def build() -> tuple[str, list[str], list[str]]:
         "stop:",
         f"  id: {stop_name}",
         f"  call: {flow(call_of(api[stop_name]))}",
-        f"  words: {flow(phrases['parada']['palavras'])}  # edge",
+        f"  words: {flow(phrases['parada']['palavras'])}  # discovery",
         "",
         "commands:",
     ]
@@ -126,13 +126,13 @@ def build() -> tuple[str, list[str], list[str]]:
         for text, origin in examples:
             out.append(f"      - {flow(text)}  {origin}")
 
-    for name, texts in edge_examples.items():
-        examples = [(text, "# edge") for text in texts]
+    for name, texts in spoken_examples.items():
+        examples = [(text, "# discovery") for text in texts]
         examples += [(text, INFERRED_TAG) for text in inferred["extra_examples"].get(name, [])]
         emit_command(name, examples, enabled=True)
     for name, texts in inferred["disabled"].items():
         if name in spoken:
-            problems.append(f"{name!r} tem frase no edge e está em `disabled`")
+            problems.append(f"{name!r} tem frase em discovery/ e está em `disabled`")
             continue
         emit_command(name, [(text, INFERRED_TAG) for text in texts], enabled=False)
 
@@ -144,7 +144,7 @@ def build() -> tuple[str, list[str], list[str]]:
     moves = phrases["movimentos"]
     defaults = moves["padrao"]
     if sorted(defaults) != sorted(api[move_name]["params"]):
-        problems.append("os campos do `move` no edge não batem com os da go2-api")
+        problems.append("os campos do `move` em phrases.json não batem com os da go2-api")
 
     out += [
         "",
@@ -158,12 +158,12 @@ def build() -> tuple[str, list[str], list[str]]:
     ]
     for verb in moves["verbos"]:
         words = [verb, *movement["verb_synonyms"].get(verb, [])]
-        out.append(f"    {verb}: {flow(words)}  # 1ª do edge, demais INFERIDAS")
+        out.append(f"    {verb}: {flow(words)}  # 1ª de discovery/, demais INFERIDAS")
     out.append("  directions:")
     for direction in phrases["direcoes"]:
         words = [direction, *movement["direction_synonyms"].get(direction, [])]
-        out.append(f"    {direction}: {flow(words)}  # 1ª do edge, demais INFERIDAS")
-    out.append("  # Velocidades e duração copiadas do edge. O `id` é INFERIDO.")
+        out.append(f"    {direction}: {flow(words)}  # 1ª de discovery/, demais INFERIDAS")
+    out.append("  # Velocidades e duração de discovery/phrases.json. O `id` é INFERIDO.")
     out.append("  rules:")
     for verb, directions in moves["verbos"].items():
         for direction, overrides in directions.items():
@@ -175,7 +175,7 @@ def build() -> tuple[str, list[str], list[str]]:
                 problems.append(f"id de movimento {rule_id!r} colide com comando da API")
             args = {**defaults, **overrides}
             # O commands.json é gerado do phrases.json: os dois têm de concordar.
-            for phrase, target in edge["phrases"].items():
+            for phrase, target in commands_json["phrases"].items():
                 words = phrase.split()
                 if not isinstance(target, dict):
                     continue

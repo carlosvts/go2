@@ -1,8 +1,8 @@
-"""Resumo por `reason`, para comparar os modos edge e thin lado a lado."""
+"""Resumo por `reason` das frases recebidas."""
 
 from collections import Counter, deque
 
-KNOWN_REASONS = ("unk", "low_conf", "too_long", "wake_word")
+KNOWN_REASONS = ("wake_word",)
 # `reason` vem do cliente: valores desconhecidos são aceitos, mas não podem
 # criar chaves sem limite aqui.
 MAX_OTHER_REASONS = 20

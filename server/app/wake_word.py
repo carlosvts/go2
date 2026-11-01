@@ -1,6 +1,6 @@
 """Remoção da wake word do início da transcrição.
 
-No modo thin a TV Box manda o áudio com a wake word, e o motor de transcrição
+A TV Box manda o áudio com a wake word, e o motor de transcrição
 a escreve de vários jeitos ("Hey Jarvis", "Ei, Jarvis", "Rei Jarvis"). A
 comparação é sem acento e sem pontuação, com tolerância a erro pequeno.
 """

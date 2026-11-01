@@ -29,7 +29,7 @@ from app.go2_client import OBSTACLE_AVOIDANCE, Go2ApiError
 log = logging.getLogger(__name__)
 
 # Depois de mandar ligar o desvio de obstáculo, a confirmação é perguntada
-# algumas vezes (mesmos números do edge).
+# algumas vezes.
 CONFIRM_TRIES = 3
 CONFIRM_WAIT_S = 0.3
 
@@ -151,18 +151,12 @@ class Dispatcher:
         return Submission(True, replaced=replaced)
 
     async def cancel(self, reason: str, edge_id: str | None = None) -> Cancellation:
-        """Limpa a fila e interrompe o comando em andamento.
+        """Limpa a fila, interrompe o comando em andamento e manda a parada à go2-api.
 
-        Com `reason="stop"`, também manda a parada à go2-api. É idempotente:
-        repetir só reenvia o `stop`, que a API aceita sempre.
+        É idempotente: repetir só reenvia o `stop`, que a API aceita sempre.
         """
         cleared = self._clear()
         log.info("cancel reason=%s edge_id=%s cleared=%d", reason, edge_id, cleared)
-        if reason != "stop":
-            # Um comando que o servidor não viu mexeu no robô: não dá mais
-            # para supor que ele está pronto para andar.
-            self._ready_to_move = False
-            return Cancellation(cleared)
         async with self._api_lock:
             try:
                 await self._go2.call(self._catalog.stop_call)

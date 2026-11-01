@@ -92,16 +92,6 @@ async def test_rejected_sentence_does_not_touch_the_queue(make, go2):
     assert go2.calls == ["sit", "hello"]
 
 
-async def test_cancel_local_command_clears_without_stopping(make, go2):
-    dispatcher = make()
-    dispatcher.submit(["sit", "hello", "stretch"], "tv1", "u1")
-    await asyncio.sleep(SIT_S / 3)
-    result = await dispatcher.cancel("local_command", "tv1")
-    assert (result.cleared, result.stop_sent) == (3, None)
-    await idle(dispatcher)
-    assert go2.calls == ["sit"]
-
-
 async def test_stop_clears_calls_the_api_and_is_idempotent(make, go2):
     dispatcher = make()
     dispatcher.submit(["sit", "hello"], "tv1", "u1")
@@ -226,7 +216,7 @@ async def test_api_failure_clears_the_queue(make, go2):
 
 
 async def test_two_edges_share_one_queue(make, go2):
-    """A fila é global: a frase de um edge substitui a de outro."""
+    """A fila é global: a frase de um cliente (edge_id) substitui a de outro."""
     dispatcher = make()
     dispatcher.submit(["sit", "hello"], "tv1", "u1")
     await asyncio.sleep(SIT_S / 3)
@@ -236,7 +226,7 @@ async def test_two_edges_share_one_queue(make, go2):
 
 
 async def test_two_edges_at_the_same_time(make, go2):
-    """Várias frases de dois edges no mesmo instante: vale só a última, inteira."""
+    """Várias frases de dois edge_ids no mesmo instante: vale só a última, inteira."""
     dispatcher = make()
 
     async def speak(edge: str, commands: list[str], number: int) -> None:
@@ -287,16 +277,6 @@ async def test_move_after_a_posture_is_prepared_again(make, go2):
         "balance_stand",
         "move:0.3,0,0",
     ]
-
-
-async def test_local_command_invalidates_the_prepared_state(make, go2):
-    dispatcher = make()
-    dispatcher.submit(["move_forward"], "tv1", "u1")
-    await idle(dispatcher)
-    await dispatcher.cancel("local_command")
-    dispatcher.submit(["move_forward"], "tv1", "u2")
-    await idle(dispatcher)
-    assert go2.calls.count("balance_stand") == 2
 
 
 async def test_obstacle_avoidance_is_switched_on_before_moving(make, go2):

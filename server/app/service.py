@@ -8,7 +8,6 @@ import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 from pydantic import BaseModel
@@ -45,8 +44,6 @@ class Meta:
     utterance_id: str
     edge_id: str
     reason: str
-    local_hypothesis: Any = None
-    local_confidence: Any = None
 
 
 class Service:
@@ -169,8 +166,6 @@ class Service:
             "utterance_id": meta.utterance_id,
             "edge_id": meta.edge_id,
             "reason": meta.reason,
-            "local_hypothesis": meta.local_hypothesis,
-            "local_confidence": meta.local_confidence,
             "audio_s": round(len(audio) / SAMPLE_RATE, 2),
             "transcript_raw": raw,
             "transcript": text,
