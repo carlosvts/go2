@@ -4,7 +4,7 @@ services:
     image: go2-api:local
     container_name: go2-api
 
-    # Só sobe quando pedido: `docker compose --profile api up -d`.
+    # Só sobe quando pedido: `docker compose --profile api up`.
     profiles: ["api"]
 
     # Toda a configuração vem do `.env` (modelo em `.env.example`).

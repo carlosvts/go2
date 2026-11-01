@@ -109,8 +109,7 @@ No lugar dos passos 2 a 4:
 
 ```bash
 cp .env.example .env
-docker compose --profile server up -d --build
-docker compose logs -f go2-server
+docker compose --profile server up --build
 ```
 
 O container usa a rede do host, como o da go2-api, e tem teto de 4 CPUs para não tirar processador do reenvio do `Move`. Para o container usar a GPU, instale o NVIDIA Container Toolkit (o `docker-compose.yml` já pede `gpus: all`).

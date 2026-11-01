@@ -7,12 +7,12 @@
 ```bash
 cp .env.example .env                    # preencha GO2_ROBOT_SERIAL_NUMBER (ou GO2_ROBOT_IP)
 docker compose --profile api build      # monta a imagem (demora na primeira vez)
-docker compose --profile api up -d      # sobe em segundo plano
-docker compose --profile api logs -f    # acompanha a conexão com o robô
+docker compose --profile api up         # sobe e mostra os logs (Ctrl+C para o container)
+docker compose --profile api logs -f    # de outro terminal: acompanha a conexão com o robô
 docker compose --profile api down       # para e remove o container
 ```
 
-- **Configuração:** tudo vem do `.env`. Mudou o `.env`? Rode `up -d` de novo (não precisa de `build`).
+- **Configuração:** tudo vem do `.env`. Mudou o `.env`? Rode `up` de novo (não precisa de `build`).
 - **Porta:** `UVICORN_PORT` no `.env` (padrão `8000`). De outra máquina: `http://<IP do PC>:8000/status`.
 - **Rede do host** (`network_mode: host`): o container usa a rede do PC direto. Sem isso a descoberta do robô por serial (multicast) e o WebRTC não funcionam. Só vale em Linux.
 
@@ -43,7 +43,7 @@ Com o robô desligado o container continua `healthy`: a API está viva e respond
 
 Antes: [checklist de campo](checklist-de-campo.md) (app do celular fechado, área livre, quem dispara o `stop`).
 
-1. **Conectar.** `docker compose --profile api up -d` e `logs -f`. Esperado: `Peer Connection State: 🟢 connected` e `Data Channel Verification: ✅ OK`.
+1. **Conectar.** `docker compose --profile api up` (os logs aparecem no terminal). Esperado: `Peer Connection State: 🟢 connected` e `Data Channel Verification: ✅ OK`.
 2. **Health.** `docker ps` mostra `(healthy)`; `curl :8000/status` mostra `"connected": true`, `"state": "connected"` e `low_state_age_s` pequeno. `curl :8000/capabilities` lista os comandos.
 3. **Comando inválido.** `curl -i -X POST :8000/commands/posture -H 'content-type: application/json' -d '{"cmd":"voar"}'` → `422`, robô não se mexe.
 4. **Um comando seguro.** Com o robô deitado: `curl -X POST :8000/commands/posture -H 'content-type: application/json' -d '{"cmd":"stand_up"}'` → `202` e o robô levanta. Depois `{"cmd":"stand_down"}`.

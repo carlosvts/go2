@@ -24,7 +24,7 @@ Prefira o **serial** ao IP.
 
 ```bash
 cp .env.example .env
-docker compose --profile api up -d --build
+docker compose --profile api up --build
 ```
 
 O container usa a rede do próprio PC (só Linux) e tem um healthcheck que indica se a API está no ar (não se o robô está conectado: isso é o `connected` do `GET /status`). Detalhes, reconexão e checklist de teste com o robô na [ficha](docs/essencial/rodar-com-docker.md).

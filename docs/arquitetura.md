@@ -156,7 +156,7 @@ flowchart TB
 
 - `network_mode: host`, só em Linux: a api precisa enxergar a LAN do robô (descoberta por multicast e WebRTC), e o server fala com ela por `127.0.0.1:8000`.
 - O healthcheck da api diz se ela responde, não se o robô está conectado: isso é o campo `connected` de `GET /status`.
-- `docker compose --profile api --profile server up -d --build` na raiz sobe os dois; cada pasta também sobe sozinha com o próprio perfil.
+- `docker compose --profile api --profile server up --build` na raiz sobe os dois; cada pasta também sobe sozinha com o próprio perfil.
 
 ## Catálogo (antes de rodar, manual)
 
