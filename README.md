@@ -23,7 +23,7 @@ cd server && cp .env.example .env && uv sync
 uv run uvicorn app.main:create_app --factory --host 0.0.0.0 --port 9000
 
 # api e server com Docker
-docker compose --profile api --profile server up -d --build
+docker compose --profile api --profile server up --build
 ```
 
 Na TV Box, em `tvbox/` (`SERVER_URL` e `GO2_API_URL` no `.env`):
@@ -44,7 +44,7 @@ Regenere à mão, em `server/`, e commite o `catalog.yaml` junto:
 uv run python scripts/build_catalog.py                     # depois de editar discovery/
 uv run python scripts/build_catalog.py \
     --capabilities http://127.0.0.1:8000/capabilities      # quando a api mudar os comandos (api no ar)
-docker compose --profile server up -d --build              # o catálogo novo só entra com rebuild
+docker compose --profile server up --build                 # o catálogo novo só entra com rebuild
 ```
 
 Editar `discovery/` sem regenerar não dá erro: o robô continua com o catálogo antigo.
