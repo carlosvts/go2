@@ -158,10 +158,36 @@
 - {text: "cumprimentos a todos", expect: reject}
 - {text: "alongamento é importante antes do treino", expect: reject}
 
+# ─── Comandos habilitados com frases INFERIDAS (sem teste no robô) ─────────
+- {text: "levanta do sentado", expect: [rise_sit]}
+- {text: "fica em equilíbrio", expect: [balance_stand]}
+- {text: "se recupera", expect: [recovery_stand]}
+- {text: "rebola", expect: [wiggle_hips]}
+- {text: "dança", expect: [dance1]}
+- {text: "dançar", expect: [dance1]}
+- {text: "dança um", expect: [dance1]}
+- {text: "dança 2", expect: [dance2]}
+- {text: "arranha o chão", expect: [scrape]}
+
+# ─── Parecidas com os habilitados, entre si ou com outros comandos ─────────
+# ("levanta", "fique em pé" e "rola", que também contam aqui, estão acima.)
+- {text: "dança três", expect: reject}
+- {text: "terceira dança", expect: reject}
+- {text: "recuperar a senha", expect: reject}
+- {text: "o equilíbrio é importante", expect: reject}
+- {text: "o cachorro arranhou a porta", expect: reject}
+- {text: "dança para frente", expect: reject}
+- {text: "rebola para a direita", expect: reject}
+- {text: "anda rebolando", expect: reject}
+- {text: "desliga o modo equilíbrio", expect: reject}
+- {text: "desligar a dança", expect: reject}
+# Hoje "para de X" não é tratado como parada (nem "para de andar"): o robô não
+# se move, mas também não para. Fica como reject até a inferência melhorar.
+- {text: "para de dançar", expect: reject}
+- {text: "não dança", expect: reject}
+- {text: "não rebola", expect: reject}
+
 # ─── Comandos que existem na go2-api e estão desabilitados ─────────────────
-- {text: "dança", expect: reject}
-- {text: "dançar", expect: reject}
-- {text: "rebola", expect: reject}
 - {text: "faz uma pose", expect: reject}
 - {text: "dá um salto mortal", expect: reject}
 - {text: "planta bananeira", expect: reject}

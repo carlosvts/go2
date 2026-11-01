@@ -147,7 +147,7 @@ def test_too_many_clauses(interpreter):
 
 
 def test_disabled_command_is_rejected(interpreter):
-    commands, result = run(interpreter, "dança")
+    commands, result = run(interpreter, "faz uma pose")
     assert commands == REJECT
     assert result.reject_reason == "command_disabled"
 
@@ -255,8 +255,8 @@ def test_lexical_only_command_is_never_reached_by_embedding(interpreter, stub):
 
 
 def test_disabled_command_works_as_a_distractor(interpreter, stub):
-    stub.mix("dançar muito", {"dançar": 1.0})
-    _, result = run(interpreter, "dançar muito")
+    stub.mix("faz uma pose bonita", {"faz uma pose": 1.0})
+    _, result = run(interpreter, "faz uma pose bonita")
     assert result.reject_reason == "command_disabled"
 
 

@@ -130,13 +130,23 @@ def build() -> tuple[str, list[str], list[str]]:
         examples = [(text, "# discovery") for text in texts]
         examples += [(text, INFERRED_TAG) for text in inferred["extra_examples"].get(name, [])]
         emit_command(name, examples, enabled=True)
+    # Habilitados sem frase em discovery/: todas as frases são inferidas.
+    for name, texts in inferred.get("enabled_inferred", {}).items():
+        if name in spoken:
+            problems.append(f"{name!r} tem frase em discovery/ e está em `enabled_inferred`")
+            continue
+        if name in inferred["disabled"]:
+            problems.append(f"{name!r} está em `enabled_inferred` e em `disabled`")
+            continue
+        emit_command(name, [(text, INFERRED_TAG) for text in texts], enabled=True)
     for name, texts in inferred["disabled"].items():
         if name in spoken:
             problems.append(f"{name!r} tem frase em discovery/ e está em `disabled`")
             continue
         emit_command(name, [(text, INFERRED_TAG) for text in texts], enabled=False)
 
-    not_in_catalog = [n for n in unspoken if n not in inferred["disabled"]]
+    listed = {*inferred["disabled"], *inferred.get("enabled_inferred", {})}
+    not_in_catalog = [n for n in unspoken if n not in listed]
     notes.append(f"fora do catálogo (exigem parâmetro que a voz não dá): {not_in_catalog}")
 
     # 3. Movimento por slots: verbo × direção → args do `move`.
