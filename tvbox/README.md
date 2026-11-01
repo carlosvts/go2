@@ -10,8 +10,6 @@ Cliente de voz do Go2. Roda na TV Box: captura o microfone Anker, espera a wake 
 
 A TV Box não reconhece comando nenhum, não tem fila e não executa nada do que o servidor responde: a resposta vira só um som de retorno. A única chamada direta à go2-api é a [parada manual](#parada-manual).
 
-> Até outubro de 2026 havia também um modo `edge`, com reconhecimento local por gramática (Vosk). Ele foi removido; o que sobrou é o antigo modo `thin`. Está no histórico do git, se precisar.
-
 ## Índice
 
 - [Como rodar](#como-rodar)
@@ -75,8 +73,6 @@ Os passos abaixo rodam dentro de `go2/tvbox/`.
 
    O log deve mostrar `Wake word pronta`, `Servidor de inferência no ar` e `Microfone aberto`. Diga "hey jarvis", espere o beep e diga o comando.
 
-**Vindo de uma instalação com o modo edge:** apague `SENSE_MODE` do `.env` (com `edge` o Sense não sobe; `thin` ainda é aceito). As outras chaves do edge são ignoradas. `uv sync` tira o Vosk do ambiente, e o modelo dele pode ser apagado para liberar ~50 MB: `rm -rf models/vosk-model-small-pt-0.3`.
-
 ### O que esperar no log
 
 No boot, o log mostra a branch e o commit em execução e a configuração em vigor:
@@ -99,8 +95,7 @@ Configuração inválida (`SERVER_URL` faltando, número fora da faixa) derruba 
 ```
 POST {SERVER_URL}/v1/utterance      multipart/form-data
   audio   WAV mono 16 kHz PCM16
-  meta    {"utterance_id": uuid, "edge_id", "reason": "wake_word",
-           "local_hypothesis": null, "local_confidence": null}
+  meta    {"utterance_id": uuid, "edge_id", "reason": "wake_word"}
 ```
 
 Só um comando fica em voo por vez. Da resposta são lidos `status`, `transcript` e `reject_reason`.
@@ -228,8 +223,6 @@ Diagnóstico: cpu=62% ram_pico=203MB | chunks_dropped_late=0 fallback_confirmed=
 │   ├── add_lead_silence.py    # põe o silêncio inicial em falas já geradas
 │   ├── generate_sounds.py     # tons simples antigos (sobrescreve as falas de mesmo nome)
 │   └── download_models.py     # baixa o modelo hey_jarvis
->>>
-
 ├── docs/checklist-laboratorio.md
 └── tests/
 ```

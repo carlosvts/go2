@@ -144,9 +144,6 @@ class FallbackClient:
             "utterance_id": utterance_id,
             "edge_id": self._edge_id,
             "reason": utterance.reason,
-            # Campos do contrato que só faziam sentido com reconhecimento local.
-            "local_hypothesis": None,
-            "local_confidence": None,
         }
         body, content_type = multipart(wav_bytes(utterance.audio), meta)
         request = urllib.request.Request(

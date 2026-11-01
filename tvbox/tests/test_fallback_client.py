@@ -36,8 +36,6 @@ def test_sucesso_envia_wav_e_meta_e_confirma(server):
     assert meta == {
         "edge_id": "tvbox-teste",
         "reason": "wake_word",
-        "local_hypothesis": None,
-        "local_confidence": None,
     }
     assert counters == {"fallback_sent": 1, "fallback_confirmed": 1}
 

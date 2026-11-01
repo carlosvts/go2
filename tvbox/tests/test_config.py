@@ -34,11 +34,6 @@ def test_configuracao_completa():
     assert config.fallback_ok_statuses == {"enqueued", "stopped"}
 
 
-def test_chaves_antigas_do_edge_no_env_sao_ignoradas():
-    env = {"SERVER_URL": SERVER, "VOSK_MODEL_PATH": "x", "STOP_FAILSAFE": "talvez", "COOLDOWN_S": "-1"}
-    assert load_config(env=env).server_url == SERVER
-
-
 @pytest.mark.parametrize(
     ("env", "mensagem"),
     [
@@ -49,7 +44,6 @@ def test_chaves_antigas_do_edge_no_env_sao_ignoradas():
         ({"SERVER_URL": SERVER, "WAKE_THRESHOLD": "alto"}, "WAKE_THRESHOLD='alto' não é"),
         ({"SERVER_URL": SERVER, "WAKE_SOUND": "talvez"}, "WAKE_SOUND='talvez' inválido"),
         ({"SERVER_URL": SERVER, "AUDIO_BUFFER_S": "5"}, "AUDIO_BUFFER_S tem de ser"),
-        ({"SERVER_URL": SERVER, "SENSE_MODE": "edge"}, "SENSE_MODE='edge'"),
     ],
 )
 def test_config_invalida_falha_com_mensagem_clara(env, mensagem):
