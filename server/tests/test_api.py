@@ -48,13 +48,11 @@ async def client(make_client, settings):
     return await make_client(settings)
 
 
-def meta(utterance_id="u1", reason="unk", **extra) -> str:
+def meta(utterance_id="u1", reason="wake_word", **extra) -> str:
     base = {
         "utterance_id": utterance_id,
         "edge_id": "tvbox-sala",
         "reason": reason,
-        "local_hypothesis": "[unk]",
-        "local_confidence": 0.4,
     }
     return json.dumps({**base, **extra})
 
@@ -103,25 +101,15 @@ async def test_compound_sentence_with_movement(client, stt, go2):
     assert go2.calls == ["stand_up", "balance_stand", "move:0.3,0,0"]
 
 
-async def test_thin_mode_wake_word_and_null_local_fields(client, stt, go2):
-    """Modo thin: reason="wake_word", `local_*` nulos e a wake word no áudio."""
+async def test_wake_word_in_the_audio(client, stt, go2):
+    """Como a TV Box manda: reason="wake_word" e a wake word no áudio."""
     audio = stt.say(2.0, "Hey, Jarvis. Senta!")
-    body = (
-        await post(
-            client, audio, meta(reason="wake_word", local_hypothesis=None, local_confidence=None)
-        )
-    ).json()
+    body = (await post(client, audio, meta())).json()
     assert body["status"] == "enqueued"
     assert body["commands"] == [{"id": "sit"}]
     assert body["transcript"] == "Hey, Jarvis. Senta!"
     await drain(client)
     assert go2.calls == ["sit"]
-
-
-async def test_thin_mode_without_local_fields_at_all(client, stt):
-    audio = stt.say(2.0, "hey jarvis levanta")
-    meta_json = json.dumps({"utterance_id": "u9", "edge_id": "thin-1", "reason": "wake_word"})
-    assert (await post(client, audio, meta_json)).json()["status"] == "enqueued"
 
 
 async def test_only_the_wake_word_is_ignored(client, stt, go2):
@@ -192,8 +180,8 @@ async def test_unknown_reason_is_accepted(client, stt):
         (wav_bytes(0.5, width=1), meta()),  # 8 bits
         (wav_bytes(0.5), None),  # meta ausente
         (wav_bytes(0.5), "{nao e json"),
-        (wav_bytes(0.5), json.dumps({"edge_id": "x", "reason": "unk"})),  # sem utterance_id
-        (wav_bytes(0.5), json.dumps({"utterance_id": "", "reason": "unk"})),
+        (wav_bytes(0.5), json.dumps({"edge_id": "x", "reason": "wake_word"})),  # sem utterance_id
+        (wav_bytes(0.5), json.dumps({"utterance_id": "", "reason": "wake_word"})),
     ],
 )
 async def test_invalid_requests_get_422(client, go2, audio, meta_json):
@@ -202,7 +190,7 @@ async def test_invalid_requests_get_422(client, go2, audio, meta_json):
 
 
 async def test_meta_sent_as_a_json_part_like_the_tvbox_does(client, stt):
-    """O edge manda `meta` como parte com Content-Type application/json."""
+    """A TV Box manda `meta` como parte com Content-Type application/json."""
     audio = stt.say(1.0, "senta")
     boundary = "abc123"
     parts = (
@@ -262,18 +250,19 @@ async def test_cancel_stop(client, stt, go2):
     assert go2.calls == ["sit", "stop", "stop"]
 
 
-async def test_cancel_local_command_without_edge_id(client, stt, go2):
-    """O edge atual manda só `{"reason": ...}`."""
+async def test_cancel_stop_without_edge_id(client, stt, go2):
+    """A parada manual da TV Box manda só `{"reason": "stop"}`."""
     await post(client, stt.say(2.0, "senta e levanta"), meta())
     await asyncio.sleep(0.01)  # o consumidor envia o primeiro comando
-    response = await client.post("/v1/cancel", json={"reason": "local_command"})
-    assert response.json() == {"cleared": 2, "stop_sent": None}
+    response = await client.post("/v1/cancel", json={"reason": "stop"})
+    assert response.json() == {"cleared": 2, "stop_sent": True}
     await drain(client)
-    assert go2.calls == ["sit"]
+    assert go2.calls == ["sit", "stop"]
 
 
 async def test_cancel_with_invalid_reason(client):
     assert (await client.post("/v1/cancel", json={"reason": "outro"})).status_code == 422
+    assert (await client.post("/v1/cancel", json={"reason": "local_command"})).status_code == 422
 
 
 # ─── Vários clientes e prioridade da parada ────────────────────────────────
@@ -343,16 +332,16 @@ def replace_settings(settings: Settings, **changes) -> Settings:
 
 
 async def test_stats_by_reason(client, stt):
-    await post(client, stt.say(1.0, "senta"), meta("u1", "unk"))
-    await post(client, stt.say(1.1, "toca uma música"), meta("u2", "unk"))
+    await post(client, stt.say(1.0, "senta"), meta("u1", "outro"))
+    await post(client, stt.say(1.1, "toca uma música"), meta("u2", "outro"))
     await post(client, stt.say(1.2, "hey jarvis para"), meta("u3", "wake_word"))
     await post(client, stt.say(1.3, "hey jarvis"), meta("u4", "wake_word"))
     stats = (await client.get("/v1/stats")).json()
-    assert stats["unk"]["by_status"] == {"enqueued": 1, "rejected": 1}
+    assert stats["outro"]["by_status"] == {"enqueued": 1, "rejected": 1}
     assert stats["wake_word"]["by_status"] == {"stopped": 1, "ignored": 1}
     assert stats["wake_word"]["stop_latency"]["count"] == 1
-    assert stats["unk"]["latency"]["p95_ms"] >= stats["unk"]["latency"]["mean_ms"] > 0
-    assert stats["unk"]["stop_latency"] is None
+    assert stats["outro"]["latency"]["p95_ms"] >= stats["outro"]["latency"]["mean_ms"] > 0
+    assert stats["outro"]["stop_latency"] is None
 
 
 async def test_structured_log_has_the_whole_story(client, stt, caplog):

@@ -15,7 +15,7 @@ Levantadas em 2026-10-09, lendo `go2-api@c880e68` (branch `dev`), e revistas em 
 | Divergência | Como ficou |
 |---|---|
 | A TV Box considerava confirmado só `ok,accepted,queued,executed` (`FALLBACK_OK_STATUSES`), e toda frase aceita tocava o som de recusa. | O padrão da TV Box agora é `FALLBACK_OK_STATUSES=enqueued,stopped`. |
-| O envio com `reason="wake_word"` e `local_*` nulos só tinha sido exercitado pelos testes e por `scripts/send_wav.py`. | Testado com a TV Box: 75 interações em 24/10/2026. |
+| O envio com `reason="wake_word"` só tinha sido exercitado pelos testes e por `scripts/send_wav.py`. | Testado com a TV Box: 75 interações em 24/10/2026. |
 
 ## Tratadas no servidor, sem ação
 

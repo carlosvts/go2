@@ -27,7 +27,7 @@ class Transcriber(Protocol):
 class TranscriptionPool:
     """Roda a transcrição fora do event loop, com uma faixa para áudio curto.
 
-    A parada falada do modo thin chega como um áudio curto. Com uma thread
+    A parada falada da TV Box chega como um áudio curto. Com uma thread
     reservada, ela não espera atrás de uma frase longa em transcrição.
     """
 
