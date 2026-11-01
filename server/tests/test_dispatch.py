@@ -263,7 +263,7 @@ async def test_move_is_prepared_once(make, go2):
     dispatcher = make()
     dispatcher.submit(["move_forward", "turn_left"], "tv1", "u1")
     await idle(dispatcher)
-    assert go2.calls == ["balance_stand", "move:0.3,0,0", "move:0,0,0.5"]
+    assert go2.calls == ["balance_stand", "move:0.5,0,0", "move:0,0,0.785"]
 
 
 async def test_move_after_a_posture_is_prepared_again(make, go2):
@@ -272,10 +272,10 @@ async def test_move_after_a_posture_is_prepared_again(make, go2):
     await idle(dispatcher)
     assert go2.calls == [
         "balance_stand",
-        "move:0.3,0,0",
+        "move:0.5,0,0",
         "sit",
         "balance_stand",
-        "move:0.3,0,0",
+        "move:0.5,0,0",
     ]
 
 
@@ -284,7 +284,7 @@ async def test_obstacle_avoidance_is_switched_on_before_moving(make, go2):
     dispatcher = make()
     dispatcher.submit(["move_forward"], "tv1", "u1")
     await asyncio.wait_for(dispatcher.wait_idle(), timeout=5)
-    assert go2.calls == ["obstacle_on", "balance_stand", "move:0.3,0,0"]
+    assert go2.calls == ["obstacle_on", "balance_stand", "move:0.5,0,0"]
 
 
 async def test_no_move_without_obstacle_avoidance_confirmed(make, go2):
@@ -302,7 +302,7 @@ async def test_obstacle_check_can_be_disabled(make, go2):
     dispatcher = make(ensure_obstacle_avoidance=False)
     dispatcher.submit(["move_forward"], "tv1", "u1")
     await idle(dispatcher)
-    assert go2.calls == ["balance_stand", "move:0.3,0,0"]
+    assert go2.calls == ["balance_stand", "move:0.5,0,0"]
 
 
 async def test_stop_is_never_queued(make, go2):

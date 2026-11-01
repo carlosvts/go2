@@ -23,14 +23,14 @@
     "padrao": {"vx": 0.0, "vy": 0.0, "vyaw": 0.0, "duration_s": 1.0},
     "verbos": {
       "andar": {
-        "frente": {"vx": 0.3},
-        "trás": {"vx": -0.5},
+        "frente": {"vx": 0.5, "duration_s": 3.0},
+        "trás": {"vx": -0.5, "duration_s": 3.0},
         "direita": {"vy": -0.5},
         "esquerda": {"vy": 0.5}
       },
       "virar": {
-        "direita": {"vyaw": -0.5},
-        "esquerda": {"vyaw": 0.5}
+        "direita": {"vyaw": -0.785},
+        "esquerda": {"vyaw": 0.785}
       }
     }
   }
