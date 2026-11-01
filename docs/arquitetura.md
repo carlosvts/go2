@@ -2,6 +2,8 @@
 
 Três serviços independentes que só conversam por HTTP. Nenhum importa código de outro; os contratos estão em [`specs/contracts/`](../specs/contracts/).
 
+Cores em todos os diagramas: 🟩 tvbox · 🟦 server · 🟧 api · ⬜ Go2 · 🟪 dados e arquivos · 🟨 Docker e CI.
+
 ## Visão geral
 
 ```mermaid
@@ -31,6 +33,19 @@ flowchart LR
     STOPCLI -->|"POST /commands/stop"| API
     STOPCLI -.->|"POST /v1/cancel (em paralelo)"| SERVER
     API <-->|"WebRTC"| GO2
+
+    classDef tvbox fill:#c8e6c9,stroke:#2e7d32,color:#000
+    classDef server fill:#bbdefb,stroke:#1565c0,color:#000
+    classDef api fill:#ffe0b2,stroke:#ef6c00,color:#000
+    classDef robot fill:#e0e0e0,stroke:#424242,color:#000
+    classDef data fill:#e1bee7,stroke:#6a1b9a,color:#000
+    class MIC,SENSE,SPK,STOPCLI tvbox
+    class SERVER server
+    class API api
+    class GO2 robot
+    class CAT,MODELS,CAPT data
+    style TVBOX fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style PC fill:#fff8e1,stroke:#f9a825,color:#000
 ```
 
 | Serviço | Onde roda | Porta | Fala com |
@@ -45,10 +60,18 @@ flowchart LR
 sequenceDiagram
     autonumber
     participant P as Pessoa
-    participant T as tvbox (Sense)
-    participant S as server
-    participant A as api
-    participant R as Go2
+    box rgba(46,125,50,0.15) TV Box
+        participant T as tvbox (Sense)
+    end
+    box rgba(21,101,192,0.15) server no PC
+        participant S as server
+    end
+    box rgba(239,108,0,0.15) api no PC
+        participant A as api
+    end
+    box rgba(66,66,66,0.15) Robô
+        participant R as Go2
+    end
 
     P->>T: "hey jarvis"
     T->>P: beep
@@ -78,9 +101,15 @@ A resposta do server à TV Box só diz se a frase virou comando (`enqueued`, `re
 
 ```mermaid
 sequenceDiagram
-    participant T as tvbox
-    participant S as server
-    participant A as api
+    box rgba(46,125,50,0.15) TV Box
+        participant T as tvbox
+    end
+    box rgba(21,101,192,0.15) server no PC
+        participant S as server
+    end
+    box rgba(239,108,0,0.15) api no PC
+        participant A as api
+    end
 
     rect rgba(128,128,128,0.1)
     Note over T,A: Falada: passa pelo server (depende de rede e Whisper)
@@ -114,6 +143,15 @@ flowchart TB
     SI --> SCT["container go2-server<br/>network_mode: host · env_file: server/.env<br/>gpus: all · cpus: 4 · healthcheck GET /health<br/>volumes: models, ./captures"]
 
     TV["TV Box: clone parcial (tvbox + specs/contracts)<br/>uv sync + python -m sense"]
+
+    classDef infra fill:#fff9c4,stroke:#f9a825,color:#000
+    classDef tvbox fill:#c8e6c9,stroke:#2e7d32,color:#000
+    classDef server fill:#bbdefb,stroke:#1565c0,color:#000
+    classDef api fill:#ffe0b2,stroke:#ef6c00,color:#000
+    class ROOT infra
+    class AC,AI,ACT api
+    class SC,SI,SCT server
+    class TV tvbox
 ```
 
 - `network_mode: host`, só em Linux: a api precisa enxergar a LAN do robô (descoberta por multicast e WebRTC), e o server fala com ela por `127.0.0.1:8000`.
@@ -131,6 +169,13 @@ flowchart LR
     B -->|"commitar"| CAT["server/catalog.yaml"]
     CAT -->|"docker compose ... --build"| IMG["imagem go2-server"]
     CAT --> EVAL["eval/phrases.yaml<br/>scripts/calibrate.py"]
+
+    classDef api fill:#ffe0b2,stroke:#ef6c00,color:#000
+    classDef server fill:#bbdefb,stroke:#1565c0,color:#000
+    classDef data fill:#e1bee7,stroke:#6a1b9a,color:#000
+    class CAP api
+    class B,IMG,EVAL server
+    class CJ,PJ,INF,CAT data
 ```
 
 Nada regenera o catálogo sozinho. Editar `discovery/` sem rodar o `build_catalog.py` (e sem rebuild da imagem) deixa o robô com o catálogo antigo.
@@ -142,10 +187,25 @@ flowchart LR
     PR["pull request / push na main"] --> ACI["api-ci.yml + api-build.yml<br/>paths: api/**"]
     PR --> SCI["server-ci.yml<br/>paths: server/**"]
     PR --> TCI["tvbox-ci.yml<br/>paths: tvbox/**"]
-    PR --> CC["contracts-check.yml<br/>paths: api/**, server/**, specs/contracts/**"]
+    PR --> CC["contracts-check.yml<br/>paths: api/, server/, specs/contracts/"]
     CC -->|"create_app().openapi()"| DIFF{"git diff --exit-code<br/>specs/contracts/"}
     DIFF -->|"igual"| OK["passa"]
     DIFF -->|"diferente"| FAIL["falha: contrato mudou sem atualizar specs/contracts/"]
+
+    classDef infra fill:#fff9c4,stroke:#f9a825,color:#000
+    classDef tvbox fill:#c8e6c9,stroke:#2e7d32,color:#000
+    classDef server fill:#bbdefb,stroke:#1565c0,color:#000
+    classDef api fill:#ffe0b2,stroke:#ef6c00,color:#000
+    classDef data fill:#e1bee7,stroke:#6a1b9a,color:#000
+    classDef ok fill:#a5d6a7,stroke:#1b5e20,color:#000
+    classDef fail fill:#ef9a9a,stroke:#b71c1c,color:#000
+    class PR,CC infra
+    class ACI api
+    class SCI server
+    class TCI tvbox
+    class DIFF data
+    class OK ok
+    class FAIL fail
 ```
 
 | Contrato | Dono | Consumidores |
