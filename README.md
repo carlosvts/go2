@@ -47,6 +47,8 @@ Comportamento e contratos ficam em `specs/` (regras em [`specs/README.md`](specs
 
 Só um humano marca `testado-hardware`.
 
+Mais informações em [`docs/spec-driven-development.md`](docs/spec-driven-development.md).
+
 ## Migrar a TV Box do go2-tvbox
 
 Disco a ~90%: só clone parcial. O `.env` antigo serve.
