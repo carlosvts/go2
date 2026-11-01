@@ -94,3 +94,64 @@ A meta é **0 falsos positivos**, principalmente em movimento e `damp`. Para sub
 - [ ] Mexeu em contrato: `specs/contracts/` atualizado no mesmo commit.
 - [ ] A spec foi atualizada junto com o código, e nada está marcado `testado-hardware` sem teste no robô.
 - [ ] O PR diz o que não foi possível testar.
+
+## Exemplos
+
+Ilustrativos: estas specs não existem no repo.
+
+### Fluxo 1: "para de dançar" deve parar o robô
+
+Hoje "para de dançar" e "para de andar" dão `reject` em vez de `stop`.
+
+```
+você: /new-spec "para de <verbo>" tem de ser tratado como parada
+IA:   pergunta: vale para qualquer verbo, ou só os do catálogo? E "pare de"?
+você: qualquer verbo; "para de" e "pare de"
+IA:   cria specs/features/F-001-parada-para-de.md (status: proposta, tipo: seguranca)
+      roda o spec-reviewer: "falta dizer o que acontece com 'para de frente'"
+você: isso continua reject. Aprovado.
+você: /implement-spec F-001
+IA:   branch feat/parada-para-de
+      eval/phrases.yaml: "para de dançar" → stop, "pare de andar" → stop, "para de frente" → reject
+      testes falham → muda a interpretação → pytest, -m model, calibrate: 0 FP
+      critérios software: testado-software; abre o PR
+você: /hardware-checklist F-001        (roteiro: falar no Anker durante uma dança)
+você: "3 de 3 pararam, 2026-11-05, commit abc123"
+IA:   critério hardware: testado-hardware (2026-11-05 @ abc123); spec: adotada
+```
+
+### Fluxo 2: o giro de 0,785 rad/s × 1 s dá 45°?
+
+```
+você: /new-spec experimento: medir o ângulo real do "vira para a direita"
+IA:   cria specs/experimentos/E-001-giro-45.md
+      hipótese: vyaw 0,785 por 1,0 s gira ~45° (inferido: o robô acelera e freia)
+      métrica: ângulo medido com transferidor no chão, 10 giros
+      pergunta: qual faixa aceita?
+você: adota se a média ficar entre 40° e 50°; senão, ajusta duration_s e repete
+IA:   escreve o critério; você confirma; criterio-congelado-em: 2026-11-03 @ def456
+você: /hardware-checklist E-001        (10 giros, anotar cada ângulo)
+você: "média 38°, de 35° a 41°"
+você: /close-experiment E-001
+IA:   38° < 40°: pelo critério congelado, rejeitada. Propõe E-002 com duration_s maior.
+você: confirma
+IA:   E-001 fica como rejeitada, com o resultado; o catálogo não muda
+```
+
+### Fluxo 3: a resposta de `POST /v1/utterance` ganha `stt_ms`
+
+```
+você: quero que a resposta da frase diga quanto tempo levou a transcrição
+IA:   acrescenta stt_ms ao UtteranceResponse (server/app/service.py)
+      roda /check-contracts: diff em specs/contracts/server.openapi.json
+        + UtteranceResponse.stt_ms (number)
+      consumidor (specs/contracts/README.md): tvbox, que só lê status, transcript
+      e reject_reason, então não muda
+      pergunta: a mudança é intencional?
+você: sim
+IA:   regenera server.openapi.json e commita junto com o código
+```
+
+Sem o arquivo regenerado, o `contracts-check` do PR falha em `git diff --exit-code -- ../specs/contracts/server.openapi.json`.
+
+Rotas que devolvem `dict` sem `response_model` (hoje o `/health` e o `/v1/stats` do server) aparecem no OpenAPI só como `object`. Mudar os campos delas **não** quebra o `contracts-check`.
