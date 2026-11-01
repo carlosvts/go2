@@ -13,7 +13,7 @@ A interpretação **não usa LLM**. Ela só seleciona comandos de um catálogo f
 
 ## Estado
 
-- **Validado:** 161 testes (`uv run pytest`), com a go2-api e a transcrição falsas; quatro deles rodam o conjunto rotulado no modelo de embeddings real. Ponta a ponta com a TV Box: 75 interações em 24/10/2026.
+- **Validado:** 158 testes (`uv run pytest`), com a go2-api e a transcrição falsas; quatro deles rodam o conjunto rotulado no modelo de embeddings real. Ponta a ponta com a TV Box: 75 interações em 24/10/2026.
 - **Não validado:** veja [O que falta validar](#o-que-falta-validar).
 
 ## Como rodar
@@ -22,13 +22,13 @@ A interpretação **não usa LLM**. Ela só seleciona comandos de um catálogo f
 
 - Linux, no mesmo PC da go2-api.
 - [uv](https://docs.astral.sh/uv/) instalado.
-- A go2-api (branch `dev`) no ar. Confira:
+- A go2-api no ar. Confira:
 
   ```bash
   curl http://127.0.0.1:8000/capabilities
   ```
 
-  Tem de devolver a lista de comandos. A branch `main` da go2-api não tem essa rota nem a do desvio de obstáculo.
+  Tem de devolver a lista de comandos.
 - Para o Whisper `medium` (padrão), uma GPU NVIDIA com driver instalado. Sem GPU, veja o passo 3.
 
 ### 2. Instale
@@ -113,7 +113,7 @@ docker compose --profile server up -d --build
 docker compose logs -f go2-server
 ```
 
-O container usa a rede do host, como o da go2-api, e tem teto de 4 CPUs para não tirar processador do reenvio do `Move`. Para o container usar a GPU, instale o NVIDIA Container Toolkit e descomente `gpus: all` no `docker-compose.yml`.
+O container usa a rede do host, como o da go2-api, e tem teto de 4 CPUs para não tirar processador do reenvio do `Move`. Para o container usar a GPU, instale o NVIDIA Container Toolkit (o `docker-compose.yml` já pede `gpus: all`).
 
 ## Contrato
 
@@ -194,7 +194,7 @@ Tudo o que não veio da go2-api nem de `phrases.json` está em `inferred.yaml` e
 - **Frase nova substitui a fila** e interrompe a espera do comando em andamento (`GO2S_REPLACE_QUEUE=0` para enfileirar no fim).
 - **Falha na go2-api** limpa a fila: os comandos seguintes não saem.
 - **Antes de um movimento** o servidor confere e liga o desvio de obstáculo, e manda `balance_stand` se não sabe se o robô já está pronto para andar.
-- **Sem controle exclusivo.** A go2-api não tem lease (planejado na issue #7 dela), então não há o que respeitar hoje.
+- **Sem controle exclusivo.** A go2-api não tem lease (fora de escopo por enquanto), então não há o que respeitar hoje.
 
 A corrida entre cancelamento e consumidor é fechada por um contador de geração e um lock em torno de "conferir a geração e enviar" (explicação no topo de `app/dispatch.py`). Um comando que já estava a caminho chega à go2-api antes do `stop`, nunca depois.
 
@@ -258,4 +258,3 @@ tests/
 4. **go2-api real e o robô.** Nenhuma chamada saiu para a API de verdade. Em especial: `balance_stand` antes de andar (sentado e deitado), as durações de cada gesto, e se o `stop` interrompe um gesto.
 5. **Grafias da wake word.** A lista em `GO2S_WAKE_WORDS` é um palpite. Ajuste com o que o Whisper escrever de verdade (campo `transcript_raw` do log).
 6. **Disputa de CPU com a go2-api.** O teto de 4 CPUs é um chute; confira se o robô anda liso enquanto o servidor transcreve.
-7. **A imagem Docker** não foi construída nem executada.

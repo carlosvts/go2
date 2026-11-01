@@ -1,0 +1,762 @@
+{
+  "components": {
+    "schemas": {
+      "CapabilitiesResponse": {
+        "description": "Lista dos comandos disponíveis e a versão dela.",
+        "properties": {
+          "commands": {
+            "items": {
+              "$ref": "#/components/schemas/Capability"
+            },
+            "title": "Commands",
+            "type": "array"
+          },
+          "version": {
+            "description": "Hash da lista de comandos. Muda se, e só se, a lista mudar.",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "commands"
+        ],
+        "title": "CapabilitiesResponse",
+        "type": "object"
+      },
+      "Capability": {
+        "description": "Um comando aceito pela API e como pedi-lo.",
+        "properties": {
+          "endpoint": {
+            "description": "Rota que executa o comando.",
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "method": {
+            "description": "Método HTTP da rota.",
+            "title": "Method",
+            "type": "string"
+          },
+          "name": {
+            "description": "Nome do comando. Nas rotas com `cmd`, é o valor exato dele.",
+            "title": "Name",
+            "type": "string"
+          },
+          "params": {
+            "description": "Campos do corpo JSON. Lista vazia = rota sem corpo.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Params",
+            "type": "array"
+          },
+          "sport_cmd": {
+            "description": "Chave correspondente em `SPORT_CMD`.",
+            "title": "Sport Cmd",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "method",
+          "endpoint",
+          "sport_cmd",
+          "params"
+        ],
+        "title": "Capability",
+        "type": "object"
+      },
+      "CommandAccepted": {
+        "description": "Resposta de `202 Accepted`.\n\nA API confirma que aceitou e despachou o comando — não que o robô terminou\nde executá-lo fisicamente (`docs/arquitetura_go2_api.md` seção 2).",
+        "properties": {
+          "accepted": {
+            "default": true,
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "cmd": {
+            "description": "Nome do comando despachado: a chave em `SPORT_CMD` ou, fora dos comandos esportivos, o nome do recurso (`ObstacleAvoidance`).",
+            "title": "Cmd",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cmd"
+        ],
+        "title": "CommandAccepted",
+        "type": "object"
+      },
+      "ConnectionState": {
+        "description": "Estado publicado da conexão.\n\nÉ informativo: quem decide se um comando sai ou leva `503` continua sendo\n:attr:`~app.robot.link.RobotLink.is_connected`.",
+        "enum": [
+          "connected",
+          "disconnected",
+          "reconnecting"
+        ],
+        "title": "ConnectionState",
+        "type": "string"
+      },
+      "Gesture": {
+        "description": "Gestos aceitos, como aparecem no corpo da request.",
+        "enum": [
+          "hello",
+          "stretch",
+          "finger_heart",
+          "wiggle_hips",
+          "content",
+          "dance1",
+          "dance2",
+          "scrape",
+          "pose"
+        ],
+        "title": "Gesture",
+        "type": "string"
+      },
+      "GestureRequest": {
+        "description": "Pedido de gesto. Comando fora do enum é rejeitado (422).\n\nSó os gestos de baixo risco físico. Os \"tricks\" (`front_flip`,\n`handstand`, ...) ficam de fora: exigem flag de confirmação e teste físico\nantes, ver `docs/arquitetura_go2_api.md` seção 4.2.",
+        "properties": {
+          "cmd": {
+            "$ref": "#/components/schemas/Gesture"
+          }
+        },
+        "required": [
+          "cmd"
+        ],
+        "title": "GestureRequest",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "MoveRequest": {
+        "description": "Velocidades no referencial do robô.\n\nEste modelo valida só o que independe da configuração (tipos, números\nfinitos, duração positiva). Os tetos configuráveis (`GO2_MAX_VX`,\n`GO2_MAX_VY`, `GO2_MAX_VYAW` e `GO2_MOVE_MAX_DURATION_S`) são aplicados\npor :meth:`to_command`, cujo resultado se recusa a existir fora deles.",
+        "properties": {
+          "duration_s": {
+            "description": "Por quanto tempo a API reenvia o comando ao robô.",
+            "exclusiveMinimum": 0.0,
+            "title": "Duration S",
+            "type": "number"
+          },
+          "vx": {
+            "description": "Velocidade para frente, em m/s.",
+            "title": "Vx",
+            "type": "number"
+          },
+          "vy": {
+            "description": "Velocidade lateral, em m/s.",
+            "title": "Vy",
+            "type": "number"
+          },
+          "vyaw": {
+            "description": "Velocidade angular, em rad/s.",
+            "title": "Vyaw",
+            "type": "number"
+          }
+        },
+        "required": [
+          "vx",
+          "vy",
+          "vyaw",
+          "duration_s"
+        ],
+        "title": "MoveRequest",
+        "type": "object"
+      },
+      "ObstacleAvoidanceRequest": {
+        "description": "Liga ou desliga o desvio de obstáculo nativo do robô.",
+        "properties": {
+          "enabled": {
+            "description": "`true` liga o desvio de obstáculo; `false` desliga.",
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "ObstacleAvoidanceRequest",
+        "type": "object"
+      },
+      "ObstacleAvoidanceResponse": {
+        "description": "Estado do desvio de obstáculo informado pelo robô.",
+        "properties": {
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Se o desvio está ligado. Vem `null` quando a resposta não pôde ser interpretada — consulte `raw` nesse caso.",
+            "title": "Enabled"
+          },
+          "raw": {
+            "description": "Resposta crua do robô, sem interpretação.",
+            "title": "Raw"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "ObstacleAvoidanceResponse",
+        "type": "object"
+      },
+      "Posture": {
+        "description": "Posturas aceitas, como aparecem no corpo da request.\n\nGestos ficam em :class:`~app.requests.gesture.GestureRequest`; os\n\"tricks\" (`front_flip`, ...) ainda não existem — grupo 4.2 da\n`docs/arquitetura_go2_api.md`.",
+        "enum": [
+          "stand_up",
+          "stand_down",
+          "sit",
+          "rise_sit",
+          "balance_stand",
+          "recovery_stand",
+          "damp"
+        ],
+        "title": "Posture",
+        "type": "string"
+      },
+      "PostureRequest": {
+        "description": "Pedido de mudança de postura. Comando fora do enum é rejeitado (422).",
+        "properties": {
+          "cmd": {
+            "$ref": "#/components/schemas/Posture"
+          }
+        },
+        "required": [
+          "cmd"
+        ],
+        "title": "PostureRequest",
+        "type": "object"
+      },
+      "SpeedLevelRequest": {
+        "description": "Nível de velocidade a aplicar no robô.",
+        "properties": {
+          "level": {
+            "description": "Nível de velocidade, como entendido pelo robô.",
+            "title": "Level",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "level"
+        ],
+        "title": "SpeedLevelRequest",
+        "type": "object"
+      },
+      "SpeedLevelResponse": {
+        "description": "Nível de velocidade informado pelo robô.",
+        "properties": {
+          "level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nível informado pelo robô. Vem `null` quando a resposta não pôde ser interpretada — consulte `raw` nesse caso.",
+            "title": "Level"
+          },
+          "raw": {
+            "description": "Resposta crua do robô, sem interpretação.",
+            "title": "Raw"
+          }
+        },
+        "required": [
+          "level"
+        ],
+        "title": "SpeedLevelResponse",
+        "type": "object"
+      },
+      "StatusResponse": {
+        "description": "Snapshot do estado do robô, lido do cache.",
+        "properties": {
+          "battery_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Carga em %, do cache de `rt/lf/lowstate`. `null` se ainda não chegou estado ou se o campo não foi reconhecido.",
+            "title": "Battery Percent"
+          },
+          "connected": {
+            "description": "Há conexão WebRTC viva e canal de dados validado. É o que decide se os comandos são aceitos ou levam `503`.",
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "low_state_age_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Há quantos segundos chegou o último `rt/lf/lowstate`.",
+            "title": "Low State Age S"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Modo atual, do cache de `rt/sportmodestate`.",
+            "title": "Mode"
+          },
+          "raw": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Payloads crus em cache. Presente para permitir fixar a extração de `battery_percent`/`mode` na validação com o robô ligado.",
+            "title": "Raw"
+          },
+          "since": {
+            "description": "Momento (UTC) da última transição de `state`.",
+            "format": "date-time",
+            "title": "Since",
+            "type": "string"
+          },
+          "sport_state_age_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Há quantos segundos chegou o último `rt/sportmodestate`.",
+            "title": "Sport State Age S"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ConnectionState",
+            "description": "Estado publicado da conexão. `reconnecting`: a conexão caiu e a API está tentando de novo, sozinha."
+          }
+        },
+        "required": [
+          "connected",
+          "state",
+          "since"
+        ],
+        "title": "StatusResponse",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "summary": "Dona única da conexão WebRTC com o Unitree Go2.",
+    "title": "go2-api",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/capabilities": {
+      "get": {
+        "description": "Não depende do robô: responde igual com ele ligado ou desligado.",
+        "operationId": "get_capabilities_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilitiesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Comandos disponíveis",
+        "tags": [
+          "capabilities"
+        ]
+      }
+    },
+    "/commands/gesture": {
+      "post": {
+        "description": "Despacha o gesto e responde na hora.\n\nA duração de cada gesto é decidida pelo robô, e a API não acompanha o fim\nda execução. Como na postura, um movimento em curso é cancelado antes: o\nrobô não anda e gesticula ao mesmo tempo.",
+        "operationId": "perform_gesture_commands_gesture_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GestureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Executa um gesto",
+        "tags": [
+          "commands"
+        ]
+      }
+    },
+    "/commands/move": {
+      "post": {
+        "description": "Reenvia `Move` a `GO2_MOVE_RATE_HZ` durante `duration_s` e então para.\n\nO corpo é validado antes de chegar aqui: `command` já respeita os tetos\nconfigurados (`422` caso contrário). Sem lease nesta versão: um `move`\nnovo substitui o que estiver em curso.",
+        "operationId": "move_commands_move_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Move o robô por uma janela de tempo",
+        "tags": [
+          "commands"
+        ]
+      }
+    },
+    "/commands/posture": {
+      "post": {
+        "description": "Despacha a postura, cancelando antes qualquer movimento em curso.",
+        "operationId": "set_posture_commands_posture_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Muda a postura do robô",
+        "tags": [
+          "commands"
+        ]
+      }
+    },
+    "/commands/speed": {
+      "get": {
+        "description": "Espera a resposta do robô.\n\nSujeito a `504` se ele não responder dentro de `GO2_REQUEST_TIMEOUT_S`.",
+        "operationId": "get_speed_commands_speed_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpeedLevelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Lê o nível de velocidade do robô",
+        "tags": [
+          "commands"
+        ]
+      },
+      "put": {
+        "description": "Despacha o nível de velocidade sem esperar confirmação.",
+        "operationId": "set_speed_commands_speed_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpeedLevelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Define o nível de velocidade",
+        "tags": [
+          "commands"
+        ]
+      }
+    },
+    "/commands/stop": {
+      "post": {
+        "description": "Cancela o reenvio em curso e manda `StopMove`.\n\nPara desenergizar as juntas, use `POST /commands/posture` com `damp`.",
+        "operationId": "stop_commands_stop_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Para o movimento imediatamente",
+        "tags": [
+          "commands"
+        ]
+      }
+    },
+    "/safety/obstacle-avoidance": {
+      "get": {
+        "description": "Espera a resposta do robô.\n\nSujeito a `504` se ele não responder dentro de `GO2_REQUEST_TIMEOUT_S`.",
+        "operationId": "get_obstacle_avoidance_safety_obstacle_avoidance_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObstacleAvoidanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Lê se o desvio de obstáculo está ligado",
+        "tags": [
+          "safety"
+        ]
+      },
+      "put": {
+        "description": "Despacha o pedido sem esperar confirmação; confira com o `GET`.\n\nLigar o desvio **não garante** que `POST /commands/move` seja filtrado:\na API anda pelo `SPORT_CMD[\"Move\"]`, e o que o serviço de desvio\ncomprovadamente intercepta é o canal do controle (dossiê 12.1).",
+        "operationId": "set_obstacle_avoidance_safety_obstacle_avoidance_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObstacleAvoidanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Liga ou desliga o desvio de obstáculo",
+        "tags": [
+          "safety"
+        ]
+      }
+    },
+    "/status": {
+      "get": {
+        "description": "Lê do cache alimentado pelas assinaturas feitas na conexão.\n\nNão gera tráfego novo com o robô. Responde `200` mesmo com o robô\ndesligado: nesse caso `connected` vem `false`. É este endpoint que\ndiferencia \"robô fora do ar\" de \"API fora do ar\", então ele nunca devolve\n`503`.",
+        "operationId": "get_status_status_get",
+        "parameters": [
+          {
+            "description": "Inclui os payloads crus de estado, sem interpretação.",
+            "in": "query",
+            "name": "raw",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Inclui os payloads crus de estado, sem interpretação.",
+              "title": "Raw",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Estado do robô",
+        "tags": [
+          "status"
+        ]
+      }
+    }
+  }
+}

@@ -25,7 +25,7 @@ Objetivo: rodar o Sense na TV Box real com o go2-server e a go2-api, e medir RAM
 - [ ] Cada comando do catálogo do servidor, 3 vezes. O robô executou o que a frase pede.
 - [ ] **Parada falada**: "para", "pare" e "stop" durante um movimento. O robô para; o servidor responde `stopped`.
 - [ ] `uv run python -m sense.stop` para o robô, com o servidor no ar e fora do ar.
-- [ ] Comando desligado no servidor ("dançar"): toca `blocked` ("esse eu ainda não posso fazer"), não "não entendi".
+- [ ] Comando desligado no servidor ("faz uma pose"): toca `blocked` ("esse eu ainda não posso fazer"), não "não entendi".
 - [ ] Frase fora do catálogo ("que horas são"): toca `rejected`.
 - [ ] "hey jarvis" e silêncio: som de recusa depois de ~5 s, `result: no_speech`, nada enviado.
 - [ ] "hey jarvis" de novo antes de a resposta chegar: `Wake word ignorada: ainda esperando a resposta`.
@@ -51,8 +51,6 @@ Medições da rodada:
 - [ ] Teste de configuração inválida: `SERVER_URL=xyz` no `.env` e rode de novo. O log lista o problema e o processo sai. Volte o valor correto.
 
 ## Já validado (24/10/2026, sem robô e sem go2-api)
-
-Detalhes em `claude/resultados-teste-thin-gpu.md` no projeto Go2.
 
 - Instalação na TV Box (aarch64, Debian 11), microfone do Anker no card 1, `aplay` no mesmo card.
 - Decimação 48 → 16 kHz sem filtro: o Anker já corta acima de ~7,5 kHz, então não há aliasing.

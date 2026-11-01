@@ -4,7 +4,7 @@
 
 | Comando | O que acontece | Quando usar |
 |---|---|---|
-| `POST /commands/stop` | Cancela o `move` em curso e manda `StopMove`. Fica de pé onde está. | Parada normal. Funciona sempre, de qualquer cliente. |
+| `POST /commands/stop` | Cancela o `move` em curso e manda `StopMove`. Fica de pé onde está. | Parada normal, de qualquer cliente. |
 | `POST /commands/posture {"cmd":"damp"}` | Tira a força das juntas. Se estiver de pé, **desaba**. | Emergência real (robô descontrolado) ou já deitado, para desligar. |
 | `POST /commands/posture {"cmd":"stand_down"}` | Deita de forma controlada. | Encerrar o uso. |
 
@@ -14,7 +14,7 @@ Em qualquer teste físico, combine antes **quem** dispara o `damp` e por qual me
 
 ## Truques (flips, handstand)
 
-Têm risco real de queda e dano. Ainda não foram implementados (#1). Quando forem, vão exigir `"confirm": true` e só devem ser testados em área livre e com piso macio.
+Têm risco real de queda e dano. Ainda não foram implementados (carlosvts/go2-api#1). Quando forem, vão exigir `"confirm": true` e só devem ser testados em área livre e com piso macio.
 
 ## Pegadinha
 

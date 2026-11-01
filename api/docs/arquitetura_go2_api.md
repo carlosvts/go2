@@ -104,7 +104,7 @@ Convenções que valem para todo o REST (`README.md`): comandos respondem `202` 
 | Na lib | Endpoint | Status | Nota |
 |---|---|---|---|
 | `SPORT_CMD["StandUp"/"StandDown"/"Sit"/"RiseSit"/"BalanceStand"/"RecoveryStand"/"Damp"]` | `POST /commands/posture` `{"cmd": "stand_up"}` | ✅ | `cmd` como enum. Cancela um `move` em curso. |
-| `SPORT_CMD["Move"]` | `POST /commands/move` `{"vx","vy","vyaw","duration_s"}` | ✅ | A API reenvia a `GO2_MOVE_RATE_HZ` (20–50 Hz) e manda `StopMove` no fim. Limites configuráveis → `422`. **Sem lease:** um `move` novo substitui o anterior (lease em #7). |
+| `SPORT_CMD["Move"]` | `POST /commands/move` `{"vx","vy","vyaw","duration_s"}` | ✅ | A API reenvia a `GO2_MOVE_RATE_HZ` (20–50 Hz) e manda `StopMove` no fim. Limites configuráveis → `422`. **Sem lease:** um `move` novo substitui o anterior (lease em carlosvts/go2-api#7). |
 | `SPORT_CMD["StopMove"]` | `POST /commands/stop` | ✅ | Sempre executa, de qualquer cliente. |
 | `SpeedLevel`/`GetSpeedLevel` | `PUT/GET /commands/speed` | ✅ | O `GET` espera resposta do robô (`504` em timeout). Payload pendente de validação física. |
 
@@ -112,28 +112,28 @@ Convenções que valem para todo o REST (`README.md`): comandos respondem `202` 
 | Na lib | Endpoint | Status | Nota |
 |---|---|---|---|
 | `Hello`, `Stretch`, `FingerHeart`, `WiggleHips`, `Content`, `Dance1/2`, `Scrape`, `Pose` | `POST /commands/gesture` `{"cmd": "hello"}` | ✅ | Baixo risco físico. |
-| `FrontFlip`, `BackFlip`, `Handstand`, `MoonWalk`, `Bound` | `POST /commands/trick` `{"cmd": "front_flip", "confirm": true}` | 🔜 #1 | Separado de propósito: risco real de queda. Exige confirmação explícita. Nenhum foi testado ainda. Os ids diferem entre `SPORT_CMD` e `SPORT_CMD_MCF`; confirmar qual espaço vale para o robô. |
+| `FrontFlip`, `BackFlip`, `Handstand`, `MoonWalk`, `Bound` | `POST /commands/trick` `{"cmd": "front_flip", "confirm": true}` | 🔜 carlosvts/go2-api#1 | Separado de propósito: risco real de queda. Exige confirmação explícita. Nenhum foi testado ainda. Os ids diferem entre `SPORT_CMD` e `SPORT_CMD_MCF`; confirmar qual espaço vale para o robô. |
 | `SPORT_CMD_MCF` (`TrotRun`, `StaticWalk`, …) | — | fora do v1 | Exige trocar o robô para o modo MCF (`motion_switcher`, não mapeado; dossiê 12.2/12.3). |
 
 ### 4.3 Dispositivo (áudio, LED, volume)
 | Na lib | Endpoint | Status | Nota |
 |---|---|---|---|
-| `WebRTCAudioHub` (lista, upload, play, pause, resume, delete, megafone) | `/audio/*` | 🔜 #2 | Classe pronta, mas sem timeout, upload por caminho de arquivo e megafone em 3 chamadas (ver `lib_unitree_webrtc_connect.md` §7). Substitui o `CMD_PLAY_AUDIO` do modo chat. |
-| `RTC_TOPIC["VUI"]` volume/brilho/LED | `PUT/GET /device/volume`, `PUT/GET /device/brightness`, `PUT /device/led` | 🔜 #3 | **api_ids (1003–1007) e payloads a confirmar:** não estão nas constantes da lib 2.2.0. |
+| `WebRTCAudioHub` (lista, upload, play, pause, resume, delete, megafone) | `/audio/*` | 🔜 carlosvts/go2-api#2 | Classe pronta, mas sem timeout, upload por caminho de arquivo e megafone em 3 chamadas (ver `lib_unitree_webrtc_connect.md` §7). Substitui o `CMD_PLAY_AUDIO` do modo chat. |
+| `RTC_TOPIC["VUI"]` volume/brilho/LED | `PUT/GET /device/volume`, `PUT/GET /device/brightness`, `PUT /device/led` | 🔜 carlosvts/go2-api#3 | **api_ids (1003–1007) e payloads a confirmar:** não estão nas constantes da lib 2.2.0. |
 
 ### 4.4 Segurança e controle
 | Na lib | Endpoint | Status | Nota |
 |---|---|---|---|
 | `SPORT_MOD_STATE`/`LOW_STATE` | `GET /status` | ✅ | Snapshot do cache em memória; sempre `200`, com `connected: false` se o robô estiver fora. `?raw=true` devolve os payloads crus. |
-| `OBSTACLES_AVOID_API` (`SWITCH_SET`/`SWITCH_GET`) | `PUT/GET /safety/obstacle-avoidance` `{"enabled"}` | ✅ #8 | Implementado; formato da resposta do `GET` pendente de validação física. Não está confirmado que o desvio filtra o `SPORT_CMD["Move"]` usado pela API (dossiê 12.1). |
-| — (design próprio) | `POST /control/acquire`, `POST /control/release` | ⏸ #7 | Lease com token e expiração (dossiê seção 13). |
+| `OBSTACLES_AVOID_API` (`SWITCH_SET`/`SWITCH_GET`) | `PUT/GET /safety/obstacle-avoidance` `{"enabled"}` | ✅ carlosvts/go2-api#8 | Implementado; formato da resposta do `GET` pendente de validação física. Não está confirmado que o desvio filtra o `SPORT_CMD["Move"]` usado pela API (dossiê 12.1). |
+| — (design próprio) | `POST /control/acquire`, `POST /control/release` | ⏸ carlosvts/go2-api#7 | Lease com token e expiração (dossiê seção 13). |
 
 ### 4.5 Streams (WebSocket)
 | Fonte | Canal | Status | Nota |
 |---|---|---|---|
-| `LOW_STATE`/`SPORT_MOD_STATE` | `/ws/telemetry` | 🔜 #5 | Os tópicos acessíveis pelo WebRTC são os de baixa frequência (dossiê 12.4); a taxa real será medida. |
-| `WebRTCVideoChannel` (track) | `/ws/video` | 🔜 #4 | Codificar quadros fora do event loop; formato no WS a decidir. |
-| `ULIDAR_ARRAY` + decoder `native` | `/ws/lidar` | 🔜 #6 | O decoder padrão (`libvoxel`) devolve malha, não pontos. Basta `set_decoder("native")` a cada conexão; sem patch na lib. |
+| `LOW_STATE`/`SPORT_MOD_STATE` | `/ws/telemetry` | 🔜 carlosvts/go2-api#5 | Os tópicos acessíveis pelo WebRTC são os de baixa frequência (dossiê 12.4); a taxa real será medida. |
+| `WebRTCVideoChannel` (track) | `/ws/video` | 🔜 carlosvts/go2-api#4 | Codificar quadros fora do event loop; formato no WS a decidir. |
+| `ULIDAR_ARRAY` + decoder `native` | `/ws/lidar` | 🔜 carlosvts/go2-api#6 | O decoder padrão (`libvoxel`) devolve malha, não pontos. Basta `set_decoder("native")` a cada conexão; sem patch na lib. |
 
 ### 4.6 Desenho interno dos streams (planejado)
 
@@ -142,11 +142,11 @@ callbacks da lib ──publish──▶ TopicHub ──subscribe──▶ 1 asyn
  (event loop, #12)            (#9, em memória)          (cheia → descarta a mais antiga)
 ```
 
-- **`TopicHub` (#9):** `Topic(str, Enum)`, `subscribe(topic, maxsize=32) -> Queue`, `unsubscribe(topic, q)` (idempotente) e `publish(topic, data)` (síncrono, `put_nowait`). Envelope enviado aos clientes: `{"topic", "ts", "data"}`, com `ts = time.time()` no `publish`. Funciona só com um processo (`uvicorn` sem `--workers`).
-- **Ponte driver → hub (#12):** reaproveita os callbacks que já alimentam o `/status`. A lib guarda **um callback por tópico**, e um segundo `subscribe` silenciaria o `/status`.
-- **Refcount (#13):** assina no robô no primeiro cliente e cancela no último. `LOW_STATE`/`SPORT_MOD_STATE` nunca são cancelados, porque o `/status` depende deles.
-- **Estado da conexão (#14):** tópico `connection` com `connected`/`disconnected` (e `reconnecting` quando houver reconexão automática).
-- **Apoio ao desenvolvimento:** `FakeHub` (#10) gera dados simulados sem o robô; `scripts/ws_client.py` (#11) imprime mensagens e mede a taxa.
+- **`TopicHub` (carlosvts/go2-api#9):** `Topic(str, Enum)`, `subscribe(topic, maxsize=32) -> Queue`, `unsubscribe(topic, q)` (idempotente) e `publish(topic, data)` (síncrono, `put_nowait`). Envelope enviado aos clientes: `{"topic", "ts", "data"}`, com `ts = time.time()` no `publish`. Funciona só com um processo (`uvicorn` sem `--workers`).
+- **Ponte driver → hub (carlosvts/go2-api#12):** reaproveita os callbacks que já alimentam o `/status`. A lib guarda **um callback por tópico**, e um segundo `subscribe` silenciaria o `/status`.
+- **Refcount (carlosvts/go2-api#13):** assina no robô no primeiro cliente e cancela no último. `LOW_STATE`/`SPORT_MOD_STATE` nunca são cancelados, porque o `/status` depende deles.
+- **Estado da conexão (carlosvts/go2-api#14):** tópico `connection` com `connected`/`disconnected` (e `reconnecting` quando houver reconexão automática).
+- **Apoio ao desenvolvimento:** `FakeHub` (carlosvts/go2-api#10) gera dados simulados sem o robô; `scripts/ws_client.py` (carlosvts/go2-api#11) imprime mensagens e mede a taxa.
 
 ### Fora do escopo do v1
 Navegação autônoma (`uslam`), UWB/side-follow e modo MCF: payloads ainda não mapeados (dossiê seção 12.2/12.3). Entram como v2+, se fizer sentido investir nisso depois. Reconexão automática ao robô ficou fora do MVP e entrou depois (`Go2Robot.keep_connected`, em `app/robot/service.py`).
@@ -156,12 +156,12 @@ Navegação autônoma (`uslam`), UWB/side-follow e modo MCF: payloads ainda não
 ## 5. Ordem de implementação
 
 1. ✅ **Postura, movimento, velocidade, gestos e `/status`** (4.1, parte de 4.2 e 4.4): o que o `robot_control` já fazia, reorganizado.
-2. 🔜 **Infraestrutura de streams** (4.6: #9, #10, #11, #12) e depois **`/ws/telemetry`** (#5), o stream mais simples, que valida o desenho.
-3. 🔜 **Refcount e estado da conexão** (#13, #14), pré-requisitos para lidar e vídeo não gerarem tráfego e CPU à toa.
-4. 🔜 **`/ws/lidar` e `/ws/video`** (#6, #4).
-5. 🔜 **Dispositivo** (#2, #3), depois de confirmar os payloads do VUI.
-6. 🔜 **Truques** (#1), só depois de testar cada comando fisicamente.
-7. ⏸ **Lease** (#7), junto com a decisão sobre controle de acesso. O **desvio de obstáculo** (#8) já tem o liga/desliga; falta validar no robô se ele filtra o `move`.
+2. 🔜 **Infraestrutura de streams** (4.6: carlosvts/go2-api#9, carlosvts/go2-api#10, carlosvts/go2-api#11, carlosvts/go2-api#12) e depois **`/ws/telemetry`** (carlosvts/go2-api#5), o stream mais simples, que valida o desenho.
+3. 🔜 **Refcount e estado da conexão** (carlosvts/go2-api#13, carlosvts/go2-api#14), pré-requisitos para lidar e vídeo não gerarem tráfego e CPU à toa.
+4. 🔜 **`/ws/lidar` e `/ws/video`** (carlosvts/go2-api#6, carlosvts/go2-api#4).
+5. 🔜 **Dispositivo** (carlosvts/go2-api#2, carlosvts/go2-api#3), depois de confirmar os payloads do VUI.
+6. 🔜 **Truques** (carlosvts/go2-api#1), só depois de testar cada comando fisicamente.
+7. ⏸ **Lease** (carlosvts/go2-api#7), junto com a decisão sobre controle de acesso. O **desvio de obstáculo** (carlosvts/go2-api#8) já tem o liga/desliga; falta validar no robô se ele filtra o `move`.
 8. Fora do v1: MCF, navegação, UWB.
 
 ---
@@ -194,7 +194,7 @@ A `go2-api` é uma camada de organização, não mágica — ela herda tudo que 
 | **Fan-out** | Uma mensagem que chega é copiada para vários destinatários. |
 | **GET / POST / PUT / DELETE** | Tipos de pedido HTTP: ler, criar ou disparar, substituir, apagar. |
 | **HTTP / REST** | HTTP: protocolo de pedido e resposta da web. REST: estilo de API em que cada endereço representa um recurso. |
-| **Lease** | "Posse" temporária do controle do robô, com token e prazo de validade (planejado, #7). |
+| **Lease** | "Posse" temporária do controle do robô, com token e prazo de validade (planejado, carlosvts/go2-api#7). |
 | **MCF** | *Multi-Control Framework*: modo de locomoção do Go2 com ids de comando próprios. |
 | **Mermaid** | Linguagem para desenhar diagramas em texto, que o GitHub renderiza. |
 | **MVP** | *Minimum Viable Product*: a primeira versão, só com o essencial. |

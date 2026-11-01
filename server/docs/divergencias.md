@@ -8,7 +8,7 @@ Levantadas em 2026-10-09, lendo `go2-api@c880e68` (branch `dev`), e revistas em 
 |---|---|---|---|
 | 1 | Depois de `stand_up` ("levanta"), o `move` responde 202 e o robô não anda: a API exige `balance_stand`. A API não trata isso. | go2-api `docs/essencial/balance-stand-vs-stand-up.md` | O servidor manda `balance_stand` antes de um movimento quando não sabe se o robô já está nela (`movement.prepare` no catálogo). **Validar com o robô**, em especial sentado e deitado. |
 | 2 | "andar para frente" é 0,3 m/s e "andar para trás" é 0,5 m/s. Andar de ré mais rápido que de frente parece invertido. | `discovery/phrases.json` | Revisar ali e regenerar o catálogo. |
-| 3 | A branch `main` da go2-api está 15 commits atrás de `dev` e não tem `GET /capabilities` nem `/safety/obstacle-avoidance`. | go2-api | Rodar o servidor contra `dev`, ou pôr `GO2S_ENSURE_OBSTACLE_AVOIDANCE=0` (não recomendado). |
+| 3 | Resolvida na migração para o monorepo: a `api/` da `main` tem `GET /capabilities` e `/safety/obstacle-avoidance`. | go2-api | — |
 
 ## Resolvidas
 
@@ -28,7 +28,7 @@ Levantadas em 2026-10-09, lendo `go2-api@c880e68` (branch `dev`), e revistas em 
 
 ## Comandos
 
-A go2-api (`dev`) aceita 19 comandos. `phrases.json` tem frase para 9 deles.
+A go2-api aceita 19 comandos. `phrases.json` tem frase para 9 deles.
 
 | Comando da go2-api | Frase em `phrases.json` | No catálogo |
 |---|---|---|

@@ -31,7 +31,7 @@ Os testes usam `FakeConnection`/`FakePubSub` (`tests/conftest.py`), que registra
 
 ## Em breve
 
-O `FakeHub` (#10) vai gerar dados falsos para os WebSockets, e o `scripts/ws_client.py` (#11) vai permitir olhá-los.
+O `FakeHub` (carlosvts/go2-api#10) vai gerar dados falsos para os WebSockets, e o `scripts/ws_client.py` (carlosvts/go2-api#11) vai permitir olhá-los.
 
 ## Pegadinha
 

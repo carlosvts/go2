@@ -23,12 +23,12 @@ Nenhuma alteração na lib é necessária.
 ## Pegadinhas
 
 - `numpy.ndarray` não vira JSON direto: é preciso converter antes de mandar por WebSocket.
-- A decodificação pesa no processador e roda no mesmo fluxo que atende todo o resto da API ([event loop](glossario.md)). Só assine o tópico se alguém estiver ouvindo (#13).
+- A decodificação pesa no processador e roda no mesmo fluxo que atende todo o resto da API ([event loop](glossario.md)). Só assine o tópico se alguém estiver ouvindo (carlosvts/go2-api#13).
 - Se é preciso ligar o sensor via `rt/utlidar/switch`: **a confirmar**.
 
 ## Mais detalhes
 
-[`lib_unitree_webrtc_connect.md`](../lib_unitree_webrtc_connect.md) §6 · issue #6
+[`lib_unitree_webrtc_connect.md`](../lib_unitree_webrtc_connect.md) §6 · issue carlosvts/go2-api#6
 
 ## Termos desta ficha
 

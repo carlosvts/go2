@@ -152,8 +152,8 @@ curl $API/safety/obstacle-avoidance      # esperado: {"enabled": true, "raw": ..
 - **Sem autenticação:** quem alcança a porta controla o robô. Use só na rede do laboratório.
 - **Sem arbitragem entre clientes:** o último `move` enviado substitui o anterior.
 - **Reconexão sem reenvio:** se a conexão cair, a API tenta de novo sozinha a cada `GO2_RECONNECT_INTERVAL_S` (`state: reconnecting` no `GET /status`). Enquanto isso os comandos respondem `503` e não são guardados para depois.
-- **Queda só visível por polling:** o `GET /status` mostra `state` (`connected`/`disconnected`/`reconnecting`) e `since`, mas ainda não há WebSocket que avise da queda: o tópico `connection` depende do hub (#9, #12). O `connected` é o que decide os `503` e pode demorar mais que o `state` para refletir uma falha.
-- **Desvio de obstáculo não comprovado para o `move`:** ligar o desvio com `PUT /safety/obstacle-avoidance` **não garante** que `POST /commands/move` desvie ou pare. A API anda pelo `SPORT_CMD["Move"]`, e o que o serviço de desvio comprovadamente filtra é o canal do controle. Teste com o robô antes de confiar ([como testar](#testar-o-desvio-de-obstáculo)).
+- **Queda só visível por polling:** o `GET /status` mostra `state` (`connected`/`disconnected`/`reconnecting`) e `since`, mas ainda não há WebSocket que avise da queda: o tópico `connection` depende do hub (carlosvts/go2-api#9, carlosvts/go2-api#12). O `connected` é o que decide os `503` e pode demorar mais que o `state` para refletir uma falha.
+- **Desvio de obstáculo com o `move`:** no teste da equipe com o robô, pela pipeline de voz (ou seja, via `POST /commands/move`), com o desvio ligado o robô **parou ao ir bater** num obstáculo. Não foi visto contornar: não conte com isso ([como testar](#testar-o-desvio-de-obstáculo)).
 - **Pendente de validação com o robô ligado:** os payloads de `Move`/`SpeedLevel`, a leitura de bateria/modo e o formato da resposta do desvio de obstáculo.
 
 ## Documentação
