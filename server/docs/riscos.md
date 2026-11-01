@@ -8,13 +8,13 @@ O que limita o dano são só os tetos de duração:
 
 | Limite | Padrão | Onde |
 |---|---|---|
-| Duração de um `move` | 1,0 s | `catalog.yaml` (vem de `discovery/phrases.json`) |
+| Duração de um `move` | 3,0 s andando para frente/trás, 1,0 s nos demais | `catalog.yaml` (vem de `discovery/phrases.json`) |
 | Teto do `move` na go2-api | 3,0 s | `GO2_MOVE_MAX_DURATION_S` da go2-api |
 | Comandos por frase e na fila | 3 e 5 | `GO2S_MAX_CLAUSES`, `GO2S_QUEUE_MAX_COMMANDS` |
 | Duração total da fila | 15 s | `GO2S_QUEUE_MAX_TOTAL_S` |
 | Idade máxima da frase | 4 s | `GO2S_MAX_UTTERANCE_AGE_S` |
 
-No pior caso com os padrões, o robô executa até 15 s de comandos sem que a TV Box consiga interromper, dos quais no máximo 3 são movimentos de 1 s. A parada falada depende do servidor; a parada manual da TV Box (`uv run python -m sense.stop`) vai direto à go2-api e continua funcionando.
+No pior caso com os padrões, o robô executa até 15 s de comandos sem que a TV Box consiga interromper, dos quais no máximo 3 são movimentos, de até 3 s cada. A parada falada depende do servidor; a parada manual da TV Box (`uv run python -m sense.stop`) vai direto à go2-api e continua funcionando.
 
 Tenha sempre um meio de parar que não passe pela voz (o controle físico, ou um `curl -X POST <api>/commands/stop` pronto).
 

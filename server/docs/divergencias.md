@@ -47,12 +47,12 @@ Nenhum comando de `commands.json` falta na API, e método, rota e campos batem n
 
 | ID (escolha do servidor) | Verbo + direção | `move` |
 |---|---|---|
-| `move_forward` | andar + frente | `vx=0.3` |
-| `move_backward` | andar + trás | `vx=-0.5` |
+| `move_forward` | andar + frente | `vx=0.5`, `duration_s=3.0` |
+| `move_backward` | andar + trás | `vx=-0.5`, `duration_s=3.0` |
 | `strafe_right` / `strafe_left` | andar + direita / esquerda | `vy=-0.5` / `vy=0.5` |
-| `turn_right` / `turn_left` | virar + direita / esquerda | `vyaw=-0.5` / `vyaw=0.5` |
+| `turn_right` / `turn_left` | virar + direita / esquerda | `vyaw=-0.785` / `vyaw=0.785` (~45° em 1 s, sem contar aceleração) |
 
-Todos com `duration_s=1.0`. "virar" + frente/trás não existe e é rejeitado.
+Os demais com `duration_s=1.0`. "virar" + frente/trás não existe e é rejeitado.
 
 ## O que a go2-api não oferece
 

@@ -195,12 +195,12 @@ movement:
     esquerda: [esquerda]  # 1ª de discovery/, demais INFERIDAS
   # Velocidades e duração de discovery/phrases.json. O `id` é INFERIDO.
   rules:
-    - {id: move_forward, verb: andar, direction: frente, args: {vx: 0.3, vy: 0.0, vyaw: 0.0, duration_s: 1.0}}
-    - {id: move_backward, verb: andar, direction: trás, args: {vx: -0.5, vy: 0.0, vyaw: 0.0, duration_s: 1.0}}
+    - {id: move_forward, verb: andar, direction: frente, args: {vx: 0.5, vy: 0.0, vyaw: 0.0, duration_s: 3.0}}
+    - {id: move_backward, verb: andar, direction: trás, args: {vx: -0.5, vy: 0.0, vyaw: 0.0, duration_s: 3.0}}
     - {id: strafe_right, verb: andar, direction: direita, args: {vx: 0.0, vy: -0.5, vyaw: 0.0, duration_s: 1.0}}
     - {id: strafe_left, verb: andar, direction: esquerda, args: {vx: 0.0, vy: 0.5, vyaw: 0.0, duration_s: 1.0}}
-    - {id: turn_right, verb: virar, direction: direita, args: {vx: 0.0, vy: 0.0, vyaw: -0.5, duration_s: 1.0}}
-    - {id: turn_left, verb: virar, direction: esquerda, args: {vx: 0.0, vy: 0.0, vyaw: 0.5, duration_s: 1.0}}
+    - {id: turn_right, verb: virar, direction: direita, args: {vx: 0.0, vy: 0.0, vyaw: -0.785, duration_s: 1.0}}
+    - {id: turn_left, verb: virar, direction: esquerda, args: {vx: 0.0, vy: 0.0, vyaw: 0.785, duration_s: 1.0}}
 
 language:  # INFERIDO
   negation: [não, nunca, sem]

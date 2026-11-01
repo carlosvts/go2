@@ -98,7 +98,7 @@ async def test_compound_sentence_with_movement(client, stt, go2):
     assert body["status"] == "enqueued"
     assert body["commands"] == [{"id": "stand_up"}, {"id": "move_forward"}]
     await drain(client)
-    assert go2.calls == ["stand_up", "balance_stand", "move:0.3,0,0"]
+    assert go2.calls == ["stand_up", "balance_stand", "move:0.5,0,0"]
 
 
 async def test_wake_word_in_the_audio(client, stt, go2):
