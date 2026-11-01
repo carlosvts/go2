@@ -65,6 +65,80 @@ Fluxo, com as skills de `.claude/skills/` (Claude Code):
 
 `verificacao: testado-hardware` e `verificado-em` só são preenchidos por um humano da equipe, depois de testar no robô. Teste automático com mock não prova comportamento físico.
 
+## Levar a TV Box do go2-tvbox antigo para este monorepo
+
+A TV Box do laboratório ainda roda o clone do repositório antigo [`go2-tvbox`](https://github.com/carlosvts/go2-tvbox) (em `/home/minipc/go2-tvbox`; ajuste o caminho se for outro). O código de `tvbox/` é o mesmo, com o modo edge removido. Um `.env` antigo continua servindo: as chaves que saíram são ignoradas. A TV Box nova conversa com o server antigo e vice-versa (ela só deixou de mandar `local_hypothesis` e `local_confidence`, que o server sempre tratou como opcionais), então não é preciso trocar os dois ao mesmo tempo.
+
+O disco raiz da TV Box está perto de 90%, então nunca clone o monorepo inteiro lá: use o clone parcial abaixo, que traz só `tvbox/` e `specs/contracts/`.
+
+1. **Confira espaço e memória**, e anote os valores:
+
+   ```bash
+   df -h / && free -h
+   ```
+
+2. **Pare o Sense antigo.** Se ele roda num terminal, Ctrl+C. Se a unit systemd antiga chegou a ser instalada, desligue e remova (o monorepo não usa mais systemd na TV Box):
+
+   ```bash
+   systemctl status go2-sense                  # "could not be found" = não estava instalada; pule o resto
+   sudo systemctl disable --now go2-sense
+   sudo rm /etc/systemd/system/go2-sense.service /etc/systemd/journald@go2-sense.conf
+   sudo systemctl daemon-reload
+   ```
+
+3. **Veja o que só existe no clone antigo** (não está no git e não vem no clone novo):
+
+   ```bash
+   cd ~/go2-tvbox
+   git status --short --ignored
+   ```
+
+   Guarde o que aparecer e for seu: o `.env` (obrigatório), WAVs novos em `media/` (por exemplo `blocked*.wav`) e, se quiser, as falas gravadas em `utterances/`. `.venv/` e `__pycache__/` não precisam: são recriados.
+
+4. **Clone parcial do monorepo** (o repositório é público, então HTTPS dispensa chave SSH na TV Box):
+
+   ```bash
+   cd ~
+   git clone --filter=blob:none --sparse https://github.com/carlosvts/go2.git
+   cd go2
+   git sparse-checkout set tvbox specs/contracts
+   ```
+
+5. **Traga o `.env` e os arquivos do passo 3:**
+
+   ```bash
+   cp ~/go2-tvbox/.env ~/go2/tvbox/.env
+   cp ~/go2-tvbox/media/blocked*.wav ~/go2/tvbox/media/    # só se existirem
+   ```
+
+6. **Instale e baixe o modelo da wake word.** O modelo `hey_jarvis` fica dentro do `.venv`, então o ambiente novo precisa baixá-lo de novo (precisa de internet). As dependências de sistema (`portaudio19-dev gcc python3-dev`) já estão instaladas da versão antiga.
+
+   ```bash
+   cd ~/go2/tvbox
+   uv sync --no-dev --extra capture --extra recognition
+   uv run python scripts/download_models.py
+   ```
+
+   Se faltar disco, apague antes o `.venv` antigo, que dá para recriar: `rm -rf ~/go2-tvbox/.venv`.
+
+7. **Teste:**
+
+   ```bash
+   curl http://<IP_DO_SERVIDOR>:9000/health    # o server tem de responder 200
+   uv run python -m sense.say --all            # beep e falas de retorno no Anker
+   uv run python -m sense                      # "Wake word pronta", "Servidor de inferência no ar", "Microfone aberto"
+   ```
+
+   O log de partida mostra `código=main@<commit>` do monorepo. Tenha a parada manual (`uv run python -m sense.stop`) pronta num terminal.
+
+8. **Depois que estiver funcionando**, apague o clone antigo (confira antes que nada do passo 3 ficou para trás) e anote de novo o `df -h /`:
+
+   ```bash
+   rm -rf ~/go2-tvbox
+   ```
+
+Para atualizar depois: `cd ~/go2 && git pull`, e rode `uv sync --no-dev --extra capture --extra recognition` de novo se `tvbox/pyproject.toml` ou `tvbox/uv.lock` mudarem. Mais detalhes em [`tvbox/README.md`](tvbox/README.md) e no roteiro de laboratório em [`tvbox/docs/checklist-laboratorio.md`](tvbox/docs/checklist-laboratorio.md).
+
 ## CI
 
 Um workflow por serviço em `.github/workflows/`, disparado só quando a pasta dele muda: `api-ci.yml` e `api-build.yml`, `server-ci.yml`, `tvbox-ci.yml`. O `contracts-check.yml` confere `specs/contracts/` contra o OpenAPI de api e server.
