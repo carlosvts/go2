@@ -19,10 +19,10 @@
     "andar para direita": {"command": "move", "args": {"vx": 0.0, "vy": -0.5, "vyaw": 0.0, "duration_s": 1.0}},
     "andar para a esquerda": {"command": "move", "args": {"vx": 0.0, "vy": 0.5, "vyaw": 0.0, "duration_s": 1.0}},
     "andar para esquerda": {"command": "move", "args": {"vx": 0.0, "vy": 0.5, "vyaw": 0.0, "duration_s": 1.0}},
-    "virar para a direita": {"command": "move", "args": {"vx": 0.0, "vy": 0.0, "vyaw": -0.5, "duration_s": 1.0}},
-    "virar para direita": {"command": "move", "args": {"vx": 0.0, "vy": 0.0, "vyaw": -0.5, "duration_s": 1.0}},
-    "virar para a esquerda": {"command": "move", "args": {"vx": 0.0, "vy": 0.0, "vyaw": 0.5, "duration_s": 1.0}},
-    "virar para esquerda": {"command": "move", "args": {"vx": 0.0, "vy": 0.0, "vyaw": 0.5, "duration_s": 1.0}}
+    "virar para a direita": {"command": "move", "args": {"vx": 0.0, "vy": 0.0, "vyaw": -0.785, "duration_s": 1.0}},
+    "virar para direita": {"command": "move", "args": {"vx": 0.0, "vy": 0.0, "vyaw": -0.785, "duration_s": 1.0}},
+    "virar para a esquerda": {"command": "move", "args": {"vx": 0.0, "vy": 0.0, "vyaw": 0.785, "duration_s": 1.0}},
+    "virar para esquerda": {"command": "move", "args": {"vx": 0.0, "vy": 0.0, "vyaw": 0.785, "duration_s": 1.0}}
   },
   "commands": {
     "stand_up": {"method": "POST", "endpoint": "/commands/posture", "sport_cmd": "StandUp", "params": ["cmd"]},
