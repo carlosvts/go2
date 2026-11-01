@@ -20,7 +20,7 @@ Tenha sempre um meio de parar que não passe pela voz (o controle físico, ou um
 
 ## Outros limites conhecidos
 
-- **A parada não interrompe gesto.** `StopMove` para de andar. A go2-api não comprovou que ele corta um gesto ou uma postura em curso. Depois de uma parada a fila está vazia, mas o gesto que já começou pode terminar.
+- **Gesto despachado não é cancelável; só o `stop` interrompe.** Depois de uma parada a fila está vazia. Que o `StopMove` corta um gesto ou uma postura em curso é **inferido**: ainda não foi testado no robô.
 - **A parada espera um envio em curso.** Para garantir que o `stop` chegue à go2-api depois de um comando que já estava a caminho, ele espera esse envio terminar: no pior caso, `GO2S_GO2_API_TIMEOUT_S` (2 s) se a API travar.
 - **Estado do robô é suposição.** O servidor não lê a postura do robô. Ele supõe "pronto para andar" depois de mandar `balance_stand` ou um `move`, e deixa de supor depois de postura, gesto, falha ou cancelamento.
 - **Durações inferidas.** Sem sinal de conclusão, a fila espera o `max_duration_s` do catálogo. Curto demais, o próximo comando atropela o gesto; longo demais, a fila fica lenta. Todos estão marcados `REVISAR`.
