@@ -97,16 +97,18 @@ commands:
       - desliga os motores  # INFERIDO
       - desligue os motores  # INFERIDO
   rise_sit:
-    enabled: false  # INFERIDO, REVISAR
+    enabled: true
     match: embedding
     sport_cmd: RiseSit
     call: {method: POST, endpoint: /commands/posture, body: {cmd: rise_sit}}
     max_duration_s: 3.0  # INFERIDO, REVISAR
     examples:
       - levanta do sentado  # INFERIDO
+      - levantar do sentado  # INFERIDO
       - sair do sentado  # INFERIDO
+      - sai do sentado  # INFERIDO
   balance_stand:
-    enabled: false  # INFERIDO, REVISAR
+    enabled: true
     match: embedding
     sport_cmd: BalanceStand
     call: {method: POST, endpoint: /commands/posture, body: {cmd: balance_stand}}
@@ -114,17 +116,21 @@ commands:
     examples:
       - modo equilíbrio  # INFERIDO
       - fica em equilíbrio  # INFERIDO
+      - fique em equilíbrio  # INFERIDO
+      - se equilibra  # INFERIDO
   recovery_stand:
-    enabled: false  # INFERIDO, REVISAR
+    enabled: true
     match: embedding
     sport_cmd: RecoveryStand
     call: {method: POST, endpoint: /commands/posture, body: {cmd: recovery_stand}}
     max_duration_s: 4.0  # INFERIDO, REVISAR
     examples:
       - recuperar  # INFERIDO
+      - recupera  # INFERIDO
       - se recupera  # INFERIDO
+      - recupera a postura  # INFERIDO
   wiggle_hips:
-    enabled: false  # INFERIDO, REVISAR
+    enabled: true
     match: embedding
     sport_cmd: WiggleHips
     call: {method: POST, endpoint: /commands/gesture, body: {cmd: wiggle_hips}}
@@ -132,6 +138,43 @@ commands:
     examples:
       - rebola  # INFERIDO
       - rebolar  # INFERIDO
+      - rebole  # INFERIDO
+      - mexe o quadril  # INFERIDO
+  dance1:
+    enabled: true
+    match: embedding
+    sport_cmd: Dance1
+    call: {method: POST, endpoint: /commands/gesture, body: {cmd: dance1}}
+    max_duration_s: 10.0  # INFERIDO, REVISAR
+    examples:
+      - dança  # INFERIDO
+      - dançar  # INFERIDO
+      - dance  # INFERIDO
+      - dança um  # INFERIDO
+      - dança 1  # INFERIDO
+      - primeira dança  # INFERIDO
+      - dança número um  # INFERIDO
+  dance2:
+    enabled: true
+    match: embedding
+    sport_cmd: Dance2
+    call: {method: POST, endpoint: /commands/gesture, body: {cmd: dance2}}
+    max_duration_s: 10.0  # INFERIDO, REVISAR
+    examples:
+      - dança dois  # INFERIDO
+      - dança 2  # INFERIDO
+      - segunda dança  # INFERIDO
+      - dança número dois  # INFERIDO
+  scrape:
+    enabled: true
+    match: embedding
+    sport_cmd: Scrape
+    call: {method: POST, endpoint: /commands/gesture, body: {cmd: scrape}}
+    max_duration_s: 6.0  # INFERIDO, REVISAR
+    examples:
+      - arranha  # INFERIDO
+      - arranhar o chão  # INFERIDO
+      - arranha o chão  # INFERIDO
   content:
     enabled: false  # INFERIDO, REVISAR
     match: embedding
@@ -141,34 +184,6 @@ commands:
     examples:
       - fica feliz  # INFERIDO
       - feliz  # INFERIDO
-  dance1:
-    enabled: false  # INFERIDO, REVISAR
-    match: embedding
-    sport_cmd: Dance1
-    call: {method: POST, endpoint: /commands/gesture, body: {cmd: dance1}}
-    max_duration_s: 10.0  # INFERIDO, REVISAR
-    examples:
-      - dança  # INFERIDO
-      - dançar  # INFERIDO
-      - dance  # INFERIDO
-  dance2:
-    enabled: false  # INFERIDO, REVISAR
-    match: embedding
-    sport_cmd: Dance2
-    call: {method: POST, endpoint: /commands/gesture, body: {cmd: dance2}}
-    max_duration_s: 10.0  # INFERIDO, REVISAR
-    examples:
-      - dança dois  # INFERIDO
-      - segunda dança  # INFERIDO
-  scrape:
-    enabled: false  # INFERIDO, REVISAR
-    match: embedding
-    sport_cmd: Scrape
-    call: {method: POST, endpoint: /commands/gesture, body: {cmd: scrape}}
-    max_duration_s: 6.0  # INFERIDO, REVISAR
-    examples:
-      - arranha  # INFERIDO
-      - arranhar o chão  # INFERIDO
   pose:
     enabled: false  # INFERIDO, REVISAR
     match: embedding
