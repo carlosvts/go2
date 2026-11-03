@@ -21,6 +21,7 @@ from app.dispatch import Dispatcher, Go2, Limits
 from app.go2_client import Go2Client
 from app.interpret.embed import Embedder
 from app.interpret.interpreter import Interpreter, Thresholds
+from app.interpret.recovery import RegexRecovery
 from app.logging_setup import setup_logging
 from app.service import Meta, Service, UtteranceResponse
 from app.transcribe.base import Transcriber, TranscriptionPool
@@ -113,6 +114,11 @@ def create_app(
         encoder = (
             await asyncio.to_thread(_load_embedder, settings) if embedder is _UNSET else embedder
         )
+        recovery = (
+            RegexRecovery.from_file(catalog, settings.regex_patterns_path)
+            if settings.regex_recovery
+            else None
+        )
         interpreter = await asyncio.to_thread(
             Interpreter,
             catalog,
@@ -125,6 +131,7 @@ def create_app(
                 max_clauses=settings.max_clauses,
                 stop_accept=settings.tau_stop_accept,
             ),
+            recovery,
         )
         dispatcher = Dispatcher(
             client,

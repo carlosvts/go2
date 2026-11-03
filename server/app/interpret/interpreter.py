@@ -9,7 +9,9 @@ Discriminativo: a saída é sempre uma seleção do catálogo. Por frase:
    termina em palavra de parada ⇒ PARADA (parar é sempre seguro);
 5. resolve cada cláusula: frase exata → slots de movimento → vizinho mais
    próximo por embedding;
-6. uma cláusula rejeitada rejeita a frase inteira.
+6. E-001: se só uma cláusula foi rejeitada, e por incerteza, tenta a regex
+   (`app/interpret/recovery.py`, padrões em `regex/patterns.yaml`);
+7. uma cláusula rejeitada rejeita a frase inteira.
 """
 
 from dataclasses import dataclass, field
@@ -19,14 +21,17 @@ import numpy as np
 
 from app.catalog import Catalog
 from app.interpret.embed import Embedder
-from app.interpret.text import COMMA, edit_distance, fold, remove_sequences, words
+from app.interpret.lexicon import SlotLexicon
+from app.interpret.recovery import RegexRecovery
+from app.interpret.text import COMMA, fold, remove_sequences, words
 
 # Classes que existem só no índice de embeddings, para dar destino certo ao que
 # se parece com parada ou com movimento em vez de cair na ação mais próxima.
 STOP_CLASS = "__stop__"
 MOVE_CLASS = "__movement__"
-# Palavra de slot com erro de uma letra só vale a partir deste tamanho.
-FUZZY_MIN_LENGTH = 5
+# Motivos de rejeição que a regex da E-001 pode tentar, por caminho.
+GESTURE_RECOVERY = frozenset({"low_similarity", "ambiguous"})
+MOVEMENT_RECOVERY = frozenset({"movement_unknown_word"})
 
 
 class Kind(Enum):
@@ -50,10 +55,13 @@ class Thresholds:
 class Clause:
     text: str
     command_id: str | None = None
-    method: str = ""  # "lexical", "slots" ou "embedding"
-    score: float | None = None  # cosseno (1.0 quando lexical)
+    method: str = ""  # "lexical", "slots", "embedding" ou "regex" (E-001)
+    score: float | None = None  # cosseno (1.0 quando lexical ou regex)
     margin: float | None = None  # top1 − top2
     reject_reason: str | None = None
+    label: str | None = None  # rótulo do vizinho mais próximo (embedding)
+    runner_up: str | None = None  # o melhor rótulo diferente dele
+    recovered_from: str | None = None  # motivo da rejeição que a regex desfez
 
     def log(self) -> dict:
         return {key: value for key, value in vars(self).items() if value is not None}
@@ -79,24 +87,23 @@ class _Slot:
 
 class Interpreter:
     def __init__(
-        self, catalog: Catalog, embedder: Embedder | None, thresholds: Thresholds | None = None
+        self,
+        catalog: Catalog,
+        embedder: Embedder | None,
+        thresholds: Thresholds | None = None,
+        recovery: RegexRecovery | None = None,
     ) -> None:
         self._catalog = catalog
         self._embedder = embedder
         self._t = thresholds or Thresholds()
+        self._recovery = recovery
+        self._lexicon = SlotLexicon(catalog)
 
         # Frase exata (sem acento) → comando.
         self._exact: dict[str, str] = {}
         for command in catalog.commands.values():
             for example in command.examples:
                 self._exact[self._key(catalog.tokenize(example))] = command.id
-
-        # Palavra (sem acento) → slot.
-        self._slot_words: dict[str, _Slot] = {}
-        for kind, lexicon in (("verb", catalog.verbs), ("direction", catalog.directions)):
-            for name, lexicon_words in lexicon.items():
-                for word in lexicon_words:
-                    self._slot_words[fold(word)] = _Slot(kind, name, 1.0)
 
         # Índices de embeddings, calculados uma vez só.
         self._intent_labels: list[str] = []
@@ -165,6 +172,10 @@ class Interpreter:
             return Interpretation(Kind.REJECTED, normalized, reject_reason="too_many_clauses")
 
         results = [self._resolve(clause) for clause in clauses]
+        rejected = [index for index, result in enumerate(results) if result.reject_reason]
+        if self._recovery is not None and len(rejected) == 1:
+            # C2/C3: só com uma cláusula rejeitada na frase.
+            self._recover(results[rejected[0]], clauses[rejected[0]])
         if any(result.command_id == catalog.stop_id for result in results):
             return Interpretation(
                 Kind.STOP,
@@ -227,10 +238,11 @@ class Interpreter:
         if self._embedder is None:
             result.reject_reason = "no_match"
             return result
-        label, score, margin = self._nearest(
+        label, score, margin, runner_up = self._nearest(
             self._embedder.embed([result.text])[0], self._intent_matrix, self._intent_labels
         )
         result.method, result.score, result.margin = "embedding", score, margin
+        result.label, result.runner_up = label, runner_up
         # O que se parece com parada tem limiar próprio, mais frouxo: parar
         # por engano é seguro.
         accept = self._t.accept
@@ -249,6 +261,26 @@ class Interpreter:
         else:
             return self._accept_command(result, label, "embedding", score, margin)
         return result
+
+    def _recover(self, result: Clause, clause: list[str]) -> None:
+        """E-001: a regex tenta desfazer a rejeição. Só muda `result` se acertar."""
+        reason = result.reject_reason
+        tokens = words(clause)
+        if reason in GESTURE_RECOVERY:
+            # G1/G2: sem embedder não dá para saber se parece parada ou movimento.
+            near = {result.label, result.runner_up}
+            if self._embedder is None or near & {STOP_CLASS, MOVE_CLASS}:
+                return
+            command_id = self._recovery.match_gesture(tokens)
+        elif reason in MOVEMENT_RECOVERY:
+            command_id = self._recovery.match_movement(tokens)
+        else:
+            return
+        if command_id is None or command_id not in self._catalog.ids:
+            return
+        result.command_id, result.method = command_id, "regex"
+        result.score, result.margin = 1.0, None
+        result.recovered_from, result.reject_reason = reason, None
 
     def _accept_command(
         self, result: Clause, command_id: str, method: str, score: float, margin: float | None
@@ -294,26 +326,14 @@ class Interpreter:
         return result
 
     def _slot_lexical(self, word: str) -> _Slot | None:
-        key = fold(word)
-        if key in self._slot_words:
-            return self._slot_words[key]
-        if len(key) < FUZZY_MIN_LENGTH:
-            return None
-        near = {
-            (slot.kind, slot.name)
-            for known, slot in self._slot_words.items()
-            if len(known) >= FUZZY_MIN_LENGTH and edit_distance(key, known, limit=1) <= 1
-        }
-        if len(near) != 1:
-            return None
-        kind, name = near.pop()
-        return _Slot(kind, name, 1.0)
+        slot = self._lexicon.lookup(word)
+        return None if slot is None else _Slot(slot[0], slot[1], 1.0)
 
     def _slot_embedding(self, word: str) -> _Slot | None:
         if self._embedder is None:
             return None
         labels = [(slot.kind, slot.name) for slot in self._slot_labels]
-        (kind, name), score, margin = self._nearest(
+        (kind, name), score, margin, _ = self._nearest(
             self._embedder.embed([word])[0], self._slot_matrix, labels
         )
         if score < self._t.slot_accept or margin < self._t.slot_margin:
@@ -322,11 +342,11 @@ class Interpreter:
 
     @staticmethod
     def _nearest(vector: np.ndarray, matrix: np.ndarray, labels: list) -> tuple:
-        """Rótulo mais próximo, seu cosseno e a folga sobre o melhor rótulo diferente."""
+        """Rótulo mais próximo, seu cosseno, a folga e o melhor rótulo diferente dele."""
         similarities = matrix @ vector
         best: dict = {}
         for label, similarity in zip(labels, similarities, strict=True):
             best[label] = max(best.get(label, -1.0), float(similarity))
         ranked = sorted(best.items(), key=lambda item: item[1], reverse=True)
-        runner_up = ranked[1][1] if len(ranked) > 1 else -1.0
-        return ranked[0][0], ranked[0][1], ranked[0][1] - runner_up
+        runner_up, runner_score = ranked[1] if len(ranked) > 1 else (None, -1.0)
+        return ranked[0][0], ranked[0][1], ranked[0][1] - runner_score, runner_up

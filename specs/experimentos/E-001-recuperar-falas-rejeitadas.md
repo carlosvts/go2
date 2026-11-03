@@ -2,11 +2,11 @@
 id: E-001
 titulo: Recuperar falas rejeitadas por incerteza com regex
 tipo: experimento
-status: proposta               # proposta | em-teste | adotada | rejeitada
+status: em-teste               # proposta | em-teste | adotada | rejeitada
 servicos: [server]
 branch: exp/recuperar-rejeitadas
-criterio-congelado-em: null    # AAAA-MM-DD @ commit, preenchido ANTES de começar a testar
-verificacao: inferido          # inferido | testado-software | testado-hardware
+criterio-congelado-em: 2026-11-03 @ 5f23fe6   # aprovado pelo humano no chat
+verificacao: testado-software  # inferido | testado-software | testado-hardware
 verificado-em: null            # AAAA-MM-DD @ <commit>; só humano preenche testado-hardware
 alternativa-a: null            # comparador interno: exemplos em discovery/inferred.yaml (ver Abordagem)
 ---
@@ -19,7 +19,7 @@ O que acontece quando a regex também falha (resposta falada do Llama) é a E-00
 
 O interpretador (`server/app/interpret/interpreter.py`) prioriza precisão: no limiar de produção (`accept=0.95`, `margin=0.10`), a cláusula que não bate por frase exata nem por slots de movimento e fica abaixo do limiar de embedding é rejeitada.
 
-Linha de base em `eval/phrases.yaml` (219 frases **escritas à mão**, sem fala real), medida com `uv run python scripts/calibrate.py` em 2026-11-03 @ `2516071`:
+Linha de base em `eval/phrases.yaml` (178 frases **escritas à mão**, sem fala real: 81 comandos, 97 negativas ou parada), medida com `uv run python scripts/calibrate.py` em 2026-11-03 @ `2516071`:
 
 | accept | margin | precisão | revocação | acertos | FP | perdidas |
 |---|---|---|---|---|---|---|
@@ -122,7 +122,7 @@ Efeito colateral: os exemplos exigem rodar `build_catalog.py`, o que muda o `cat
 
 ## Dados de teste
 
-1. **Conjunto 1, regressão:** `eval/phrases.yaml` como está em `2516071` (219 frases). Tem de manter 0 FP, 0 parada virando comando e todos os acertos atuais.
+1. **Conjunto 1, regressão:** `eval/phrases.yaml` como está em `2516071` (178 frases). Tem de manter 0 FP, 0 parada virando comando e todos os acertos atuais.
 2. **Conjunto 2, sessão ao vivo:** decisão do humano, frases ditas na hora, sem arquivo pronto.
    - Pelo menos 30 frases, faladas no robô com o server da branch e `GO2S_SAVE_UTTERANCES=1`.
    - **Antes de cada frase**, o humano anota o desfecho pretendido (comando, `stop` ou `reject`). A anotação não muda depois de ver o resultado.
@@ -164,7 +164,7 @@ O limite de 2 frases recuperadas é decisão do humano (2026-11-03).
 
 ## Procedimento de hardware
 
-1. Escrever `server/regex/patterns.yaml` e a lista de exemplos do comparador. Congelar (commit em `criterio-congelado-em`).
+1. Critério congelado em `5f23fe6` (decisão do humano). `server/regex/patterns.yaml` e a lista de exemplos do comparador são escritos na implementação e ficam commitados **antes da sessão**; não mudam depois de ver o resultado.
 2. Subir a api com o robô e o server da branch com `GO2S_SAVE_UTTERANCES=1`.
 3. Para cada frase (≥ 30): anotar o desfecho pretendido, falar depois da wake word e anotar o que o robô fez.
 4. Comando executado que não era o pretendido: parar o teste e anotar. Depois, o log (`clauses[].method`) diz se veio da regex (rejeita) ou de outro método (registrado à parte).
@@ -190,4 +190,6 @@ Segurança: gesto despachado não é cancelável. Deixar `python -m sense.stop` 
 
 ## Histórico
 
+- 2026-11-03: implementado na branch (testes de software passam; ver abaixo). Conjunto 1, `calibrate.py --fixed`: main 66 acertos / 0 FP; regex 79 / 0 FP / 0 parada→comando / 0 acerto perdido (13 recuperadas); comparador 78 / 0 FP (12 recuperadas); custo da regex p95 0,104 ms por cláusula. **Atenção:** os padrões foram escritos olhando as 15 perdidas do conjunto 1, então esses números são otimistas; quem decide é a sessão ao vivo (conjunto 2). As 2 que continuam perdidas ("dá um oi para a gente", "acena para mim") têm "para" fora de movimento e ficam bloqueadas por C1, como a spec manda. Nada disso foi testado no robô.
+- 2026-11-03: critério congelado em `5f23fe6` (aprovado pelo humano); status `em-teste`, branch `exp/recuperar-rejeitadas`.
 - 2026-11-03: criada (proposta), revisada pelo `spec-reviewer`. Mesmo dia: o Llama saiu desta spec e foi para a E-002 (decisão do humano: o Llama não escolhe comando).

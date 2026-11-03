@@ -18,6 +18,7 @@ Requer a api no ar (`127.0.0.1:8000` por padrão). Sem robô: api em `LocalAP` c
 ## Regras
 
 - **`catalog.yaml` é gerado** por `scripts/build_catalog.py` a partir de `discovery/`. Não edite à mão.
+- **Regex da E-001** (experimento): os padrões ficam só em `regex/patterns.yaml`; o código em `app/interpret/recovery.py`. Não mude os padrões depois da sessão de teste no robô (critério congelado). `GO2S_REGEX_RECOVERY=false` volta ao comportamento da main.
 - **A interpretação nunca gera comando fora do catálogo.**
 - Mudou a interpretação? Rode `eval/phrases.yaml`. Meta: **0 falsos positivos**, principalmente em movimento e `damp`. Subir revocação = mais exemplos em `discovery/inferred.yaml`, não baixar limiar.
 - `max_duration_s` marcado como inferido continua inferido até haver medida da equipe.

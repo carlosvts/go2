@@ -91,6 +91,10 @@ class Settings(BaseSettings):
     # propósito: parar por engano é seguro.
     tau_stop_accept: float = Field(default=0.80, ge=0, le=1)
     max_clauses: int = Field(default=3, ge=1)
+    # E-001: recuperação por regex de cláusulas rejeitadas por incerteza.
+    # Padrões em regex/patterns.yaml; false = comportamento da main.
+    regex_recovery: bool = True
+    regex_patterns_path: Path = ROOT / "regex" / "patterns.yaml"
 
     # ─── Fila ──────────────────────────────────────────────────────────────
     queue_max_commands: int = Field(default=5, ge=1)

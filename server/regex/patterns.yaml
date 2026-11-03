@@ -1,0 +1,80 @@
+# E-001: padrões regex para recuperar cláusulas rejeitadas.
+# Spec: specs/experimentos/E-001-recuperar-falas-rejeitadas.md
+# Código: app/interpret/recovery.py (padrões) e app/interpret/interpreter.py (gatilho).
+#
+# COMO OS PADRÕES SÃO APLICADOS
+#   - Sobre a cláusula já normalizada: minúsculas, SEM ACENTO, sem pontuação,
+#     palavras separadas por um espaço, sem enchimento ("por favor", "agora"...).
+#     "pra"/"pro" já chegam como "para"/"para o": escreva só "para".
+#   - Match TOTAL (fullmatch): o padrão tem de cobrir a cláusula inteira.
+#   - Padrão que bate em mais de um comando ⇒ nada é recuperado.
+#
+# QUANDO A REGEX RODA (o código garante, não o padrão)
+#   gestures: só se o interpretador rejeitou por low_similarity/ambiguous, o
+#     embedding não aponta parada nem movimento (top-1 e top-2) e a cláusula não
+#     tem palavra de parada nenhuma ("para", "pare", "parar", "stop").
+#   movement: só se rejeitou por movement_unknown_word, com EXATAMENTE uma
+#     palavra de direção na frase (nunca assumida), um verbo só (do léxico do
+#     catálogo ou de verb_words abaixo) e "para" só logo antes da direção.
+#   Nunca: damp, stop, comandos desabilitados (o carregamento recusa).
+#
+# `examples`: o que cada padrão pretende pegar. Servem de teste (cada exemplo
+# tem de bater no seu padrão) e de comparador da E-001 (os mesmos exemplos
+# como frases do catálogo, sem regex).
+#
+# NÃO mude este arquivo depois da sessão de teste no robô: o critério foi
+# congelado antes (E-001, `criterio-congelado-em`).
+
+gestures:
+  sit:
+    patterns:
+      - "(?:pode |vai )?(?:se )?senta(?:r)?(?: se)?(?: no chao| ai| aqui)"
+      - "(?:pode )?sentar"
+    examples: [senta no chão, pode sentar, senta aqui]
+  stand_up:
+    patterns:
+      - "(?:pode |consegue )?levantar"
+      - "(?:se )?levanta(?: se)?(?: do chao)"
+      - "fica(?:r)? de pe(?: ai)?"
+    examples: [pode levantar, levanta do chão, ficar de pé]
+  stand_down:
+    patterns:
+      - "(?:pode )?deitar"
+      - "deite se"
+      - "deita(?: no chao| ai| aqui)"
+    examples: [pode deitar, deite-se, deita no chão]
+  hello:
+    patterns:
+      - "(?:me |nos )?cumprimenta(?: a gente| todo mundo)?"
+      - "(?:me )?(?:da|manda) (?:um )?(?:oi|ola|tchauzinho)"
+    examples: [me cumprimenta, dá um oi, manda um olá]
+  stretch:
+    patterns:
+      - "faz (?:um |uma )?(?:alongamento|alongada)"
+      - "(?:se )?espreguica"
+    examples: [faz um alongamento, faz uma alongada]
+  finger_heart:
+    patterns:
+      - "(?:faz|manda) (?:um )?(?:coracao|coracaozinho)(?: com as patas)?"
+    examples: [faz um coração com as patas, manda um coraçãozinho]
+
+movement:
+  # Palavras que fixam o verbo quando a frase não tem verbo do léxico.
+  verb_words:
+    andar: [avance, avanca, avancar, recue, recua, recuar, bora, segue, siga]
+    virar: [rode, roda, rodar]
+  patterns:
+    # <verbo> [um pouco/rapidinho/devagar] para [artigo] [lado] <direção>
+    - "(?P<verbo>\\w+)(?: (?:rapidinho|devagar|devagarinho|mais))? para (?:a |o |as |os )?(?:lado )?(?P<direcao>\\w+)"
+    # <verbo> de <ré>
+    - "(?P<verbo>\\w+) de (?P<direcao>re)"
+    # <verbo> [artigo] [lado] <direção>, sem "para": "vira à direita", "anda em frente"
+    - "(?P<verbo>\\w+) (?:a |o |em )?(?:lado )?(?P<direcao>\\w+)"
+  examples:
+    - avance para frente
+    - recue para trás
+    - rode para a direita
+    - anda de ré
+    - anda rapidinho para frente
+    - vira para o lado direito
+    - bora para frente
