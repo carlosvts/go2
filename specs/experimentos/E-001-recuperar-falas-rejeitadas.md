@@ -190,6 +190,7 @@ Segurança: gesto despachado não é cancelável. Deixar `python -m sense.stop` 
 
 ## Histórico
 
+- 2026-11-03: revisão de código aplicada antes da sessão. "segue"/"siga" saíram de `verb_words` ("segue direito" viraria andar de lado); "devagar" saiu dos padrões (o move tem velocidade fixa); padrões aceitam "ao" como o C1; o Dockerfile copia `regex/`; o `calibrate.py` conta por frase e ordena as capturas pelo novo campo `received_unix` do log. Conjunto 1 sem mudança: regex 79 / 0 FP; custo p95 0,059 ms.
 - 2026-11-03: implementado na branch (testes de software passam; ver abaixo). Conjunto 1, `calibrate.py --fixed`: main 66 acertos / 0 FP; regex 79 / 0 FP / 0 parada→comando / 0 acerto perdido (13 recuperadas); comparador 78 / 0 FP (12 recuperadas); custo da regex p95 0,104 ms por cláusula. **Atenção:** os padrões foram escritos olhando as 15 perdidas do conjunto 1, então esses números são otimistas; quem decide é a sessão ao vivo (conjunto 2). As 2 que continuam perdidas ("dá um oi para a gente", "acena para mim") têm "para" fora de movimento e ficam bloqueadas por C1, como a spec manda. Nada disso foi testado no robô.
 - 2026-11-03: critério congelado em `5f23fe6` (aprovado pelo humano); status `em-teste`, branch `exp/recuperar-rejeitadas`.
 - 2026-11-03: criada (proposta), revisada pelo `spec-reviewer`. Mesmo dia: o Llama saiu desta spec e foi para a E-002 (decisão do humano: o Llama não escolhe comando).

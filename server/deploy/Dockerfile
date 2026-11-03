@@ -14,6 +14,8 @@ RUN uv sync --frozen --no-dev --extra gpu
 
 COPY app ./app
 COPY catalog.yaml ./
+# E-001: padrões da regex (lidos na partida se GO2S_REGEX_RECOVERY=true).
+COPY regex ./regex
 
 EXPOSE 9000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=120s \

@@ -48,7 +48,14 @@ class RegexRecovery:
         problems: list[str] = []
 
         self._gestures: dict[str, list[re.Pattern]] = {}
-        for name, block in (data.get("gestures") or {}).items():
+        gestures = data.get("gestures") or {}
+        if not isinstance(gestures, dict):
+            gestures = {}
+            problems.append("gestures: tem de ser um mapa comando → bloco")
+        for name, block in gestures.items():
+            if not isinstance(block, dict):
+                problems.append(f"{name}: bloco vazio ou não é um mapa")
+                continue
             command = catalog.commands.get(name)
             if name not in ALLOWED_GESTURES or command is None:
                 problems.append(f"{name}: fora do conjunto permitido da E-001")
@@ -59,10 +66,17 @@ class RegexRecovery:
             self._gestures[name] = self._compile(name, block.get("patterns") or [], problems)
 
         movement = data.get("movement") or {}
+        if not isinstance(movement, dict):
+            movement = {}
+            problems.append("movement: tem de ser um mapa")
         self._verb_words: dict[str, str] = {}
-        for verb, verb_words in (movement.get("verb_words") or {}).items():
-            if verb not in catalog.verbs:
-                problems.append(f"verb_words: {verb!r} não é verbo do catálogo")
+        verb_lists = movement.get("verb_words") or {}
+        if not isinstance(verb_lists, dict):
+            verb_lists = {}
+            problems.append("verb_words: tem de ser um mapa verbo → palavras")
+        for verb, verb_words in verb_lists.items():
+            if verb not in catalog.verbs or not isinstance(verb_words, list):
+                problems.append(f"verb_words: {verb!r} não é verbo do catálogo ou não tem lista")
                 continue
             for word in verb_words:
                 previous = self._verb_words.setdefault(fold(word), verb)
@@ -70,8 +84,8 @@ class RegexRecovery:
                     problems.append(f"verb_words: {word!r} em mais de um verbo ou slot")
         self._movement = self._compile("movement", movement.get("patterns") or [], problems)
         for pattern in self._movement:
-            if not {"verbo", "direcao"} <= set(pattern.groupindex):
-                problems.append(f"movement: {pattern.pattern!r} sem os grupos verbo e direcao")
+            if not {"verb", "direction"} <= set(pattern.groupindex):
+                problems.append(f"movement: {pattern.pattern!r} sem os grupos verb e direction")
 
         if problems:
             listed = "\n".join(f"  - {problem}" for problem in problems)
@@ -83,6 +97,9 @@ class RegexRecovery:
 
     @staticmethod
     def _compile(owner: str, patterns: list[str], problems: list[str]) -> list[re.Pattern]:
+        if not isinstance(patterns, list):
+            problems.append(f"{owner}: `patterns` tem de ser uma lista")
+            return []
         compiled = []
         for pattern in patterns:
             try:
@@ -113,36 +130,43 @@ class RegexRecovery:
         folded = [fold(token) for token in tokens]
         if not folded or not self._stop_words_are_prepositions(folded):
             return None
+        slots = {word: self._lexicon.lookup(word) for word in set(folded)}
         # M1: exatamente uma palavra de direção na cláusula.
-        directions = {self._slot(word, "direction") for word in folded} - {None}
-        direction_words = [word for word in folded if self._slot(word, "direction")]
-        if len(direction_words) != 1 or len(directions) != 1:
+        directions = [slots[word][1] for word in folded if self._is(slots[word], "direction")]
+        if len(directions) != 1:
             return None
-        direction = directions.pop()
+        direction = directions[0]
         # M2: um verbo só, do léxico ou da lista do arquivo.
-        verbs = {self._verb(word) for word in folded} - {None}
+        verbs = {self._verb_words.get(word) or self._name(slots[word], "verb") for word in folded}
+        verbs.discard(None)
         if len(verbs) != 1:
             return None
         verb = verbs.pop()
-
+        rule = self._catalog.rules.get((verb, direction))
+        if rule is None:
+            return None
         text = " ".join(folded)
-        results = set()
         for pattern in self._movement:
             match = pattern.fullmatch(text)
-            if match is None:
-                continue
-            if self._verb(match["verbo"]) != verb:
-                continue
-            if self._slot(match["direcao"], "direction") != direction:
-                continue
-            rule = self._catalog.rules.get((verb, direction))
-            if rule is not None:
-                results.add(rule.id)
-        return results.pop() if len(results) == 1 else None
+            # Os grupos têm de apontar o mesmo verbo e a mesma direção da frase.
+            if (
+                match
+                and self._verb(match["verb"]) == verb
+                and self._slot(match["direction"], "direction") == direction
+            ):
+                return rule.id
+        return None
+
+    @staticmethod
+    def _is(slot: tuple[str, str] | None, kind: str) -> bool:
+        return slot is not None and slot[0] == kind
+
+    @classmethod
+    def _name(cls, slot: tuple[str, str] | None, kind: str) -> str | None:
+        return slot[1] if cls._is(slot, kind) else None
 
     def _slot(self, word: str, kind: str) -> str | None:
-        slot = self._lexicon.lookup(word)
-        return slot[1] if slot is not None and slot[0] == kind else None
+        return self._name(self._lexicon.lookup(word), kind)
 
     def _verb(self, word: str) -> str | None:
         return self._verb_words.get(fold(word)) or self._slot(word, "verb")

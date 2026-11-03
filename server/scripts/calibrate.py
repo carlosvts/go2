@@ -61,7 +61,7 @@ class Score:
     misses: list[str] = field(default_factory=list)
     wrong_stops: list[str] = field(default_factory=list)
     stop_to_command: list[str] = field(default_factory=list)
-    hit_texts: dict[str, list[str]] = field(default_factory=dict)  # texto → métodos
+    hit_cases: dict[int, list[str]] = field(default_factory=dict)  # índice da frase → métodos
     fp_methods: list[list[str]] = field(default_factory=list)
     stop_hits: int = 0
     stops: int = 0
@@ -79,7 +79,7 @@ class Score:
 
 def evaluate(interpreter: Interpreter, cases: list[dict], wake_words: list[str]) -> Score:
     score = Score()
-    for case in cases:
+    for index, case in enumerate(cases):
         expected, text = case["expect"], case["text"]
         got, result = outcome(interpreter, text, wake_words)
         detail = f"{text!r}: esperado {expected}, veio {got}"
@@ -94,7 +94,7 @@ def evaluate(interpreter: Interpreter, cases: list[dict], wake_words: list[str])
         if isinstance(got, list):
             if got == expected:
                 score.hits += 1
-                score.hit_texts[text] = methods
+                score.hit_cases[index] = methods
             else:
                 score.false_positives.append(f"{detail} [{','.join(methods)}]")
                 score.fp_methods.append(methods)
@@ -169,8 +169,9 @@ def fixed(settings: Settings, catalog, cases: list[dict], embedder) -> None:
     print(f"\n=== E-001, limiar fixo accept={thresholds.accept} margin={thresholds.margin}")
     print("versão      | acertos  FP  FP(regex)  perdidas  parada→comando  recuperadas  perdeu")
     for name, score in runs.items():
-        recovered = [t for t in score.hit_texts if t not in main.hit_texts]
-        lost = [t for t in main.hit_texts if t not in score.hit_texts]
+        # Por frase (índice), não por texto: a mesma fala dita duas vezes conta duas.
+        recovered = [i for i in score.hit_cases if i not in main.hit_cases]
+        lost = [i for i in main.hit_cases if i not in score.hit_cases]
         fp_regex = sum("regex" in methods for methods in score.fp_methods)
         print(
             f"{name:11s} |   {score.hits:3d}   {len(score.false_positives):2d}      {fp_regex:2d}"
@@ -181,19 +182,30 @@ def fixed(settings: Settings, catalog, cases: list[dict], embedder) -> None:
             print(f"    FALSO POSITIVO {line}")
         for line in score.stop_to_command:
             print(f"    PARADA VIROU COMANDO {line}")
-        for text in recovered:
-            print(f"    RECUPERADA {text!r} [{','.join(score.hit_texts[text])}]")
-        for text in lost:
-            print(f"    PERDEU {text!r}")
+        for index in recovered:
+            methods = ",".join(score.hit_cases[index])
+            print(f"    RECUPERADA #{index} {cases[index]['text']!r} [{methods}]")
+        for index in lost:
+            print(f"    PERDEU #{index} {cases[index]['text']!r}")
     print(f"\ncusto da regex: p95 {regex_cost_ms(recovery, catalog, cases):.3f} ms por cláusula")
 
 
 def dump_captures(folder: Path) -> None:
-    """As transcrições salvas, na ordem em que foram faladas, prontas para rotular."""
-    records = sorted(folder.rglob("*.json"), key=lambda path: path.stat().st_mtime)
-    print("# Preencha `expect` com o desfecho anotado ANTES de cada frase.")
-    for path in records:
+    """As transcrições salvas, na ordem em que foram faladas, prontas para rotular.
+
+    Ordena por `received_unix` (relógio do servidor, gravado no JSON). Sem ele
+    (captura antiga), usa a data do arquivo, que muda numa cópia sem `-p`: o
+    script avisa, porque a ordem errada casa o rótulo com a frase errada.
+    """
+    records = []
+    for path in folder.rglob("*.json"):
         record = json.loads(path.read_text(encoding="utf-8"))
+        records.append((record.get("received_unix"), path.stat().st_mtime, record))
+    if any(received is None for received, _, _ in records):
+        print("# AVISO: captura sem received_unix; a ordem usa a data do arquivo. Confira!")
+    records.sort(key=lambda item: (item[0] is None, item[0] or item[1]))
+    print("# Preencha `expect` com o desfecho anotado ANTES de cada frase.")
+    for _, _, record in records:
         text = json.dumps(record.get("transcript_raw") or "", ensure_ascii=False)
         print(f"- {{text: {text}, expect: TODO}}  # {record.get('utterance_id')}")
 

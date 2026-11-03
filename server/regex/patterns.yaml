@@ -28,7 +28,7 @@
 gestures:
   sit:
     patterns:
-      - "(?:pode |vai )?(?:se )?senta(?:r)?(?: se)?(?: no chao| ai| aqui)"
+      - "(?:pode )?(?:se )?senta(?:r)?(?: se)?(?: no chao| ai| aqui)"
       - "(?:pode )?sentar"
     examples: [senta no chão, pode sentar, senta aqui]
   stand_up:
@@ -61,15 +61,19 @@ gestures:
 movement:
   # Palavras que fixam o verbo quando a frase não tem verbo do léxico.
   verb_words:
-    andar: [avance, avanca, avancar, recue, recua, recuar, bora, segue, siga]
+    # Sem "segue"/"siga": "segue direito" quer dizer "em frente", e "direito"
+    # conta como direita (erro de 1 letra), o que viraria andar de lado.
+    andar: [avance, avanca, avancar, recue, recua, recuar, bora]
     virar: [rode, roda, rodar]
   patterns:
-    # <verbo> [um pouco/rapidinho/devagar] para [artigo] [lado] <direção>
-    - "(?P<verbo>\\w+)(?: (?:rapidinho|devagar|devagarinho|mais))? para (?:a |o |as |os )?(?:lado )?(?P<direcao>\\w+)"
+    # Grupos obrigatórios: `verb` e `direction`.
+    # <verbo> [rapidinho/mais] para [artigo] [lado] <direção>
+    # Sem "devagar": o move tem velocidade fixa, e pedir devagar não pode sair rápido.
+    - "(?P<verb>\\w+)(?: (?:rapidinho|mais))? para (?:a |o |ao |as |os )?(?:lado )?(?P<direction>\\w+)"
     # <verbo> de <ré>
-    - "(?P<verbo>\\w+) de (?P<direcao>re)"
+    - "(?P<verb>\\w+) de (?P<direction>re)"
     # <verbo> [artigo] [lado] <direção>, sem "para": "vira à direita", "anda em frente"
-    - "(?P<verbo>\\w+) (?:a |o |em )?(?:lado )?(?P<direcao>\\w+)"
+    - "(?P<verb>\\w+) (?:a |o |ao |em )?(?:lado )?(?P<direction>\\w+)"
   examples:
     - avance para frente
     - recue para trás

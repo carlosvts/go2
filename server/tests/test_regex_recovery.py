@@ -32,8 +32,8 @@ TEST_PATTERNS = {
     "movement": {
         "verb_words": {"andar": ["avance", "bora"], "virar": ["rode"]},
         "patterns": [
-            r"(?P<verbo>\w+)(?: rapidinho)? para (?:a |o |as |os )?(?:lado )?(?P<direcao>\w+)",
-            r"(?P<verbo>\w+) de (?P<direcao>re)",
+            r"(?P<verb>\w+)(?: rapidinho)? para (?:a |o |ao |as |os )?(?:lado )?(?P<direction>\w+)",
+            r"(?P<verb>\w+) de (?P<direction>re)",
         ],
         "examples": ["avance para frente"],
     },
@@ -225,7 +225,7 @@ def test_command_outside_the_allowed_set_is_refused(catalog):
 
 
 def test_movement_pattern_needs_both_groups(catalog):
-    data = {"movement": {"verb_words": {}, "patterns": [r"\w+ para (?P<direcao>\w+)"]}}
+    data = {"movement": {"verb_words": {}, "patterns": [r"\w+ para (?P<direction>\w+)"]}}
     with pytest.raises(RecoveryError):
         RegexRecovery(catalog, data)
 
@@ -283,3 +283,48 @@ def test_real_patterns_recover_their_own_examples(catalog):
             assert recovery.match_gesture(words(catalog.tokenize(example))) == name, example
     for example in data["movement"]["examples"]:
         assert recovery.match_movement(words(catalog.tokenize(example))), example
+
+
+# ─── Achados da revisão de código ──────────────────────────────────────────
+
+
+@pytest.fixture
+def real(catalog) -> RegexRecovery:
+    return RegexRecovery.from_file(catalog, PATTERNS)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "segue direito",  # quer dizer "em frente"; "direito" viraria direita
+        "siga direito",
+        "anda devagar para frente",  # pediu devagar: não pode sair na velocidade normal
+        "anda devagarinho para trás",
+    ],
+)
+def test_real_patterns_refuse_misleading_movement(real, catalog, text):
+    assert real.match_movement(words(catalog.tokenize(text))) is None
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [("vira ao lado direito", "turn_right"), ("anda pro lado esquerdo", "strafe_left")],
+)
+def test_real_patterns_accept_every_article_of_c1(real, catalog, text, expected):
+    assert real.match_movement(words(catalog.tokenize(text))) == expected
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"gestures": {"sit": None}},
+        {"gestures": ["sit"]},
+        {"gestures": {"sit": {"patterns": "senta ai"}}},
+        {"movement": ["x"]},
+        {"movement": {"verb_words": ["bora"]}},
+        {"movement": {"verb_words": {"andar": "bora"}}},
+    ],
+)
+def test_malformed_file_gives_the_aggregated_error(catalog, data):
+    with pytest.raises(RecoveryError):
+        RegexRecovery(catalog, data)
