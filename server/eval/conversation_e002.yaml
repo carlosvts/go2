@@ -46,8 +46,8 @@
 - {text: "desligar motores e qual é o seu nome", expect: reject}       # F4: damp
 - {text: "senta e qual é o seu nome e quem te criou", expect: reject}  # F3: duas de conversa
 - {text: "senta e não fala nada", expect: reject}                      # negation
-- {text: "senta e pra que você serve", expect: not_llm}                # F1: "para" abrindo a conversa
-- {text: "pare de falar e me conta uma piada", expect: not_llm}         # F1: "pare"
+- {text: "senta e pra que você serve", expect: reject}                 # F1: "para" abrindo a conversa
+- {text: "pare de falar e me conta uma piada", expect: not_llm}         # F1: "pare"; pode dar reject, stop não é garantido
 
 # ─── Só conversa: vai ao Llama ─────────────────────────────────────────────
 - {text: "qual é o seu nome", expect: llm}
@@ -57,13 +57,20 @@
 - {text: "qual é a previsão do tempo", expect: llm}
 - {text: "tudo bem com você", expect: llm}
 - {text: "onde você mora", expect: llm}
-- {text: "fala pra mim quem é você", expect: llm}   # F1: "para" no meio da conversa
+- {text: "fala pra mim quem é você", expect: llm}   # F1: "para" no meio; rótulo inferido, o C3 pode rejeitar (informativo, não é FP)
 
-# ─── Tentativa de parada com "para" no meio: nunca vai ao Llama (C3) ───────
+# ─── Tentativa de parada em frase: nunca vai ao Llama nem despacha ─────────
 # Esperado "não vai ao Llama e não despacha"; o desfecho exato (stop ou reject)
-# é o do interpretador de hoje.
-- {text: "ei robô para agora de falar", expect: not_llm}
-- {text: "você pode parar de andar", expect: not_llm}
+# é o do interpretador de hoje. Ir ao Llama ou despachar aqui rejeita a E-002.
+- {text: "ei para de me seguir", expect: not_llm}                  # F1: "para de"
+- {text: "olha para com isso que você tá fazendo", expect: not_llm}  # F1: "para com"
+- {text: "robô para de me seguir", expect: not_llm}                # F1: posição depois dos fillers
+- {text: "hey jarvis para de me seguir", expect: not_llm}          # F1: posição depois da wake word
+- {text: "você para de dançar", expect: not_llm}                   # F1: "para de"
+- {text: "você vai bater para e anda para trás", expect: not_llm}  # F1: "para" no fim da cláusula
+- {text: "senta e você para com isso", expect: not_llm}            # F1: "para com", mista
+- {text: "anda para frente e me para quando ver a parede", expect: not_llm}  # risco aceito: só C3 protege
+- {text: "você para já que eu mandei", expect: not_llm}            # risco aceito: só C3 protege
 
 # ─── Ruído e conversa curta: rejeita (C4) ──────────────────────────────────
 - {text: "banana", expect: reject}

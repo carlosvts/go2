@@ -54,12 +54,17 @@ Com candidata, valem as condições sobre a **frase inteira**. Se alguma falhar,
 
 - F1. Palavra de parada, conferida **depois** de `tokenize`, como no interpretador (então "pra" já virou "para"). Refinada por decisão do humano em 2026-11-04:
   - "pare", "parar", "stop" e qualquer outra palavra de `stop.words` que não seja "para", em qualquer lugar da frase: barram sempre.
+  - **Posição**: conta nos tokens de cada cláusula como `_segment` devolve, ou seja, depois de tirar a wake word (`strip_wake_word`), de `tokenize`, de cortar nos separadores e de tirar os fillers. Exemplo: em "robô para de me seguir", "para" é a primeira palavra.
   - "para" barra, **exceto** quando é preposição nestes dois casos:
     - dentro de uma cláusula aceita como movimento (`slots`), onde o interpretador já a tratou como preposição (`movement.ignore`). Exemplo: "andar para frente e qual é o seu nome" passa;
-    - no meio da cláusula de conversa, nunca como primeira palavra dela. Exemplo: "fala pra mim quem é você" passa.
-  - "para" como **primeira palavra** da cláusula de conversa barra sempre ("para com isso", "para de falar", "pra que você serve"), porque é a forma típica da tentativa de parada.
+    - no **meio** da cláusula de conversa, ou seja, nem a primeira nem a última palavra dela, e sem "de" ou "com" logo depois. Exemplo: "fala pra mim quem é você" passa.
+  - Barram sempre (decisões do humano, 2026-11-04):
+    - "para" como **primeira** palavra da cláusula de conversa ("para com isso", "pra que você serve");
+    - "para" como **última** palavra de **qualquer** cláusula. Exemplo: em "você vai bater para e anda para trás", sem esta regra sairia `move_backward` mais o Llama;
+    - "para de" e "para com", em **qualquer** posição de qualquer cláusula de conversa ou não aceita ("ei para de me seguir", "olha para com isso"), porque são a forma típica da tentativa de parada;
+    - "para" em cláusula aceita que não é de movimento, como [para senta] aceita por embedding. Nesse caso barra por exclusão.
   - O que o interpretador já trata como parada não muda: cláusula só de palavras de parada, ou frase terminada em "para", continuam `stop` antes de qualquer regra da E-002.
-  - Risco aceito pelo humano: uma tentativa de parada com "para" no meio da cláusula ("ei robô para agora de falar") fica protegida só pelo C3 (top-1/top-2 não pode ser `__stop__`) e pelo limiar do embedding. O eval da etapa 1 tem casos para isso.
+  - Risco aceito pelo humano: uma tentativa de parada com "para" no meio, fora das formas acima ("você para já que eu mandei"), fica protegida só pelo C3 (top-1/top-2 não pode ser `__stop__`) e pelo limiar do embedding. O eval da etapa 1 e a rodada de parada no hardware têm casos para isso.
 - F2. Nenhuma cláusula foi rejeitada por motivo diferente de `low_similarity`.
 - F3. **Exatamente uma** cláusula é de conversa (decisão do humano, 2026-11-04). Cláusula `low_similarity` que não cumpre C2–C4 rejeita a frase inteira (`low_similarity`, como hoje), e duas ou mais cláusulas de conversa também.
 - F4. As demais cláusulas foram aceitas, nenhuma é `damp` e **todas casaram sem embedding** (decisão do humano, 2026-11-04). Vale `method: lexical` (frase exata do catálogo) ou `method: slots` com todos os slots resolvidos pelo léxico (`_slot_lexical`, incluindo a distância de edição 1 que já existe). Ficam de fora:
@@ -229,6 +234,7 @@ Todas no log do server e da TV Box, por frase:
 | Cláusulas barradas pelo filtro de ruído | log do server; informativo | — |
 | Comando por eco | log do server: comando aceito cuja transcrição tem **≥ 2 palavras consecutivas** da última resposta tocada, comparadas com `fold`, numa fala até 10 s depois do fim real do som da resposta, tocado inteiro ou interrompido pela wake word (regra e números **inferidos**, congelados na etapa 1) | 0 |
 | Parada durante a geração: fim da fala → `stopped` | `reply_latency_s` da TV Box, rodada de parada × a mesma parada sem Llama | `TODO(humano): medir` |
+| Tentativas de parada em frase que foram ao Llama ou despacharam comando | anotação humana (procedimento item 4) + log do server (`llm_reply`, `partial_dispatch`) | 0 |
 | Paradas perdidas (o robô não parou) | **anotação humana** do procedimento, item 4 (uma wake word não detectada não deixa log); log da TV Box e do server como apoio. Contagem por rodada: com Llama × sem Llama | 0 |
 | VRAM ocupada (Whisper + Llama) e `n_gpu_layers` | `nvidia-smi` e log de partida no server | `TODO(humano): medir` |
 
@@ -249,6 +255,7 @@ Números do critério aceitos pelo humano em 2026-11-03; os de 2026-11-04 (10 s,
 - `eval/conversation_e002.yaml` ou `eval/phrases.yaml` tem algum falso positivo, ou seja, algum comando despachado fora do `expect`;
 - o teste automático da invariante do Fluxo, item 2, falha: a busca da resposta usa `submit`, pega o `_in_flight` ou põe a máquina em `SENDING`;
 - a parada durante a geração ficou mais lenta: o máximo de "fim da fala → `stopped`" subiu mais de 0,5 s em relação à mesma parada sem Llama gerando;
+- alguma tentativa de parada em frase (eval ou rodada de hardware, procedimento item 4) foi ao Llama ou despachou comando, em vez de virar `stopped` ou `rejected` (decisão do humano, 2026-11-04);
 - parada perdida com Llama (decisão do humano, 2026-11-04): na rodada com Llama, o número de paradas em que o robô não parou é maior que zero **e** maior que o da rodada sem Llama. Se as duas rodadas perderem paradas, a comparação é inconclusiva e as duas rodadas se repetem;
 - o modelo não cabe: OOM ao carregar, ou alguma camada fora da GPU, com Whisper e Llama carregados juntos.
 
@@ -268,6 +275,7 @@ Um FP do interpretador numa frase **sem** cláusula de conversa (comando errado 
 2. Na TV Box: atualizar com os WAVs de espera; `df -h` e `free -h` antes e depois.
 3. Falar as frases (≥ 30, pelo menos 10 caindo no Llama). **Antes** de cada uma, anotar o desfecho pretendido. Depois, anotar se tocou o áudio de espera, se a resposta chegou e se foi inteligível (anotação livre, fora do critério).
 4. Rodada de parada: falar "para" durante a geração (≥ 5 vezes) e o mesmo sem Llama gerando. Anotar se o robô parou; uma parada perdida só com Llama rejeita.
+   - Mais ≥ 5 **tentativas de parada em frase**, com o robô andando ou fazendo gesto: "ei, para de me seguir", "olha, para com isso", "você para já que eu mandei". Para cada uma, anotar se foi ao Llama (tocou o áudio de espera) ou se despachou comando. Qualquer uma assim rejeita o experimento (decisão do humano, 2026-11-04). O que se espera é `stopped` ou `rejected`.
 5. Quando acontecer de falar a wake word com o áudio de espera ou a resposta tocando, anotar se o som parou e se o comando saiu (anotação livre, fora do critério).
 6. Movimento do robô que não veio de comando pretendido: parar o teste e anotar. O log diz a origem: do Llama, de eco ou do despacho parcial (`partial_dispatch`) rejeita; do interpretador numa frase sem cláusula de conversa fica registrado à parte.
 7. Para cada frase mista, conferir o comando despachado contra o desfecho anotado antes.
@@ -314,3 +322,8 @@ Segurança: deixar `python -m sense.stop` à mão. A parada falada não é garan
 - 2026-11-04: aprovada pelo humano, com as frases de `thinking` e `reply_failed` (≥ 4 de cada), saúde do llama-server a cada 2 s com timeout de 0,5 s e os demais números inferidos da tabela de revisão.
 - 2026-11-04: frases fixas do filtro de eco com variantes ("Eu. Não. Entender.", "Eu. Confuso.", "Eu. Não. Saber."), com exceção para "não" só nelas; eval da E-002 em arquivo próprio (`eval/conversation_e002.yaml`).
 - 2026-11-04: o humano voltou atrás no bloqueio de movimento na mista (vale o F4 anterior). F1 refinado: "para" como preposição não conta dentro de movimento aceito nem no meio da cláusula de conversa; "para" abrindo a cláusula e as demais palavras de parada continuam barrando.
+- 2026-11-04: F1 corrigido após o `spec-reviewer`, com decisões do humano:
+  - posição contada nos tokens de `_segment`;
+  - "para" no fim de qualquer cláusula barra;
+  - "para de" e "para com" barram em qualquer posição;
+  - tentativa de parada em frase que vai ao Llama ou despacha comando rejeita o experimento, medida no eval e numa rodada nova de hardware.
