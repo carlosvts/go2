@@ -52,7 +52,14 @@ A decisão é por cláusula. Uma cláusula é **de conversa** (vai para o Llama)
 
 Com candidata, valem as condições sobre a **frase inteira**. Se alguma falhar, nada vai para o Llama e a frase segue exatamente como hoje, ou seja, rejeitada inteira (`low_similarity` ou o motivo de sempre):
 
-- F1. Não há palavra de parada em lugar nenhum da frase, sem exceção. A checagem é feita **depois** de `tokenize`, como no interpretador. Efeito aceito: como "pra" vira "para", frases como "pra que serve" e "fala para mim" não vão ao Llama.
+- F1. Palavra de parada, conferida **depois** de `tokenize`, como no interpretador (então "pra" já virou "para"). Refinada por decisão do humano em 2026-11-04:
+  - "pare", "parar", "stop" e qualquer outra palavra de `stop.words` que não seja "para", em qualquer lugar da frase: barram sempre.
+  - "para" barra, **exceto** quando é preposição nestes dois casos:
+    - dentro de uma cláusula aceita como movimento (`slots`), onde o interpretador já a tratou como preposição (`movement.ignore`). Exemplo: "andar para frente e qual é o seu nome" passa;
+    - no meio da cláusula de conversa, nunca como primeira palavra dela. Exemplo: "fala pra mim quem é você" passa.
+  - "para" como **primeira palavra** da cláusula de conversa barra sempre ("para com isso", "para de falar", "pra que você serve"), porque é a forma típica da tentativa de parada.
+  - O que o interpretador já trata como parada não muda: cláusula só de palavras de parada, ou frase terminada em "para", continuam `stop` antes de qualquer regra da E-002.
+  - Risco aceito pelo humano: uma tentativa de parada com "para" no meio da cláusula ("ei robô para agora de falar") fica protegida só pelo C3 (top-1/top-2 não pode ser `__stop__`) e pelo limiar do embedding. O eval da etapa 1 tem casos para isso.
 - F2. Nenhuma cláusula foi rejeitada por motivo diferente de `low_similarity`.
 - F3. **Exatamente uma** cláusula é de conversa (decisão do humano, 2026-11-04). Cláusula `low_similarity` que não cumpre C2–C4 rejeita a frase inteira (`low_similarity`, como hoje), e duas ou mais cláusulas de conversa também.
 - F4. As demais cláusulas foram aceitas, nenhuma é `damp` e **todas casaram sem embedding** (decisão do humano, 2026-11-04). Vale `method: lexical` (frase exata do catálogo) ou `method: slots` com todos os slots resolvidos pelo léxico (`_slot_lexical`, incluindo a distância de edição 1 que já existe). Ficam de fora:
@@ -306,3 +313,4 @@ Segurança: deixar `python -m sense.stop` à mão. A parada falada não é garan
   Também: invariante de auditoria `llm_reply` × `submit`, `stale` também na conversa pura (F5), saúde do llama-server em segundo plano (F6), regra de eco definida, desfecho pretendido anotado antes de falar e lista de arquivos completa.
 - 2026-11-04: aprovada pelo humano, com as frases de `thinking` e `reply_failed` (≥ 4 de cada), saúde do llama-server a cada 2 s com timeout de 0,5 s e os demais números inferidos da tabela de revisão.
 - 2026-11-04: frases fixas do filtro de eco com variantes ("Eu. Não. Entender.", "Eu. Confuso.", "Eu. Não. Saber."), com exceção para "não" só nelas; eval da E-002 em arquivo próprio (`eval/conversation_e002.yaml`).
+- 2026-11-04: o humano voltou atrás no bloqueio de movimento na mista (vale o F4 anterior). F1 refinado: "para" como preposição não conta dentro de movimento aceito nem no meio da cláusula de conversa; "para" abrindo a cláusula e as demais palavras de parada continuam barrando.

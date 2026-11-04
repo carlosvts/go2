@@ -10,6 +10,7 @@
 #   reject                       nada despachado, nada vai ao Llama
 #   [ids]                        comando normal, como hoje (regressão)
 #   stop                         parada, como hoje (regressão)
+#   not_llm                      não vai ao Llama e não despacha comando (stop ou reject)
 #
 # Falso positivo (meta 0, rejeita a E-002): qualquer comando despachado que
 # não está no `expect`, incluindo o do despacho parcial.
@@ -26,6 +27,7 @@
 - {text: "deita e me conta uma piada", expect: {commands: [stand_down], llm: true}}
 - {text: "coração e me fala como você está", expect: {commands: [finger_heart], llm: true}}
 - {text: "dança e qual é o seu nome", expect: {commands: [dance1], llm: true}}
+- {text: "andar para frente e qual é o seu nome", expect: {commands: [move_forward], llm: true}}  # F1: "para" do movimento não conta
 
 # ─── Mistas com ruído: rejeita tudo ────────────────────────────────────────
 - {text: "senta e banana", expect: reject}
@@ -39,10 +41,11 @@
 - {text: "eu vou deitar e você me liga amanhã", expect: reject}
 
 # ─── Mistas barradas pelas regras da frase inteira ─────────────────────────
-- {text: "andar para frente e qual é o seu nome", expect: reject}       # F1: "para"
 - {text: "desligar motores e qual é o seu nome", expect: reject}       # F4: damp
 - {text: "senta e qual é o seu nome e quem te criou", expect: reject}  # F3: duas de conversa
 - {text: "senta e não fala nada", expect: reject}                      # negation
+- {text: "senta e pra que você serve", expect: not_llm}                # F1: "para" abrindo a conversa
+- {text: "pare de falar e me conta uma piada", expect: not_llm}         # F1: "pare"
 
 # ─── Só conversa: vai ao Llama ─────────────────────────────────────────────
 - {text: "qual é o seu nome", expect: llm}
@@ -52,6 +55,13 @@
 - {text: "qual é a previsão do tempo", expect: llm}
 - {text: "tudo bem com você", expect: llm}
 - {text: "onde você mora", expect: llm}
+- {text: "fala pra mim quem é você", expect: llm}   # F1: "para" no meio da conversa
+
+# ─── Tentativa de parada com "para" no meio: nunca vai ao Llama (C3) ───────
+# Esperado "não vai ao Llama e não despacha"; o desfecho exato (stop ou reject)
+# é o do interpretador de hoje.
+- {text: "ei robô para agora de falar", expect: not_llm}
+- {text: "você pode parar de andar", expect: not_llm}
 
 # ─── Ruído e conversa curta: rejeita (C4) ──────────────────────────────────
 - {text: "banana", expect: reject}
