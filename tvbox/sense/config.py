@@ -22,6 +22,13 @@ SAMPLE_RATE = 16000  # exigido pelo openWakeWord e pelo servidor
 # (frase aceita na fila, ou parada executada).
 DEFAULT_OK_STATUSES = "enqueued,stopped"
 
+# Wake words aceitas em WAKE_WORD e o modelo de cada uma: um nome de modelo
+# que vem com o openWakeWord, ou o caminho de um .onnx treinado por nós.
+WAKE_MODELS = {
+    "hey_jarvis": "hey_jarvis",
+    "hey_go2": str(REPO_ROOT / "models" / "hey_go2_v2_1.onnx"),
+}
+
 
 class ConfigError(Exception):
     """Configuração inválida. A mensagem lista todos os problemas."""
@@ -35,7 +42,8 @@ class Config:
     api_url: str | None
     chunk_ms: int
     mic_name: str
-    wake_word: str  # nome do modelo do openWakeWord
+    wake_word: str  # uma das chaves de WAKE_MODELS
+    wake_model: str  # nome do modelo do openWakeWord, ou caminho de um .onnx
     wake_threshold: float
     wake_vad_threshold: float  # 0 = VAD do Silero desligado
     edge_id: str
@@ -101,6 +109,13 @@ def load_config(env: Mapping[str, str] | None = None) -> Config:
         return value
 
 
+    wake_word = get("WAKE_WORD") or "hey_jarvis"
+    wake_model = WAKE_MODELS.get(wake_word, "")
+    if not wake_model:
+        problems.append(f"WAKE_WORD={wake_word!r} inválido (use {' ou '.join(WAKE_MODELS)})")
+    elif wake_model.endswith(".onnx") and not Path(wake_model).is_file():
+        problems.append(f"WAKE_WORD={wake_word}: modelo {wake_model} não encontrado")
+
     save_dir = Path(get("SAVE_UTTERANCES_DIR")) if get("SAVE_UTTERANCES_DIR") else None
     if save_dir is not None and not save_dir.is_absolute():
         save_dir = REPO_ROOT / save_dir
@@ -110,7 +125,8 @@ def load_config(env: Mapping[str, str] | None = None) -> Config:
         api_url=url("GO2_API_URL", "http://192.168.0.10:8000", required=False),
         chunk_ms=int(number("AUDIO_CHUNK_MS", 30, 20, 40)),
         mic_name=get("MIC_NAME") or "anker",
-        wake_word=get("WAKE_WORD") or "hey_jarvis",
+        wake_word=wake_word,
+        wake_model=wake_model,
         wake_threshold=number("WAKE_THRESHOLD", 0.85, 0, 1),
         wake_vad_threshold=number("WAKE_VAD_THRESHOLD", 0.0, 0, 1),
         edge_id=get("EDGE_ID") or socket.gethostname(),

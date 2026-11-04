@@ -157,7 +157,7 @@ Chama `POST /commands/stop` na go2-api (`GO2_API_URL`) e, em paralelo, avisa o s
 | Nome do microfone | `MIC_NAME` | `anker` |
 | Tamanho do chunk de áudio | `AUDIO_CHUNK_MS` | 30 |
 | Tamanho do buffer circular de áudio | `AUDIO_BUFFER_S` | 10.0 |
-| Qual wake word (modelo do openWakeWord) | `WAKE_WORD` | `hey_jarvis` |
+| Qual wake word: `hey_jarvis` (openWakeWord) ou `hey_go2` (`models/hey_go2_v2_1.onnx`, copiado à mão) | `WAKE_WORD` | `hey_jarvis` |
 | Sensibilidade da wake word | `WAKE_THRESHOLD` | 0.85 |
 | VAD do Silero na wake word: nota mínima de voz (0 = desligado; 0.5 para ligar) | `WAKE_VAD_THRESHOLD` | 0 |
 | Intervalo mínimo entre wake words | `WAKE_COOLDOWN_S` | 2.0 |

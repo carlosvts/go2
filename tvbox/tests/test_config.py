@@ -1,6 +1,6 @@
 import pytest
 
-from sense.config import ConfigError, load_config
+from sense.config import WAKE_MODELS, ConfigError, load_config
 
 SERVER = "http://192.168.0.10:9000"
 API = "http://192.168.0.10:8000"
@@ -55,3 +55,22 @@ def test_lista_todos_os_problemas_de_uma_vez():
     with pytest.raises(ConfigError) as error:
         load_config(env={"WAKE_THRESHOLD": "2", "PRE_ROLL_S": "-1"})
     assert str(error.value).count("\n  - ") == 3
+
+
+def test_wake_word_escolhe_o_modelo(monkeypatch, tmp_path):
+    assert load_config(env={"SERVER_URL": SERVER}).wake_model == "hey_jarvis"
+    model = tmp_path / "hey_go2_v2_1.onnx"
+    model.touch()
+    monkeypatch.setitem(WAKE_MODELS, "hey_go2", str(model))
+    config = load_config(env={"SERVER_URL": SERVER, "WAKE_WORD": "hey_go2"})
+    assert (config.wake_word, config.wake_model) == ("hey_go2", str(model))
+
+
+@pytest.mark.parametrize(
+    ("wake_word", "message"),
+    [("alexa", "WAKE_WORD='alexa' inválido"), ("hey_go2", "não encontrado")],
+)
+def test_wake_word_invalida_ou_sem_modelo(monkeypatch, tmp_path, wake_word, message):
+    monkeypatch.setitem(WAKE_MODELS, "hey_go2", str(tmp_path / "falta.onnx"))
+    with pytest.raises(ConfigError, match=message):
+        load_config(env={"SERVER_URL": SERVER, "WAKE_WORD": wake_word})

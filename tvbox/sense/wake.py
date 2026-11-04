@@ -4,6 +4,7 @@ O openWakeWord é importado só ao criar o motor, para os testes rodarem sem ele
 """
 
 from collections import deque
+from pathlib import Path
 
 from sense.config import SAMPLE_RATE
 
@@ -14,10 +15,11 @@ VAD_WINDOW_S = 1.0
 
 
 class OpenWakeWordEngine:
-    def __init__(self, wake_word: str, vad_threshold: float = 0.0) -> None:
+    def __init__(self, model: str, vad_threshold: float = 0.0) -> None:
         """
         Args:
-            wake_word: nome de um modelo do openWakeWord, ex.: "hey_jarvis".
+            model: nome de um modelo do openWakeWord, ex.: "hey_jarvis", ou
+                caminho de um .onnx, ex.: "models/hey_go2_v2_1.onnx".
             vad_threshold: acima de 0, liga o VAD do Silero que vem com o
                 openWakeWord: a wake word só pontua se o VAD viu voz, com
                 pelo menos esta nota (0 a 1), no último segundo. Filtra
@@ -28,8 +30,10 @@ class OpenWakeWordEngine:
         from openwakeword.model import Model
 
         self._np = np
-        self._wake_word = wake_word
-        self._model = Model(wakeword_models=[wake_word], inference_framework="onnx")
+        # O openWakeWord devolve a nota pelo nome do arquivo, sem extensão;
+        # para um modelo que vem com ele, pelo próprio nome.
+        self._wake_word = Path(model).stem
+        self._model = Model(wakeword_models=[model], inference_framework="onnx")
         # O `vad_threshold` do próprio Model olha de 4 a 7 chamadas atrás, o
         # que só funciona com chunks de 80 ms; com os nossos, de 30 ms, ele
         # zera a nota justamente no pico. Por isso o VAD é aplicado aqui, por
