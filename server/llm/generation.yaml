@@ -1,0 +1,12 @@
+# Parâmetros da geração do Llama (E-002). Entram no congelamento da etapa 2
+# (parametros-congelados-em), junto com prompt.md e o arquivo do modelo.
+# Mudar depois de congelar invalida a medida de latência.
+#
+# INFERIDO: ninguém mediu. temperature e top_p são valores usuais, não escolhidos
+# por medida; TODO(humano): confirmar antes da etapa 2.
+
+model_file: Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf  # decisão do humano (8B Instruct, Q4_K_M)
+model_sha256: null  # TODO(humano): sha256sum do arquivo usado no server, antes da etapa 2
+max_tokens: 24      # aceito pelo humano em 2026-11-03; inferido
+temperature: 0.7
+top_p: 0.9

@@ -108,6 +108,23 @@ class Settings(BaseSettings):
     max_utterance_age_s: float = Field(default=4.0, gt=0)
     idempotency_ttl_s: float = Field(default=600.0, gt=0)
 
+    # ─── Resposta falada (E-002) ───────────────────────────────────────────
+    # Desligado por padrão: sem isto, nada muda em relação à main.
+    llm_enabled: bool = False
+    # llama-server (llama.cpp) em processo separado, na mesma máquina.
+    llm_url: str = "http://127.0.0.1:8080"
+    # Prompt, parâmetros, marcadores, palavras proibidas e frases fixas.
+    llm_dir: Path = ROOT / "llm"
+    # Saúde do llama-server, em segundo plano. INFERIDO (aprovado em 2026-11-04).
+    llm_health_interval_s: float = Field(default=2.0, gt=0)
+    llm_health_timeout_s: float = Field(default=0.5, gt=0)
+    # Long-poll do GET /v1/reply e validade da resposta. INFERIDOS; congelados
+    # na etapa 1 da E-002: não mude sem invalidar o experimento.
+    reply_deadline_s: float = Field(default=10.0, gt=0)
+    reply_ttl_s: float = Field(default=30.0, gt=0)
+    piper_voice: Path = ROOT / "models" / "piper" / "pt_BR-faber-medium.onnx"
+    reply_lead_silence_ms: int = Field(default=250, ge=0)
+
     # ─── Calibração e observabilidade ──────────────────────────────────────
     save_utterances: bool = False
     save_dir: Path = ROOT / "captures"

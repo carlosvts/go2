@@ -54,6 +54,12 @@ class Clause:
     score: float | None = None  # cosseno (1.0 quando lexical)
     margin: float | None = None  # top1 − top2
     reject_reason: str | None = None
+    # Rótulos do vizinho mais próximo (E-002, C3): o melhor e o segundo rótulo
+    # distinto, registrados mesmo quando a cláusula é rejeitada.
+    top1: str | None = None
+    top2: str | None = None
+    # Movimento: True se todos os slots vieram do léxico (sem embedding).
+    slots_lexical: bool | None = None
 
     def log(self) -> dict:
         return {key: value for key, value in vars(self).items() if value is not None}
@@ -129,6 +135,14 @@ class Interpreter:
                     slot_texts.append(word)
                     self._slot_labels.append(_Slot(kind, name, 1.0))
         self._slot_matrix = embedder.embed(slot_texts)
+
+    @property
+    def has_embedder(self) -> bool:
+        return self._embedder is not None
+
+    def tokenize(self, text: str) -> list[str]:
+        """A mesma normalização da interpretação (minúsculas, "pra" → "para"...)."""
+        return self._catalog.tokenize(text)
 
     # ─── Parada ────────────────────────────────────────────────────────────
 
@@ -227,10 +241,11 @@ class Interpreter:
         if self._embedder is None:
             result.reject_reason = "no_match"
             return result
-        label, score, margin = self._nearest(
+        label, score, margin, runner_up = self._ranked(
             self._embedder.embed([result.text])[0], self._intent_matrix, self._intent_labels
         )
         result.method, result.score, result.margin = "embedding", score, margin
+        result.top1, result.top2 = label, runner_up
         # O que se parece com parada tem limiar próprio, mais frouxo: parar
         # por engano é seguro.
         accept = self._t.accept
@@ -273,6 +288,8 @@ class Interpreter:
                 result.reject_reason = "movement_unknown_word"
                 return result
             slots.append(slot)
+        # Slot do léxico (exato ou a uma letra) não tem margem; o do embedding tem.
+        result.slots_lexical = all(slot.margin is None for slot in slots)
         verbs = [slot for slot in slots if slot.kind == "verb"]
         directions = [slot for slot in slots if slot.kind == "direction"]
         if not verbs:
@@ -320,13 +337,19 @@ class Interpreter:
             return None
         return _Slot(kind, name, score, margin)
 
-    @staticmethod
-    def _nearest(vector: np.ndarray, matrix: np.ndarray, labels: list) -> tuple:
+    @classmethod
+    def _nearest(cls, vector: np.ndarray, matrix: np.ndarray, labels: list) -> tuple:
         """Rótulo mais próximo, seu cosseno e a folga sobre o melhor rótulo diferente."""
+        return cls._ranked(vector, matrix, labels)[:3]
+
+    @staticmethod
+    def _ranked(vector: np.ndarray, matrix: np.ndarray, labels: list) -> tuple:
+        """Como `_nearest`, mais o segundo rótulo distinto (None se não houver)."""
         similarities = matrix @ vector
         best: dict = {}
         for label, similarity in zip(labels, similarities, strict=True):
             best[label] = max(best.get(label, -1.0), float(similarity))
         ranked = sorted(best.items(), key=lambda item: item[1], reverse=True)
         runner_up = ranked[1][1] if len(ranked) > 1 else -1.0
-        return ranked[0][0], ranked[0][1], ranked[0][1] - runner_up
+        second = ranked[1][0] if len(ranked) > 1 else None
+        return ranked[0][0], ranked[0][1], ranked[0][1] - runner_up, second
