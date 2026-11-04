@@ -28,6 +28,8 @@
 - {text: "coração e me fala como você está", expect: {commands: [finger_heart], llm: true}}
 - {text: "dança e qual é o seu nome", expect: {commands: [dance1], llm: true}}
 - {text: "andar para frente e qual é o seu nome", expect: {commands: [move_forward], llm: true}}  # F1: "para" do movimento não conta
+- {text: "vira à direita e qual é o seu nome", expect: {commands: [turn_right], llm: true}}
+- {text: "anda adiante e me conta uma piada", expect: {commands: [move_forward], llm: true}}
 
 # ─── Mistas com ruído: rejeita tudo ────────────────────────────────────────
 - {text: "senta e banana", expect: reject}
