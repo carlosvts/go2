@@ -62,6 +62,7 @@ class Decision:
     text: str = ""  # o que vai ao Llama: só a cláusula de conversa
     commands: list[str] = field(default_factory=list)  # só na mista
     reason: str | None = None  # por que não foi (para o log)
+    score: float | None = None  # cosseno da cláusula de conversa (informativo)
 
     def log(self) -> dict:
         return {"route": self.route.value, "commands": self.commands, "reason": self.reason}
@@ -153,8 +154,12 @@ def decide(
     if not all(_dispatchable(c) for c in others):  # F4
         return Decision(Route.NONE, reason="f4_not_dispatchable")
 
+    score = None if candidate.score is None else round(candidate.score, 4)
     if not others:
-        return Decision(Route.PURE, text=candidate.text)
+        return Decision(Route.PURE, text=candidate.text, score=score)
     return Decision(
-        Route.MIXED, text=candidate.text, commands=[c.command_id for c in others if c.command_id]
+        Route.MIXED,
+        text=candidate.text,
+        commands=[c.command_id for c in others if c.command_id],
+        score=score,
     )

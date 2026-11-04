@@ -193,7 +193,7 @@ class Service:
             reply_pending=reply_pending,
         )
         if status == "thinking" and decision is not None:
-            response.confidence = self._candidate_score(interpretation, decision)
+            response.confidence = decision.score
         total_ms = (done - received) * 1000
         self.stats.record(meta.reason, stats_status or status, total_ms)
         record = {
@@ -265,15 +265,6 @@ class Service:
         )
         replies.engine.start(meta.utterance_id, decision.text)
         return "enqueued", None, list(decision.commands), True, "enqueued_with_reply"
-
-    @staticmethod
-    def _candidate_score(interpretation: Interpretation | None, decision: Decision) -> float | None:
-        if interpretation is None:
-            return None
-        for clause in interpretation.clauses:
-            if clause.text == decision.text and clause.score is not None:
-                return round(clause.score, 4)
-        return None
 
     def _enqueue(self, commands: list[str], meta: Meta, received: float) -> tuple[str, str | None]:
         # A saída só pode conter IDs do catálogo, e a parada nunca entra na fila.

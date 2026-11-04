@@ -82,6 +82,17 @@ def test_echo_filter_keeps_harmless_replies(echo, text):
     assert echo.check(text) == (text, None)
 
 
+def test_echo_filter_sees_commands_hidden_by_many_sentences(echo):
+    """5 frases curtas: o interpretador rejeitaria por too_many_clauses sem resolver nada.
+
+    "Senta." no meio só aparece conferindo frase por frase / sem pontuação.
+    """
+    assert "senta" in echo._forbidden  # garante que o teste é do item 1
+    echo._forbidden = frozenset()
+    final, reason = echo.check("Eu. Feliz. Senta. Muito. Você.")
+    assert reason is not None and reason.startswith("interpreter")
+
+
 def test_fixed_replies_pass_the_filter_except_for_nao(echo):
     """Nenhuma frase fixa vira comando nem parada; só "não" é exceção na lista."""
     assert len(echo.fallback_replies) >= 3

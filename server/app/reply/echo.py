@@ -9,12 +9,15 @@ qualquer um acusar, ele é trocado por uma frase fixa (spec E-002):
 """
 
 import random
+import re
 from pathlib import Path
 
 import yaml
 
 from app.interpret.interpreter import Interpreter, Kind
 from app.interpret.text import fold, words
+
+_SENTENCE_BREAK = re.compile(r"[.,;:!?]+")
 
 
 class EchoFilter:
@@ -42,7 +45,25 @@ class EchoFilter:
         return cls(interpreter, forbidden, list(fixed["replies"]), rng)
 
     def command_like(self, text: str) -> str | None:
-        """Item 1. O motivo, ou None se o interpretador não vê comando nem parada."""
+        """Item 1. O motivo, ou None se o interpretador não vê comando nem parada.
+
+        O microfone não ouve pontuação: "Dar. Oi." volta como "dar oi". Por isso
+        o texto é conferido inteiro, sem pontuação, e em janelas de 1 a 3 frases
+        seguidas. Assim o `too_many_clauses` e o `negation` do interpretador,
+        que rejeitam antes de resolver as cláusulas, não escondem um comando.
+        """
+        sentences = [part for part in _SENTENCE_BREAK.split(text) if part.strip()]
+        variants = [text, " ".join(sentences)]
+        for size in range(1, 4):
+            for start in range(len(sentences) - size + 1):
+                variants.append(" ".join(sentences[start : start + size]))
+        for variant in dict.fromkeys(variants):
+            reason = self._command_like_one(variant)
+            if reason is not None:
+                return reason
+        return None
+
+    def _command_like_one(self, text: str) -> str | None:
         if self._interpreter.is_stop_only(text):
             return "stop_only"
         result = self._interpreter.interpret(text)

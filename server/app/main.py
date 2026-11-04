@@ -133,6 +133,12 @@ def create_app(
                 stop_accept=settings.tau_stop_accept,
             ),
         )
+        # E-002 antes do dispatcher: se a voz do Piper ou um YAML falhar, nada
+        # mais foi iniciado e não há o que vazar.
+        replies = None
+        llama = None
+        if settings.llm_enabled or llm is not None:
+            replies, llama = await _build_replies(settings, interpreter, llm, synthesizer)
         dispatcher = Dispatcher(
             client,
             catalog,
@@ -147,10 +153,6 @@ def create_app(
         )
         dispatcher.start()
         pool = TranscriptionPool(stt, settings.stt_workers, settings.short_audio_s)
-        replies = None
-        llama = None
-        if settings.llm_enabled or llm is not None:
-            replies, llama = await _build_replies(settings, interpreter, llm, synthesizer)
         service = Service(settings, catalog, interpreter, pool, dispatcher, replies)
         app.state.service = service
         app.state.go2 = client
@@ -273,11 +275,16 @@ async def _build_replies(
         synthesizer = await asyncio.to_thread(
             PiperSynthesizer, settings.piper_voice, settings.reply_lead_silence_ms
         )
-    echo = EchoFilter.load(interpreter, settings.llm_dir)
-    store = ReplyStore(settings.reply_deadline_s, settings.reply_ttl_s)
-    health = HealthMonitor(llm, settings.llm_health_interval_s, settings.llm_health_timeout_s)
-    await health.start()
-    rules = ConversationRules.load(settings.llm_dir / "conversation_markers.yaml")
+    try:
+        echo = EchoFilter.load(interpreter, settings.llm_dir)
+        rules = ConversationRules.load(settings.llm_dir / "conversation_markers.yaml")
+        store = ReplyStore(settings.reply_deadline_s, settings.reply_ttl_s)
+        health = HealthMonitor(llm, settings.llm_health_interval_s, settings.llm_health_timeout_s)
+        await health.start()  # a última: só ela deixa uma tarefa rodando
+    except BaseException:
+        if llama is not None:
+            await llama.aclose()
+        raise
     return Replies(rules, ReplyEngine(llm, synthesizer, echo, store), health), llama
 
 

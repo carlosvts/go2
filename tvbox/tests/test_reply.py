@@ -279,3 +279,69 @@ def test_falas_novas_tem_pelo_menos_quatro_variantes():
     player = SoundPlayer(media_dir)
     assert len(player.variants("thinking")) >= 4
     assert len(player.variants("reply_failed")) >= 4
+
+
+def test_erro_inesperado_na_busca_ainda_avisa(server, monkeypatch):
+    import http.client
+
+    fetcher = ReplyFetcher(f"http://127.0.0.1:{server.server_port}", 2.0, Counter())
+
+    def broken(utterance_id):
+        raise http.client.IncompleteRead(b"RIFF")
+
+    monkeypatch.setattr(fetcher, "_get", broken)
+    results = []
+    fetcher.fetch("u1", lambda *result: results.append(result))
+    wait_for(lambda: results)
+    assert results[0][1] is None and "IncompleteRead" in results[0][2]
+
+
+def test_disco_cheio_nao_deixa_arquivo(server, monkeypatch, tmp_path):
+    server.reply = (200, WAV)
+    monkeypatch.setattr("tempfile.tempdir", str(tmp_path))
+    real_fdopen = __import__("os").fdopen
+
+    def full(*args, **kwargs):
+        handle = real_fdopen(*args, **kwargs)
+        handle.write = lambda data: (_ for _ in ()).throw(OSError(28, "No space left"))
+        return handle
+
+    monkeypatch.setattr("sense.reply_fetcher.os.fdopen", full)
+    _, path, error = fetch(server)
+    assert path is None and "não gravou" in error
+    assert list(tmp_path.glob("go2-reply-*")) == []
+
+
+def test_clear_entre_a_checagem_e_o_aplay_ainda_corta(tmp_path):
+    """Corrida: o worker já passou da checagem de geração quando o clear chega."""
+    from sense.audio import _Aplay
+
+    aplay = _Aplay()
+    started = []
+
+    def popen(command, **kwargs):
+        class Process:
+            def __init__(self):
+                self.terminated = False
+                started.append(self)
+
+            def poll(self):
+                return 0 if self.terminated else None
+
+            def terminate(self):
+                self.terminated = True
+
+            def wait(self, timeout=None):
+                return 0
+
+        return Process()
+
+    import sense.audio as audio_module
+
+    original = audio_module.subprocess.Popen
+    audio_module.subprocess.Popen = popen
+    try:
+        aplay(["aplay", "x.wav"], timeout=1, still_wanted=lambda: False)
+    finally:
+        audio_module.subprocess.Popen = original
+    assert started and started[0].terminated

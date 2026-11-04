@@ -18,13 +18,17 @@ def outcome(
     """`STOP`, `REJECT`, `IGNORED` ou a lista de IDs de comando."""
     stripped, _ = strip_wake_word(text, wake_words)
     result = interpreter.interpret(stripped)
+    return _from_interpretation(result), result
+
+
+def _from_interpretation(result: Interpretation) -> str | list[str]:
     if result.kind is Kind.EMPTY:
-        return IGNORED, result
+        return IGNORED
     if result.kind is Kind.STOP:
-        return STOP, result
+        return STOP
     if result.kind is Kind.REJECTED:
-        return REJECT, result
-    return result.commands, result
+        return REJECT
+    return result.commands
 
 
 # ─── E-002: a camada de conversa por cima do interpretador ─────────────────
@@ -49,7 +53,7 @@ def conversation_outcome(
         return LLM, result
     if decision.route is Route.MIXED:
         return {"commands": decision.commands, "llm": True}, result
-    return outcome(interpreter, text, wake_words)
+    return _from_interpretation(result), result
 
 
 def dispatched(got: str | list[str] | dict) -> list[str]:

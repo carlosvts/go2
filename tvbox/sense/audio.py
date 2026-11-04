@@ -247,6 +247,9 @@ class SoundPlayer:
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                     timeout=self.TIMEOUT_S,
+                    # Um `clear()` que chegue entre a checagem acima e o início
+                    # do aplay ainda corta o som (ver `_Aplay`).
+                    still_wanted=lambda generation=generation: generation == self._generation,
                 )
             except (OSError, subprocess.SubprocessError) as error:
                 log.warning("Som %r não tocou: %s", path.name, error)
@@ -263,10 +266,16 @@ class _Aplay:
         self._process: subprocess.Popen | None = None
         self._lock = threading.Lock()
 
-    def __call__(self, command: list[str], stdout=None, stderr=None, timeout=None) -> None:
+    def __call__(
+        self, command: list[str], stdout=None, stderr=None, timeout=None, still_wanted=None
+    ) -> None:
         process = subprocess.Popen(command, stdout=stdout, stderr=stderr)
         with self._lock:
             self._process = process
+        # `clear()` sobe a geração ANTES de chamar `interrupt()`. Se ele veio
+        # antes de o processo ficar visível ali em cima, a checagem pega aqui.
+        if still_wanted is not None and not still_wanted():
+            process.terminate()
         try:
             process.wait(timeout=timeout)
         except subprocess.TimeoutExpired:

@@ -36,12 +36,20 @@ class ReplyFetcher:
         self._counters = counters
 
     def fetch(self, utterance_id: str, on_result: OnResult) -> None:
-        """Busca em segundo plano e entrega o resultado a `on_result`. Nunca bloqueia."""
-        threading.Thread(
-            target=lambda: on_result(utterance_id, *self._get(utterance_id)),
-            name="reply-fetch",
-            daemon=True,
-        ).start()
+        """Busca em segundo plano e entrega o resultado a `on_result`. Nunca bloqueia.
+
+        `on_result` é chamado sempre, mesmo com erro inesperado: sem isso a
+        máquina ficaria esperando uma resposta que nunca vem, em silêncio.
+        """
+
+        def run() -> None:
+            try:
+                path, error = self._get(utterance_id)
+            except Exception as unexpected:  # IncompleteRead, disco cheio...
+                path, error = self._fail(utterance_id, repr(unexpected))
+            on_result(utterance_id, path, error)
+
+        threading.Thread(target=run, name="reply-fetch", daemon=True).start()
 
     def _get(self, utterance_id: str) -> tuple[Path | None, str | None]:
         url = f"{self._server_url}/v1/reply/{urllib.request.quote(utterance_id, safe='')}"
@@ -58,8 +66,12 @@ class ReplyFetcher:
             return self._fail(utterance_id, f"WAV grande demais (> {MAX_REPLY_BYTES} bytes)")
         # Fora de `media/`: o arquivo é apagado depois de tocar (SoundPlayer).
         handle, name = tempfile.mkstemp(prefix=TEMP_PREFIX, suffix=".wav")
-        with os.fdopen(handle, "wb") as out:
-            out.write(data)
+        try:
+            with os.fdopen(handle, "wb") as out:
+                out.write(data)
+        except OSError as error:  # disco cheio: não deixa arquivo pela metade
+            Path(name).unlink(missing_ok=True)
+            return self._fail(utterance_id, f"não gravou o WAV: {error}")
         self._counters["reply_received"] += 1
         log.info("Resposta falada %s recebida: %d bytes.", utterance_id, len(data))
         return Path(name), None
