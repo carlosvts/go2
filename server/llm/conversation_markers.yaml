@@ -27,3 +27,18 @@ markers:
   - conta
   - diz
   - me
+
+# F1: "para" no meio da cláusula de conversa só não barra quando a palavra
+# seguinte é um destes pronomes ("fala para mim", "conta para ele").
+# "a gente" são duas palavras. Decisão do humano em 2026-11-04, depois do eval.
+para_pronouns:
+  - mim
+  - ti
+  - você
+  - vocês
+  - nós
+  - ele
+  - ela
+  - eles
+  - elas
+  - a gente

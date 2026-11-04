@@ -27,8 +27,6 @@ from app.interpret.text import fold, words
 
 # Comando que só sai por frase exata e nunca acompanha uma resposta (F4).
 DAMP_ID = "damp"
-# "para" seguido de uma destas é a forma típica de pedir parada (F1).
-_STOP_FOLLOWERS = frozenset({"de", "com"})
 _PARA = "para"
 
 
@@ -42,6 +40,9 @@ class Route(Enum):
 class ConversationRules:
     min_words: int
     markers: frozenset[str]  # sem acento
+    # F1: o que pode vir depois de "para" no meio da conversa (sem acento,
+    # cada item como tupla de palavras: "a gente" = ("a", "gente")).
+    para_pronouns: tuple[tuple[str, ...], ...] = ()
 
     @classmethod
     def load(cls, path: Path) -> "ConversationRules":
@@ -49,6 +50,9 @@ class ConversationRules:
         return cls(
             min_words=int(data["min_words"]),
             markers=frozenset(fold(str(word)).lower() for word in data["markers"]),
+            para_pronouns=tuple(
+                tuple(fold(str(item)).lower().split()) for item in data.get("para_pronouns", [])
+            ),
         )
 
 
@@ -77,8 +81,17 @@ def is_candidate(clause: Clause, rules: ConversationRules, embedder_loaded: bool
     return len(tokens) >= rules.min_words and any(t in rules.markers for t in tokens)  # C4
 
 
+def _followed_by_pronoun(tokens: list[str], index: int, rules: ConversationRules) -> bool:
+    after = tokens[index + 1 :]
+    return any(tuple(after[: len(p)]) == p for p in rules.para_pronouns)
+
+
 def _stop_word_blocks(
-    clauses: list[Clause], candidate: Clause, all_words: list[str], catalog: Catalog
+    clauses: list[Clause],
+    candidate: Clause,
+    all_words: list[str],
+    catalog: Catalog,
+    rules: ConversationRules,
 ) -> bool:
     """F1. True se alguma palavra de parada barra a frase."""
     others = catalog.stop_words - {_PARA}
@@ -97,8 +110,8 @@ def _stop_word_blocks(
                 continue  # preposição do movimento (movement.ignore)
             if not is_conversation:
                 return True  # cláusula aceita que não é movimento, ou rejeitada
-            if index == 0 or tokens[index + 1] in _STOP_FOLLOWERS:
-                return True  # "para" abrindo a conversa, ou "para de/com"
+            if index == 0 or not _followed_by_pronoun(tokens, index, rules):
+                return True  # "para" abrindo a conversa, ou sem pronome depois
     return False
 
 
@@ -135,7 +148,7 @@ def decide(
     if any(c.reject_reason is not None for c in others):  # F2 (e F3: low_similarity sem C2–C4)
         return Decision(Route.NONE, reason="f2_other_rejection")
     all_words = [fold(word) for word in words(catalog.tokenize(text))]
-    if _stop_word_blocks(clauses, candidate, all_words, catalog):  # F1
+    if _stop_word_blocks(clauses, candidate, all_words, catalog, rules):  # F1
         return Decision(Route.NONE, reason="f1_stop_word")
     if not all(_dispatchable(c) for c in others):  # F4
         return Decision(Route.NONE, reason="f4_not_dispatchable")

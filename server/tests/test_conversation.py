@@ -226,3 +226,18 @@ def test_f1_is_what_blocks(interpreter, catalog, rules, text):
 def test_para_in_the_middle_of_conversation_passes(interpreter, catalog, rules):
     decision, _ = route(interpreter, catalog, rules, "fala pra mim quem é você")
     assert decision.route is Route.PURE
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["fala para mim quem é você", "conta para ele quem te criou", "diz para a gente quem é você"],
+)
+def test_para_followed_by_pronoun_passes(interpreter, catalog, rules, text):
+    decision, _ = route(interpreter, catalog, rules, text)
+    assert decision.route is Route.PURE
+
+
+@pytest.mark.parametrize("text", ["você para já que eu mandei", "ei você para agora mesmo"])
+def test_para_without_pronoun_blocks(interpreter, catalog, rules, text):
+    decision, _ = route(interpreter, catalog, rules, text)
+    assert decision.reason == "f1_stop_word"

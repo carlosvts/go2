@@ -5,7 +5,7 @@ tipo: experimento
 status: em-teste               # proposta | em-teste | adotada | rejeitada
 servicos: [server, tvbox]
 branch: exp/resposta-falada-llama   # parte da main; se a E-001 for adotada antes, rebase sobre ela
-criterio-congelado-em: 2026-11-04 @ 193ac50   # etapa 1; registrado a pedido do humano (carlosvts)
+criterio-congelado-em: null   # etapa 1; o congelamento 193ac50 foi invalidado pela mudança da F1 (Histórico); aguarda novo
 parametros-congelados-em: null # etapa 2 (antes do hardware): AAAA-MM-DD @ commit; só humano preenche
 verificacao: inferido          # inferido | testado-software | testado-hardware
 verificado-em: null            # AAAA-MM-DD @ <commit>; só humano preenche testado-hardware
@@ -57,7 +57,7 @@ Com candidata, valem as condições sobre a **frase inteira**. Se alguma falhar,
   - **Posição**: conta nos tokens de cada cláusula como `_segment` devolve, ou seja, depois de tirar a wake word (`strip_wake_word`), de `tokenize`, de cortar nos separadores e de tirar os fillers. Exemplo: em "robô para de me seguir", "para" é a primeira palavra.
   - "para" barra, **exceto** quando é preposição nestes dois casos:
     - dentro de uma cláusula aceita como movimento (`slots`), onde o interpretador já a tratou como preposição (`movement.ignore`). Exemplo: "andar para frente e qual é o seu nome" passa;
-    - no **meio** da cláusula de conversa, ou seja, nem a primeira nem a última palavra dela, e sem "de" ou "com" logo depois. Exemplo: "fala pra mim quem é você" passa.
+    - no **meio** da cláusula de conversa (nem a primeira nem a última palavra dela) **e seguido de pronome** da lista `para_pronouns` de `server/llm/conversation_markers.yaml`: mim, ti, você, vocês, nós, ele, ela, eles, elas, a gente. Exemplo: "fala pra mim quem é você" passa; "você para já que eu mandei" barra. (Decisão do humano em 2026-11-04, depois do eval: ver Histórico.)
   - Barram sempre (decisões do humano, 2026-11-04):
     - "para" como **primeira** palavra da cláusula de conversa ("para com isso", "pra que você serve");
     - "para" como **última** palavra de **qualquer** cláusula. Exemplo: em "você vai bater para e anda para trás", sem esta regra sairia `move_backward` mais o Llama;
@@ -329,3 +329,4 @@ Segurança: deixar `python -m sense.stop` à mão. A parada falada não é garan
   - tentativa de parada em frase que vai ao Llama ou despacha comando rejeita o experimento, medida no eval e numa rodada nova de hardware.
 - 2026-11-04: etapa 1 congelada em `193ac50`, registrada a pedido do humano. Status `em-teste`.
 - 2026-11-04: eval de software com o modelo real (`tests/test_real_model_conversation.py` @ `3651307`). Resultados: 0 comando despachado fora do esperado, regressões iguais, 13/17 frases foram ao Llama como esperado. Mas `"você para já que eu mandei"` iria ao Llama (top-1 `hello`, top-2 `recovery_stand`, score 0,73), o que é **condição de rejeição** do critério congelado (tentativa de parada que vai ao Llama). Aguardando decisão humana: corrigir F1 e recongelar, rejeitar, ou seguir para o hardware. TV Box ainda não implementada.
+- 2026-11-04: **mudança de régua depois do eval** (decisão do humano). A F1 passa a liberar "para" no meio da conversa só quando seguido de pronome (`para_pronouns`), para manter "fala para mim quem é você" no Llama e barrar "você para já que eu mandei". O congelamento `193ac50` fica **invalidado**; a etapa 1 precisa ser congelada de novo. O eval (`eval/conversation_e002.yaml`) não muda: o caso que falhou continua `not_llm`.
