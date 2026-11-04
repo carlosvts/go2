@@ -328,3 +328,4 @@ Segurança: deixar `python -m sense.stop` à mão. A parada falada não é garan
   - "para de" e "para com" barram em qualquer posição;
   - tentativa de parada em frase que vai ao Llama ou despacha comando rejeita o experimento, medida no eval e numa rodada nova de hardware.
 - 2026-11-04: etapa 1 congelada em `193ac50`, registrada a pedido do humano. Status `em-teste`.
+- 2026-11-04: eval de software com o modelo real (`tests/test_real_model_conversation.py` @ `3651307`). Resultados: 0 comando despachado fora do esperado, regressões iguais, 13/17 frases foram ao Llama como esperado. Mas `"você para já que eu mandei"` iria ao Llama (top-1 `hello`, top-2 `recovery_stand`, score 0,73), o que é **condição de rejeição** do critério congelado (tentativa de parada que vai ao Llama). Aguardando decisão humana: corrigir F1 e recongelar, rejeitar, ou seguir para o hardware. TV Box ainda não implementada.
