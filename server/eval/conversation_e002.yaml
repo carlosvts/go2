@@ -43,6 +43,8 @@
 - {text: "desligar motores e qual é o seu nome", expect: reject}       # F4: damp
 - {text: "senta e qual é o seu nome e quem te criou", expect: reject}  # F3: duas de conversa
 - {text: "senta e não fala nada", expect: reject}                      # negation
+- {text: "vira à direita e qual é o seu nome", expect: reject}         # F4: movimento
+- {text: "anda adiante e me conta uma piada", expect: reject}           # F4: movimento
 
 # ─── Só conversa: vai ao Llama ─────────────────────────────────────────────
 - {text: "qual é o seu nome", expect: llm}
