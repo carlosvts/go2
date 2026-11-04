@@ -10,13 +10,15 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy \
 ENV LD_LIBRARY_PATH=$NVIDIA/cublas/lib:$NVIDIA/cudnn/lib
 
 COPY pyproject.toml uv.lock .python-version ./
-RUN uv sync --frozen --no-dev --extra gpu
+RUN uv sync --frozen --no-dev --extra gpu --extra llm
 
 COPY app ./app
 COPY catalog.yaml ./
+# E-002: prompt, parâmetros e listas da resposta falada.
+COPY llm ./llm
 
 EXPOSE 9000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=120s \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/health', timeout=2)"
-CMD ["uv", "run", "--frozen", "--no-dev", "--extra", "gpu", "uvicorn", "app.main:create_app", "--factory", \
+CMD ["uv", "run", "--frozen", "--no-dev", "--extra", "gpu", "--extra", "llm", "uvicorn", "app.main:create_app", "--factory", \
      "--host", "0.0.0.0", "--port", "9000"]

@@ -206,6 +206,7 @@ def create_app(
 
     @app.get(
         "/v1/reply/{utterance_id}",
+        response_class=Response,
         responses={
             200: {"content": {"audio/wav": {}}, "description": "a resposta falada (WAV)"},
             204: {"description": "sem resposta (falhou, passou do prazo ou Llama ocupado)"},
