@@ -7,7 +7,7 @@ servicos: [server, tvbox]
 branch: exp/resposta-falada-llama   # parte da main; se a E-001 for adotada antes, rebase sobre ela
 criterio-congelado-em: 2026-11-04 @ 9913f05   # etapa 1 (recongelada a pedido do humano; 193ac50 invalidado)
 parametros-congelados-em: null # etapa 2 (antes do hardware): AAAA-MM-DD @ commit; só humano preenche
-verificacao: inferido          # inferido | testado-software | testado-hardware
+verificacao: testado-software  # inferido | testado-software | testado-hardware (2026-11-04 @ 53b011e; mocks, não prova o robô)
 verificado-em: null            # AAAA-MM-DD @ <commit>; só humano preenche testado-hardware
 alternativa-a: null
 ---
@@ -331,3 +331,4 @@ Segurança: deixar `python -m sense.stop` à mão. A parada falada não é garan
 - 2026-11-04: eval de software com o modelo real (`tests/test_real_model_conversation.py` @ `3651307`). Resultados: 0 comando despachado fora do esperado, regressões iguais, 13/17 frases foram ao Llama como esperado. Mas `"você para já que eu mandei"` iria ao Llama (top-1 `hello`, top-2 `recovery_stand`, score 0,73), o que é **condição de rejeição** do critério congelado (tentativa de parada que vai ao Llama). Aguardando decisão humana: corrigir F1 e recongelar, rejeitar, ou seguir para o hardware. TV Box ainda não implementada.
 - 2026-11-04: **mudança de régua depois do eval** (decisão do humano). A F1 passa a liberar "para" no meio da conversa só quando seguido de pronome (`para_pronouns`), para manter "fala para mim quem é você" no Llama e barrar "você para já que eu mandei". O congelamento `193ac50` fica **invalidado**; a etapa 1 precisa ser congelada de novo. O eval (`eval/conversation_e002.yaml`) não muda: o caso que falhou continua `not_llm`.
 - 2026-11-04: etapa 1 recongelada em `9913f05`, a pedido do humano. Eval com o modelo real nesse commit: 0 comando fora do esperado, 0 tentativa de parada ao Llama, regressões iguais, 13/17 frases ao Llama como esperado (as 4 restantes barradas pelo C3, informativo).
+- 2026-11-04: implementação de software concluída (`53b011e`): server 252 testes e tvbox 113 testes passando, incluindo o eval com o modelo real. Llama, Piper (exceto um teste manual de síntese), go2-api e aplay são falsos nos testes: nada disso prova latência nem comportamento no robô. Pendente: congelamento da etapa 2 (prompt, SHA do modelo, parâmetros) e o teste em hardware.
