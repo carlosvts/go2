@@ -1,0 +1,71 @@
+# Conjunto rotulado da E-002: decisão "vai para o Llama?" e despacho parcial.
+#
+# Separado de phrases.yaml de propósito: phrases.yaml mede só o interpretador
+# (a mesma frase continua `reject` lá), e este arquivo mede a camada da E-002
+# por cima dele (C1–C4 e F1–F6 da spec). Precisa do embedder (testes -m model).
+#
+# `expect`:
+#   llm                          só conversa: nada é despachado, vai ao Llama
+#   {commands: [ids], llm: true} mista: despacha os ids E vai ao Llama
+#   reject                       nada despachado, nada vai ao Llama
+#   [ids]                        comando normal, como hoje (regressão)
+#   stop                         parada, como hoje (regressão)
+#
+# Falso positivo (meta 0, rejeita a E-002): qualquer comando despachado que
+# não está no `expect`, incluindo o do despacho parcial.
+# Errar `llm` × `reject` sem despachar nada não é FP: é falta de resposta (ou
+# resposta a mais), informativo.
+#
+# Escritas à mão, não vieram de fala real. Congelado na etapa 1 da E-002
+# (criterio-congelado-em). TODO(humano): revisar antes de congelar.
+
+# ─── Mistas com pedido: despacha e responde ────────────────────────────────
+- {text: "senta e fala seu nome", expect: {commands: [sit], llm: true}}
+- {text: "senta e quem é você", expect: {commands: [sit], llm: true}}
+- {text: "levanta e me diz quem é você", expect: {commands: [stand_up], llm: true}}
+- {text: "deita e me conta uma piada", expect: {commands: [stand_down], llm: true}}
+- {text: "coração e me fala como você está", expect: {commands: [finger_heart], llm: true}}
+- {text: "dança e qual é o seu nome", expect: {commands: [dance1], llm: true}}
+
+# ─── Mistas com ruído: rejeita tudo ────────────────────────────────────────
+- {text: "senta e banana", expect: reject}
+- {text: "senta e banana azul grande", expect: reject}
+- {text: "levanta e mesa cadeira", expect: reject}
+- {text: "deita e legendas pela comunidade amara.org", expect: reject}
+
+# ─── Conversa alheia com comando no meio: rejeita tudo (F4) ────────────────
+- {text: "a gente senta e depois você me conta como foi", expect: reject}
+- {text: "ele levanta cedo e quem paga o café", expect: reject}
+- {text: "eu vou deitar e você me liga amanhã", expect: reject}
+
+# ─── Mistas barradas pelas regras da frase inteira ─────────────────────────
+- {text: "andar para frente e qual é o seu nome", expect: reject}       # F1: "para"
+- {text: "desligar motores e qual é o seu nome", expect: reject}       # F4: damp
+- {text: "senta e qual é o seu nome e quem te criou", expect: reject}  # F3: duas de conversa
+- {text: "senta e não fala nada", expect: reject}                      # negation
+
+# ─── Só conversa: vai ao Llama ─────────────────────────────────────────────
+- {text: "qual é o seu nome", expect: llm}
+- {text: "quem te criou", expect: llm}
+- {text: "o que você sabe fazer", expect: llm}
+- {text: "me conta uma piada", expect: llm}
+- {text: "qual é a previsão do tempo", expect: llm}
+- {text: "tudo bem com você", expect: llm}
+- {text: "onde você mora", expect: llm}
+
+# ─── Ruído e conversa curta: rejeita (C4) ──────────────────────────────────
+- {text: "banana", expect: reject}
+- {text: "banana azul grande", expect: reject}
+- {text: "oi", expect: reject}
+- {text: "bom dia", expect: reject}
+- {text: "toca uma música", expect: reject}
+- {text: "legendas pela comunidade amara.org", expect: reject}
+
+# ─── Regressão: comandos e paradas como hoje ───────────────────────────────
+- {text: "senta", expect: [sit]}
+- {text: "levanta", expect: [stand_up]}
+- {text: "andar para frente", expect: [move_forward]}
+- {text: "virar para a direita", expect: [turn_right]}
+- {text: "senta e depois levanta", expect: [sit, stand_up]}
+- {text: "para", expect: stop}
+- {text: "pare agora", expect: stop}

@@ -1,0 +1,101 @@
+# Palavras proibidas na resposta do Llama (E-002, filtro de eco, item 2).
+#
+# Se o texto gerado contiver qualquer uma destas palavras (comparação sem
+# acento, palavra inteira), a resposta é trocada pela frase fixa antes do TTS.
+# O item 1 do filtro (passar a resposta pelo interpretador) roda junto e cobre
+# o que esta lista não cobre.
+#
+# Lista explícita, de propósito: não é gerada do catálogo em tempo de
+# execução, para que uma mudança no catálogo não mude o experimento sem
+# ninguém ver. Origem de cada grupo anotada abaixo (catalog.yaml @ etapa 1).
+#
+# Ficam de fora palavras funcionais (a, o, um, de, faz, fica, dá, se...) e
+# saudações (oi, tchau): entrariam em quase toda resposta. "dá um oi" e
+# "dar tchau" continuam cobertos pelo item 1.
+#
+# Congelado na etapa 1 da E-002 (criterio-congelado-em).
+
+# movement.verbs (catalog.yaml)
+movement_verbs:
+  - andar
+  - anda
+  - ande
+  - caminhar
+  - caminha
+  - caminhe
+  - vai
+  - vá
+  - virar
+  - vira
+  - vire
+  - girar
+  - gira
+  - gire
+
+# movement.directions (catalog.yaml)
+movement_directions:
+  - frente
+  - adiante
+  - trás
+  - atrás
+  - ré
+  - direita
+  - esquerda
+
+# stop.words (catalog.yaml)
+stop_words:
+  - para
+  - pare
+  - parar
+  - stop
+
+# language.negation (catalog.yaml)
+negation:
+  - não
+  - nunca
+  - sem
+
+# damp
+damp:
+  - desligar
+  - desliga
+  - desligue
+  - motores
+
+# Palavra principal dos comandos habilitados (examples do catalog.yaml).
+commands:
+  - levanta
+  - levantar
+  - levante
+  - senta
+  - sentar
+  - sente
+  - sentado
+  - deita
+  - deitar
+  - deite
+  - cumprimentar
+  - cumprimente
+  - cumprimenta
+  - acenar
+  - acena
+  - alonga
+  - alongar
+  - alongue
+  - espreguiçar
+  - espreguiça
+  - coração
+  - coraçãozinho
+  - equilíbrio
+  - equilibra
+  - recuperar
+  - recupera
+  - rebola
+  - rebolar
+  - rebole
+  - quadril
+  - dança
+  - dançar
+  - dance
+  - arranha
+  - arranhar

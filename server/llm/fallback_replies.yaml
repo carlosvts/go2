@@ -1,0 +1,14 @@
+# Frases fixas do filtro de eco (E-002). Quando a resposta do Llama é barrada
+# (viraria comando/parada ou tem palavra proibida), uma destas é sorteada no
+# lugar e vira áudio com o Piper.
+#
+# Aprovadas pelo humano em 2026-11-04. Teste automático: nenhuma vira comando
+# nem parada no interpretador, e nenhuma tem palavra de forbidden_words.yaml
+# EXCETO "não" (exceção aceita pelo humano, só para estas frases).
+#
+# Congelado na etapa 1 da E-002 (criterio-congelado-em).
+
+replies:
+  - "Eu. Não. Entender."
+  - "Eu. Confuso."
+  - "Eu. Não. Saber."

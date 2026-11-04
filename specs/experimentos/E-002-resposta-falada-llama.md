@@ -110,7 +110,7 @@ O que precisa mudar:
   - `app/metrics.py` (`Stats`): conta `thinking` e a mista separada de `enqueued`;
   - `scripts/send_wav.py`: mostra `reply_pending` e baixa a resposta;
   - `docker-compose.yml`: serviço `llama-server`;
-  - `app/interpret/evaluate.py` e `scripts/calibrate.py`: o `expect` do eval ganha a forma `{commands: [ids], llm: true}` (mista) e `llm` (só conversa).
+  - `app/interpret/evaluate.py`: ganha o desfecho da camada da E-002 (`llm`, mista), usado por um teste novo (`-m model`) sobre `eval/conversation_e002.yaml`. O `scripts/calibrate.py` e o `eval/phrases.yaml` não mudam.
 
 `thinking` não entra em `FALLBACK_OK_STATUSES`: não é confirmação de comando.
 
@@ -119,15 +119,18 @@ O que precisa mudar:
 A resposta tocada pelo alto-falante pode ser captada pelo microfone na gravação seguinte. Decisão do humano: filtrar a resposta no server, com o microfone sempre ligado.
 
 - O prompt proíbe anunciar ação ("Eu. Andar.", "Eu. Sentar.").
-- Antes do TTS, o server confere o texto da resposta de duas formas. Se qualquer uma acusar, a resposta é **trocada** por uma frase fixa ("Eu. Não. Entender."):
+- Antes do TTS, o server confere o texto da resposta de duas formas. Se qualquer uma acusar, a resposta é **trocada** por uma **frase fixa**, sorteada entre as variantes aprovadas pelo humano (2026-11-04) e versionadas em `server/llm/`: "Eu. Não. Entender.", "Eu. Confuso.", "Eu. Não. Saber.". As duas verificações:
   1. Passa pelo interpretador. Acusa se `is_stop_only` der verdadeiro, se o `Kind` for `STOP` ou `COMMANDS`, ou se **qualquer** cláusula tiver `command_id` aceito, mesmo que a frase seja rejeitada ou fosse mista. Inclui a regex da E-001, se estiver ativa.
   2. Acusa se contém palavra de uma **lista explícita de palavras proibidas**, versionada em `server/llm/`, comparada sem acento. A lista tem:
      - verbos e direções de `movement.verbs` e `movement.directions`;
      - `stop_words` e `negation`;
      - as palavras de `damp` ("desligar", "motores");
-     - a palavra principal de cada comando do conjunto da E-001 (ex.: senta, sentar, levanta, deita, dança, rebola, alonga, coração, cumprimenta, acena, equilíbrio, recupera, arranha).
-     Palavras funcionais ("a", "o", "um", "de", "para", "faz", "fica") **não** entram, para o filtro não trocar quase toda resposta. "para" já é coberto pelo item 1 e por `stop_words`.
-- A frase fixa também passa pelo filtro, num teste automático.
+     - a palavra principal de cada comando habilitado no catálogo (ex.: senta, sentar, levanta, deita, dança, rebola, alonga, coração, cumprimenta, acena, equilíbrio, recupera, arranha).
+     Palavras funcionais ("a", "o", "um", "de", "faz", "fica") e saudações ("oi", "tchau") **não** entram, para o filtro não trocar quase toda resposta. "para" está em `stop_words`.
+- As frases fixas passam por um teste automático:
+  - item 1 (interpretador): nenhuma pode virar comando nem parada;
+  - item 2 (lista proibida): nenhuma pode conter palavra da lista, **exceto "não"**. Essa exceção foi aceita pelo humano em 2026-11-04, como na frase "Não sei te responder isso." do `reply_failed`. Se "não" vazar no pré-roll, a próxima frase pode ser rejeitada por `negation`, o que é seguro.
+  - A exceção vale só para as frases fixas. Uma resposta do Llama com "não" continua sendo trocada.
 - O log registra quando o filtro trocou a resposta e por quê.
 
 ### Llama
@@ -183,7 +186,7 @@ Piper no server, **na CPU** (aceito pelo humano; motivo **inferido**: não dispu
 
 ## Dados de teste
 
-**Antes do hardware (software):** `eval/phrases.yaml` ganha frases mistas e de ruído, com o resultado esperado de cada uma:
+**Antes do hardware (software):** um conjunto próprio, `server/eval/conversation_e002.yaml`, com o resultado esperado de cada frase. Ele é separado do `eval/phrases.yaml` (decisão do humano, 2026-11-04) porque o `phrases.yaml` mede só o interpretador: lá a frase de conversa continua `reject`, e está certo, porque nada é executado. Este conjunto mede a camada da E-002 por cima do interpretador, com os rótulos `llm` e `{commands: [...], llm: true}`. O `phrases.yaml` continua passando sem mudança, e a meta de 0 FP vale para os dois. Categorias do conjunto novo:
 - mistas com pedido ("senta e fala seu nome"): despacha o comando e vai para o Llama;
 - mistas com ruído ("senta e banana"): rejeita tudo;
 - conversa no meio de fala que não é comando ("a gente senta e depois você me conta como foi"): rejeita tudo. Quem segura esse caso é o F4 ("a gente senta" só casa por embedding), não o filtro de ruído: a cláusula de conversa tem marcadores e passaria;
@@ -225,7 +228,7 @@ Todas no log do server e da TV Box, por frase:
 ## Critério de decisão (congelar em duas etapas)
 
 Decisão do humano (2026-11-04), exceção registrada ao fluxo de `specs/README.md`, que congela tudo de uma vez antes de implementar:
-- **Etapa 1, antes de implementar** (`criterio-congelado-em`): esta seção, as regras de "Quando roda" (C1–C4, com o mínimo de 3 palavras, e F1–F6), as frases novas do eval, a lista de marcadores de conversa, a lista de palavras proibidas, a regra de eco, o prazo do long-poll e o timeout do cliente.
+- **Etapa 1, antes de implementar** (`criterio-congelado-em`): esta seção, as regras de "Quando roda" (C1–C4, com o mínimo de 3 palavras, e F1–F6), `eval/conversation_e002.yaml`, a lista de marcadores de conversa, a lista de palavras proibidas, as frases fixas do filtro de eco, a regra de eco, o prazo do long-poll e o timeout do cliente.
 - **Etapa 2, antes do hardware** (`parametros-congelados-em`): prompt, modelo (nome e SHA-256), parâmetros de geração e limite de tokens, porque só existem depois da implementação.
 
 Mudar algo da etapa 1 depois de congelado invalida o experimento. Os dois campos, só humano preenche.
@@ -236,7 +239,7 @@ Números do critério aceitos pelo humano em 2026-11-03; os de 2026-11-04 (10 s,
 
 - qualquer comando saiu do caminho do Llama, direto ou por eco;
 - algum comando não pretendido saiu do **despacho parcial**: uma frase mista que hoje seria rejeitada inteira executou um comando que ninguém pediu. Exemplo: "a gente senta e depois você me conta como foi" e o robô senta;
-- `eval/phrases.yaml` tem algum falso positivo nas frases mistas ou de ruído;
+- `eval/conversation_e002.yaml` ou `eval/phrases.yaml` tem algum falso positivo, ou seja, algum comando despachado fora do `expect`;
 - o teste automático da invariante do Fluxo, item 2, falha: a busca da resposta usa `submit`, pega o `_in_flight` ou põe a máquina em `SENDING`;
 - a parada durante a geração ficou mais lenta: o máximo de "fim da fala → `stopped`" subiu mais de 0,5 s em relação à mesma parada sem Llama gerando;
 - parada perdida com Llama (decisão do humano, 2026-11-04): na rodada com Llama, o número de paradas em que o robô não parou é maior que zero **e** maior que o da rodada sem Llama. Se as duas rodadas perderem paradas, a comparação é inconclusiva e as duas rodadas se repetem;
@@ -302,3 +305,4 @@ Segurança: deixar `python -m sense.stop` à mão. A parada falada não é garan
 
   Também: invariante de auditoria `llm_reply` × `submit`, `stale` também na conversa pura (F5), saúde do llama-server em segundo plano (F6), regra de eco definida, desfecho pretendido anotado antes de falar e lista de arquivos completa.
 - 2026-11-04: aprovada pelo humano, com as frases de `thinking` e `reply_failed` (≥ 4 de cada), saúde do llama-server a cada 2 s com timeout de 0,5 s e os demais números inferidos da tabela de revisão.
+- 2026-11-04: frases fixas do filtro de eco com variantes ("Eu. Não. Entender.", "Eu. Confuso.", "Eu. Não. Saber."), com exceção para "não" só nelas; eval da E-002 em arquivo próprio (`eval/conversation_e002.yaml`).
