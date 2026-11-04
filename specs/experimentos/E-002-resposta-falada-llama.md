@@ -2,10 +2,10 @@
 id: E-002
 titulo: Resposta falada curta (Llama, estilo caveman) para conversa e FAQ
 tipo: experimento
-status: proposta               # proposta | em-teste | adotada | rejeitada (aprovada pelo humano em 2026-11-04; aguarda congelamento da etapa 1)
+status: em-teste               # proposta | em-teste | adotada | rejeitada
 servicos: [server, tvbox]
 branch: exp/resposta-falada-llama   # parte da main; se a E-001 for adotada antes, rebase sobre ela
-criterio-congelado-em: null    # etapa 1 (antes de implementar): AAAA-MM-DD @ commit; só humano preenche
+criterio-congelado-em: 2026-11-04 @ 193ac50   # etapa 1; registrado a pedido do humano (carlosvts)
 parametros-congelados-em: null # etapa 2 (antes do hardware): AAAA-MM-DD @ commit; só humano preenche
 verificacao: inferido          # inferido | testado-software | testado-hardware
 verificado-em: null            # AAAA-MM-DD @ <commit>; só humano preenche testado-hardware
@@ -327,3 +327,4 @@ Segurança: deixar `python -m sense.stop` à mão. A parada falada não é garan
   - "para" no fim de qualquer cláusula barra;
   - "para de" e "para com" barram em qualquer posição;
   - tentativa de parada em frase que vai ao Llama ou despacha comando rejeita o experimento, medida no eval e numa rodada nova de hardware.
+- 2026-11-04: etapa 1 congelada em `193ac50`, registrada a pedido do humano. Status `em-teste`.
