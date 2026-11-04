@@ -55,12 +55,11 @@ Com candidata, valem as condições sobre a **frase inteira**. Se alguma falhar,
 - F1. Não há palavra de parada em lugar nenhum da frase, sem exceção. A checagem é feita **depois** de `tokenize`, como no interpretador. Efeito aceito: como "pra" vira "para", frases como "pra que serve" e "fala para mim" não vão ao Llama.
 - F2. Nenhuma cláusula foi rejeitada por motivo diferente de `low_similarity`.
 - F3. **Exatamente uma** cláusula é de conversa (decisão do humano, 2026-11-04). Cláusula `low_similarity` que não cumpre C2–C4 rejeita a frase inteira (`low_similarity`, como hoje), e duas ou mais cláusulas de conversa também.
-- F4. As demais cláusulas foram aceitas, **todas casaram por frase exata** (`method: lexical`) e nenhuma é `damp` nem movimento (decisões do humano, 2026-11-04). Ficam de fora, e qualquer uma delas faz a frase inteira ser rejeitada, como hoje:
-  - cláusula aceita por embedding ("a gente senta") e cláusula recuperada pela regex da E-001;
-  - **todo comando de movimento** (`move_forward`, `move_backward`, `strafe_left`, `strafe_right`, `turn_left`, `turn_right`), qualquer que seja o método. Nesta primeira implementação, movimento não sai junto com resposta do Llama. O comando de movimento sozinho ("anda para frente") continua como hoje;
+- F4. As demais cláusulas foram aceitas, nenhuma é `damp` e **todas casaram sem embedding** (decisão do humano, 2026-11-04). Vale `method: lexical` (frase exata do catálogo) ou `method: slots` com todos os slots resolvidos pelo léxico (`_slot_lexical`, incluindo a distância de edição 1 que já existe). Ficam de fora:
+  - cláusula aceita por embedding ("a gente senta"), slot resolvido por embedding e cláusula recuperada pela regex da E-001. Qualquer uma dessas faz a frase inteira ser rejeitada, como hoje;
   - `damp`, que só sai por frase exata e nunca acompanha uma resposta.
 
-  Na prática, só gestos e posturas (`lexical`) saem numa frase mista, com as regras de sempre do dispatch. Despachar comando a partir de LLM fica para uma spec futura, com decisão própria.
+  Os outros comandos do catálogo podem ser despachados junto, com as regras de sempre (`move` exige `balance_stand`, garantido pelo dispatch).
 - F5. A fala não está velha: `time.monotonic() - received ≤ max_utterance_age_s`, checado antes de chamar o Llama, **também na conversa pura**. Passou do limite: `rejected`, `stale`, como hoje.
 - F6. O `llama-server` está saudável segundo o estado mantido em segundo plano (ver Llama). Fora do ar: a frase segue como hoje.
 
@@ -106,7 +105,7 @@ O que precisa mudar:
   - `sense/audio.py` (`SoundPlayer`).
 - **server**:
   - `app/service.py`: `UtteranceResponse.reply_pending`, F1–F6 e o disparo da resposta;
-  - `app/interpret/interpreter.py`: a classificação de cada cláusula como "de conversa" e o registro do top-1/top-2;
+  - `app/interpret/interpreter.py`: a classificação de cada cláusula como "de conversa" e o registro do top-1/top-2 e da origem dos slots;
   - `app/main.py`: rota `GET /v1/reply/{utterance_id}`;
   - `app/metrics.py` (`Stats`): conta `thinking` e a mista separada de `enqueued`;
   - `scripts/send_wav.py`: mostra `reply_pending` e baixa a resposta;
@@ -307,4 +306,3 @@ Segurança: deixar `python -m sense.stop` à mão. A parada falada não é garan
   Também: invariante de auditoria `llm_reply` × `submit`, `stale` também na conversa pura (F5), saúde do llama-server em segundo plano (F6), regra de eco definida, desfecho pretendido anotado antes de falar e lista de arquivos completa.
 - 2026-11-04: aprovada pelo humano, com as frases de `thinking` e `reply_failed` (≥ 4 de cada), saúde do llama-server a cada 2 s com timeout de 0,5 s e os demais números inferidos da tabela de revisão.
 - 2026-11-04: frases fixas do filtro de eco com variantes ("Eu. Não. Entender.", "Eu. Confuso.", "Eu. Não. Saber."), com exceção para "não" só nelas; eval da E-002 em arquivo próprio (`eval/conversation_e002.yaml`).
-- 2026-11-04: na mista, só comando por frase exata (`lexical`), sem nenhum movimento (andar e virar), por decisão do humano. Movimento sozinho continua como hoje. Despacho de comando por LLM fica para spec futura.
