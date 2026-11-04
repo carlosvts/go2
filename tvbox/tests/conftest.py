@@ -65,6 +65,17 @@ class FakeServer(BaseHTTPRequestHandler):
         self.wfile.write(answer if isinstance(answer, bytes) else json.dumps(answer).encode())
 
     def do_GET(self):
+        server = self.server
+        if self.path.startswith("/v1/reply/"):
+            # E-002: long-poll da resposta falada.
+            server.reply_requests.append(self.path.rsplit("/", 1)[-1])
+            time.sleep(server.reply_delay_s)
+            status, body = server.reply
+            self.send_response(status)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         self.send_response(200 if self.path == "/health" else 404)
         self.end_headers()
         self.wfile.write(b'{"status": "ok"}')
@@ -81,6 +92,9 @@ def server():
     server.arrived, server.release = threading.Event(), threading.Event()
     server.release.set()  # responde na hora, a menos que o teste segure
     server.cancel_delay_s = 0.0
+    server.reply = (204, b"")  # E-002: GET /v1/reply
+    server.reply_delay_s = 0.0
+    server.reply_requests = []
     threading.Thread(target=server.serve_forever, daemon=True).start()
     yield server
     server.release.set()

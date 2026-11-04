@@ -105,14 +105,15 @@ def test_variante_nao_repete_a_anterior(tmp_path):
 
 def test_fila_cheia_descarta_o_som_mais_antigo_que_nao_comecou(tmp_path):
     fake = FakeAplay(duration_s=0.1)
-    media = _media(tmp_path, "a.wav", "b.wav", "c.wav", "d.wav")
+    media = _media(tmp_path, "a.wav", "b.wav", "c.wav", "d.wav", "e.wav")
     player = SoundPlayer(media, runner=fake)
-    for name in ("a", "b", "c", "d"):
+    for name in ("a", "b", "c", "d", "e"):
         player.play(1, name)
     player.wait_idle()
     played = [name for _, name in fake.played]
-    assert played[-1] == "d.wav"  # o mais novo sempre toca
-    assert len(played) <= 3 and fake.max_running == 1
+    assert played[-1] == "e.wav"  # o mais novo sempre toca
+    # MAX_PENDING=3 (E-002): um tocando + 3 na fila.
+    assert len(played) <= 4 and fake.max_running == 1
 
 
 def test_erro_do_aplay_nao_derruba_o_player(tmp_path):

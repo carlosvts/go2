@@ -10,6 +10,7 @@ import random
 import re
 import subprocess
 import threading
+import time
 from pathlib import Path
 
 import numpy as np
@@ -119,16 +120,28 @@ class SoundPlayer:
 
     Um som pode ter variantes, `<nome>_2.wav`, `<nome>_3.wav`...: uma delas é
     sorteada a cada vez, sem repetir a anterior, para a fala não soar robótica.
+
+    E-002: também toca um WAV por caminho (a resposta falada, fora de `media/`,
+    apagada depois de tocar), e `clear()` esvazia a fila e interrompe o som em
+    curso (wake word nova tem prioridade sobre qualquer som).
     """
 
-    MAX_PENDING = 2  # se acumular mais que isto, o mais antigo é descartado
+    # Se acumular mais que isto, o mais antigo é descartado. 3 para a frase
+    # mista da E-002 não perder o áudio de espera: processing + confirmed + thinking.
+    MAX_PENDING = 3
     TIMEOUT_S = 15.0  # um `aplay` que passe disto é morto
 
-    def __init__(self, media_dir: Path = MEDIA_DIR, runner=subprocess.run, rng=None) -> None:
+    def __init__(self, media_dir: Path = MEDIA_DIR, runner=None, rng=None) -> None:
         self._media_dir = media_dir
-        self._runner = runner
+        self._runner = runner or _Aplay()
         self._rng = rng or random.Random()
-        self._queue: queue.Queue[tuple[int, Path]] = queue.Queue(maxsize=self.MAX_PENDING)
+        # (card, arquivo, apagar depois de tocar, geração do `clear`)
+        self._queue: queue.Queue[tuple[int, Path, bool, int]] = queue.Queue(
+            maxsize=self.MAX_PENDING
+        )
+        # Sobe a cada `clear()`: item de geração antiga que o worker já tirou da
+        # fila, mas ainda não começou a tocar, é descartado.
+        self._generation = 0
         self._variants: dict[str, list[Path]] = {}
         self._last: dict[str, Path] = {}
         self._thread: threading.Thread | None = None
@@ -169,16 +182,48 @@ class SoundPlayer:
                 options = [path for path in options if path != self._last.get(name)]
             path = self._rng.choice(options)
             self._last[name] = path
-            self._start()
-            try:
-                self._queue.put_nowait((card, path))
-            except queue.Full:
-                try:  # descarta o mais antigo que ainda não começou
-                    self._queue.get_nowait()
+            self._put(card, path, delete_after=False)
+
+    def play_path(self, card: int | None, path: Path, delete_after: bool = False) -> None:
+        """Toca um WAV por caminho (E-002: a resposta falada). Não bloqueia."""
+        if card is None:
+            if delete_after:
+                path.unlink(missing_ok=True)
+            return
+        with self._lock:
+            self._put(card, path, delete_after)
+
+    def _put(self, card: int, path: Path, delete_after: bool) -> None:
+        self._start()
+        try:
+            self._queue.put_nowait((card, path, delete_after, self._generation))
+        except queue.Full:
+            try:  # descarta o mais antigo que ainda não começou
+                self._discard(self._queue.get_nowait())
+                self._queue.task_done()
+            except queue.Empty:
+                pass
+            self._queue.put_nowait((card, path, delete_after, self._generation))
+
+    @staticmethod
+    def _discard(item: tuple[int, Path, bool, int]) -> None:
+        _, path, delete_after, _ = item
+        if delete_after:
+            path.unlink(missing_ok=True)
+
+    def clear(self) -> None:
+        """Esvazia a fila e interrompe o som em curso (E-002, wake word nova)."""
+        with self._lock:
+            self._generation += 1
+            while True:
+                try:
+                    self._discard(self._queue.get_nowait())
                     self._queue.task_done()
                 except queue.Empty:
-                    pass
-                self._queue.put_nowait((card, path))
+                    break
+        interrupt = getattr(self._runner, "interrupt", None)
+        if interrupt is not None:
+            interrupt()
 
     def wait_idle(self) -> None:
         """Espera tudo o que está na fila terminar de tocar (para os testes)."""
@@ -191,9 +236,12 @@ class SoundPlayer:
 
     def _work(self) -> None:
         while True:
-            card, path = self._queue.get()
+            card, path, delete_after, generation = self._queue.get()
             try:
-                log.info("Tocando %s", path.name)
+                if generation != self._generation:
+                    continue  # pedido antes de um `clear()`: não toca
+                # Horário real do início do aplay (métrica da E-002), não o do pedido.
+                log.info("Tocando %s (aplay_at=%.3f)", path.name, time.time())
                 self._runner(
                     ["aplay", "-D", f"plughw:{card},0", "--quiet", str(path)],
                     stdout=subprocess.DEVNULL,
@@ -203,7 +251,37 @@ class SoundPlayer:
             except (OSError, subprocess.SubprocessError) as error:
                 log.warning("Som %r não tocou: %s", path.name, error)
             finally:
+                if delete_after:
+                    path.unlink(missing_ok=True)
                 self._queue.task_done()
+
+
+class _Aplay:
+    """Roda o `aplay` e guarda o processo, para `interrupt()` poder matá-lo."""
+
+    def __init__(self) -> None:
+        self._process: subprocess.Popen | None = None
+        self._lock = threading.Lock()
+
+    def __call__(self, command: list[str], stdout=None, stderr=None, timeout=None) -> None:
+        process = subprocess.Popen(command, stdout=stdout, stderr=stderr)
+        with self._lock:
+            self._process = process
+        try:
+            process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+            raise
+        finally:
+            with self._lock:
+                self._process = None
+
+    def interrupt(self) -> None:
+        with self._lock:
+            process = self._process
+        if process is not None and process.poll() is None:
+            process.terminate()
 
 
 _player = SoundPlayer()
@@ -212,3 +290,13 @@ _player = SoundPlayer()
 def play_sound(card: int | None, name: str) -> None:
     """Toca `media/<name>.wav` (ou uma variante) no Anker, sem esperar terminar."""
     _player.play(card, name)
+
+
+def play_file(card: int | None, path: Path) -> None:
+    """E-002: toca a resposta falada (fora de `media/`) e apaga o arquivo depois."""
+    _player.play_path(card, path, delete_after=True)
+
+
+def stop_sounds() -> None:
+    """E-002: esvazia a fila de sons e interrompe o `aplay` em curso."""
+    _player.clear()
