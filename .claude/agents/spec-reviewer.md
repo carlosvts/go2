@@ -21,6 +21,13 @@ A spec indicada, `AGENTS.md` da raiz e dos serviços citados, `specs/README.md`,
 7. **Experimento**: o critério de decisão tem números, está escrito antes do teste (`criterio-congelado-em`) e define o que fazer se for inconclusivo? Os dados de teste estão congelados e a linha de base declarada? Há meta de 0 falsos positivos em movimento e `damp` quando a interpretação muda?
 8. **Fora de escopo e riscos**: a seção existe e é concreta? O risco ao robô físico está descrito?
 9. **Lacunas**: o que o implementador (uma IA) precisaria perguntar e a spec não responde?
+10. **HRI** (feature e experimento): a seção "Impacto HRI" existe e é concreta, ou traz `Sem impacto HRI: <motivo>` plausível? Cheque:
+    - todo caminho (sucesso, rejeição, erro, espera) tem retorno perceptível? Algum cai em silêncio?
+    - o retorno afirma mais do que aconteceu (aceito tratado como executado; fala do robô que inventa capacidade ou fato)?
+    - latência: a spec fala da percebida (última palavra → primeiro retorno) ou só da de componente? O valor é medido ou `inferido`?
+    - a mudança pode surpreender quem está perto do robô, ou o som/fala do robô pode voltar pelo microfone (eco, pré-roll)?
+    - afirmação de percepção ("claro", "natural", "a pessoa entende") sem critério `usuario` é inferência tratada como fato (item 2).
+    - rejeição de fala natural (sinônimo, erro de transcrição) está tratada como falha de interação ou só como "comportamento correto"?
 
 ## Formato da resposta
 
