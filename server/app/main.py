@@ -168,6 +168,7 @@ def create_app(
                 "save_utterances": settings.save_utterances,
                 "llm_enabled": replies is not None,
                 "llm_url": settings.llm_url if replies is not None else None,
+                "piper_url": settings.piper_url if replies is not None else None,
                 "llm_healthy": replies.health.healthy if replies is not None else None,
             },
         )
@@ -180,6 +181,9 @@ def create_app(
             if replies is not None:
                 await replies.health.close()
                 await replies.engine.close()
+                close_tts = getattr(replies.engine.tts, "close", None)
+                if close_tts is not None:
+                    close_tts()
             if llama is not None:
                 await llama.aclose()
             await dispatcher.close()
@@ -270,11 +274,10 @@ async def _build_replies(
 
         llama = llm = LlamaServer(settings.llm_url, settings.llm_dir)
     if synthesizer is None:
-        from app.reply.tts import PiperSynthesizer
+        from app.reply.tts import PiperClient
 
-        synthesizer = await asyncio.to_thread(
-            PiperSynthesizer, settings.piper_voice, settings.reply_lead_silence_ms
-        )
+        # Piper roda em processo próprio: aqui só o cliente HTTP.
+        synthesizer = PiperClient(settings.piper_url, settings.piper_timeout_s)
     try:
         echo = EchoFilter.load(interpreter, settings.llm_dir)
         rules = ConversationRules.load(settings.llm_dir / "conversation_markers.yaml")

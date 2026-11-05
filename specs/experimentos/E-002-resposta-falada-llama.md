@@ -163,7 +163,7 @@ A resposta tocada pelo alto-falante pode ser captada pelo microfone na gravaçã
 
 ### TTS
 
-Piper no server, **na CPU** (aceito pelo humano; motivo **inferido**: não disputa VRAM com Whisper e Llama), com as vozes em `server/models/piper/` (as mesmas de `scripts/tts.py`). Voz: `pt_BR-faber-medium` (decisão do humano). A mesma voz gera os WAVs de espera.
+Piper no server, **na CPU** (aceito pelo humano; motivo **inferido**: não disputa VRAM com Whisper e Llama), com as vozes em `server/models/piper/` (as mesmas de `scripts/tts.py`). Voz: `pt_BR-faber-medium` (decisão do humano). A mesma voz gera os WAVs de espera. Por decisão do humano (2026-11-05), o Piper roda num **processo separado** (`app.reply.piper_service`, serviço `piper-tts` do compose, com teto de CPU **inferido**), para não disputar CPU com o go2-server, que interpreta a fala seguinte, inclusive a parada. O go2-server só faz HTTP. O filtro de eco continua no processo do go2-server.
 
 ### Áudio de espera (TV Box)
 
@@ -332,3 +332,4 @@ Segurança: deixar `python -m sense.stop` à mão. A parada falada não é garan
 - 2026-11-04: **mudança de régua depois do eval** (decisão do humano). A F1 passa a liberar "para" no meio da conversa só quando seguido de pronome (`para_pronouns`), para manter "fala para mim quem é você" no Llama e barrar "você para já que eu mandei". O congelamento `193ac50` fica **invalidado**; a etapa 1 precisa ser congelada de novo. O eval (`eval/conversation_e002.yaml`) não muda: o caso que falhou continua `not_llm`.
 - 2026-11-04: etapa 1 recongelada em `9913f05`, a pedido do humano. Eval com o modelo real nesse commit: 0 comando fora do esperado, 0 tentativa de parada ao Llama, regressões iguais, 13/17 frases ao Llama como esperado (as 4 restantes barradas pelo C3, informativo).
 - 2026-11-04: implementação de software concluída (`53b011e`): server 252 testes e tvbox 113 testes passando, incluindo o eval com o modelo real. Llama, Piper (exceto um teste manual de síntese), go2-api e aplay são falsos nos testes: nada disso prova latência nem comportamento no robô. Pendente: congelamento da etapa 2 (prompt, SHA do modelo, parâmetros) e o teste em hardware.
+- 2026-11-05: decisões do humano após a revisão de código: o experimento roda só com a wake word `hey_jarvis` (`hey_go2` fica fora, porque a resposta diz "Go2"); a imagem do llama-server foi fixada em `server-cuda12-b11749` com digest (entra na etapa 2); o Piper passou para um processo separado.

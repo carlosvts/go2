@@ -122,8 +122,9 @@ class Settings(BaseSettings):
     # na etapa 1 da E-002: não mude sem invalidar o experimento.
     reply_deadline_s: float = Field(default=10.0, gt=0)
     reply_ttl_s: float = Field(default=30.0, gt=0)
-    piper_voice: Path = ROOT / "models" / "piper" / "pt_BR-faber-medium.onnx"
-    reply_lead_silence_ms: int = Field(default=250, ge=0)
+    # Piper em processo separado (app.reply.piper_service), por HTTP.
+    piper_url: str = "http://127.0.0.1:5002"
+    piper_timeout_s: float = Field(default=10.0, gt=0)
 
     # ─── Calibração e observabilidade ──────────────────────────────────────
     save_utterances: bool = False

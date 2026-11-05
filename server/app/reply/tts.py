@@ -1,5 +1,8 @@
 """Piper na CPU: texto → WAV, com silêncio no começo (E-002).
 
+`PiperSynthesizer` roda no processo próprio do Piper (`app.reply.piper_service`);
+o go2-server usa só o `PiperClient`, por HTTP.
+
 O alto-falante USB da TV Box (Anker) corta o começo do som quando o `aplay`
 abre o dispositivo; por isso o mesmo silêncio inicial dos sons de `media/`
 (250 ms, `tvbox/scripts/add_lead_silence.py`).
@@ -11,6 +14,8 @@ import io
 import threading
 import wave
 from pathlib import Path
+
+import httpx
 
 
 class PiperSynthesizer:
@@ -26,6 +31,21 @@ class PiperSynthesizer:
         with self._lock, wave.open(raw, "wb") as out:
             self._voice.synthesize_wav(text, out)
         return add_lead_silence(raw.getvalue(), self._lead_silence_ms)
+
+
+class PiperClient:
+    """O lado do go2-server: pede a síntese ao processo do Piper."""
+
+    def __init__(self, base_url: str, timeout_s: float) -> None:
+        self._client = httpx.Client(base_url=base_url, timeout=timeout_s)
+
+    def synthesize(self, text: str) -> bytes:
+        response = self._client.post("/synthesize", json={"text": text})
+        response.raise_for_status()
+        return response.content
+
+    def close(self) -> None:
+        self._client.close()
 
 
 def add_lead_silence(wav: bytes, ms: int) -> bytes:

@@ -17,8 +17,6 @@ services:
       - models:/models
       # Frases capturadas com GO2S_SAVE_UTTERANCES=1.
       - ./captures:/srv/captures
-      # E-002: vozes do Piper (resposta falada), as mesmas de scripts/tts.py.
-      - ./models/piper:/srv/models/piper:ro
 
     # Whisper na GPU: exige o NVIDIA Container Toolkit no host.
     gpus: all
@@ -32,8 +30,28 @@ services:
   # todas as camadas na GPU. O go2-server fala com ele em 127.0.0.1:8080.
   # O arquivo .gguf não é versionado: coloque em ./models/llm/ (ver server/llm/generation.yaml).
   # Com Whisper e Llama juntos, confira a VRAM (`nvidia-smi`): caber em 8 GB é INFERIDO.
+  # E-002: Piper em processo (container) próprio, com teto de CPU, para não
+  # disputar processador com o go2-server (que interpreta a fala seguinte,
+  # inclusive a parada) nem com a go2-api. Mesma imagem do go2-server.
+  piper-tts:
+    image: go2-server:local
+    container_name: go2-piper-tts
+    profiles: ["server"]
+    network_mode: host
+    volumes:
+      # Vozes do Piper, as mesmas de scripts/tts.py.
+      - ./models/piper:/srv/models/piper:ro
+    command: ["uv", "run", "--frozen", "--no-dev", "--extra", "llm", "python", "-m",
+              "app.reply.piper_service", "--voice", "/srv/models/piper/pt_BR-faber-medium.onnx",
+              "--host", "127.0.0.1", "--port", "5002"]
+    # Teto de CPU INFERIDO: ninguém mediu. Ajuste ao hardware do server.
+    cpus: 1.0
+    restart: unless-stopped
+
   llama-server:
-    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    # Versão fixada (build b11749, ~2026-10-20) e digest: um pull entre sessões
+    # não pode trocar o llama.cpp no meio do experimento (etapa 2 da E-002).
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda12-b11749@sha256:31b39eacce2bab5fde9286ec3980ed5548a3987644e94da0d0c2092f93313538
     container_name: go2-llama-server
     profiles: ["server"]
     network_mode: host
