@@ -169,11 +169,11 @@ Piper no server, **na CPU** (aceito pelo humano; motivo **inferido**: não dispu
 
 - Dois sons novos, gerados **uma vez** com Piper e versionados em `tvbox/media/`, com pelo menos 4 variantes cada, para redundância. A TV Box sorteia uma sem repetir a anterior, como nos outros sons. Frases aprovadas pelo humano em 2026-11-04:
   - `thinking` (espera, teto de 1,5 s por frase):
-    - "Hum, deixa eu pensar."
+    - "Deixa eu pensar."
     - "Boa pergunta, peraí."
     - "Pensando aqui..."
-    - "Calma, já te respondo."
-    - "Opa, deixa eu ver isso."
+    - "Já te respondo."
+    - "Opa, vendo aqui."
     - "Hum... pensando."
   - `reply_failed` (resposta não veio, só na mista; teto de 2,8 s, igual ao `rejected`):
     - "Essa pergunta eu fiquei devendo."
@@ -186,7 +186,7 @@ Piper no server, **na CPU** (aceito pelo humano; motivo **inferido**: não dispu
 - São gerados por `tvbox/scripts/generate_voice.py`, como os outros, e recebem o silêncio inicial de `scripts/add_lead_silence.py` (250 ms), para o Anker não cortar o começo.
 - O WAV da resposta do Llama, gerado no server, recebe o mesmo silêncio inicial de 250 ms, pelo mesmo motivo.
 - Sem Piper e sem dependência nova na TV Box: ela já toca WAV com `aplay` (`sense/audio.py`, `SoundPlayer`).
-- Recursos: os WAVs atuais têm 10–35 KB. As 12 frases novas devem ocupar menos de 500 KB (inferido). A TV Box está com o disco em ~90%: conferir `df -h` antes de instalar.
+- Recursos: os WAVs atuais têm 10–35 KB. As 12 frases novas somam ~870 KB, medido; acima dos 500 KB inferidos antes, aceito pelo humano em 2026-11-05. A TV Box está com o disco em ~90%: conferir `df -h` antes de instalar.
 
 ### Limites que não mudam
 
@@ -333,3 +333,4 @@ Segurança: deixar `python -m sense.stop` à mão. A parada falada não é garan
 - 2026-11-04: etapa 1 recongelada em `9913f05`, a pedido do humano. Eval com o modelo real nesse commit: 0 comando fora do esperado, 0 tentativa de parada ao Llama, regressões iguais, 13/17 frases ao Llama como esperado (as 4 restantes barradas pelo C3, informativo).
 - 2026-11-04: implementação de software concluída (`53b011e`): server 252 testes e tvbox 113 testes passando, incluindo o eval com o modelo real. Llama, Piper (exceto um teste manual de síntese), go2-api e aplay são falsos nos testes: nada disso prova latência nem comportamento no robô. Pendente: congelamento da etapa 2 (prompt, SHA do modelo, parâmetros) e o teste em hardware.
 - 2026-11-05: decisões do humano após a revisão de código: o experimento roda só com a wake word `hey_jarvis` (`hey_go2` fica fora, porque a resposta diz "Go2"); a imagem do llama-server foi fixada em `server-cuda12-b11749` com digest (entra na etapa 2); o Piper passou para um processo separado.
+- 2026-11-05: três frases de `thinking` passavam de 1,5 s e foram trocadas por versões curtas ("Deixa eu pensar.", "Já te respondo.", "Opa, vendo aqui."), a pedido do humano. Tamanho dos WAVs acima de 500 KB aceito pelo humano.

@@ -70,11 +70,11 @@ PHRASES: dict[str, list[str]] = {
     ],
     # E-002: frases aprovadas pelo humano em 2026-11-04 (≥ 4 de cada, redundância).
     "thinking": [
-        "Hum, deixa eu pensar.",
+        "Deixa eu pensar.",
         "Boa pergunta, peraí.",
         "Pensando aqui...",
-        "Calma, já te respondo.",
-        "Opa, deixa eu ver isso.",
+        "Já te respondo.",
+        "Opa, vendo aqui.",
         "Hum... pensando.",
     ],
     "reply_failed": [
