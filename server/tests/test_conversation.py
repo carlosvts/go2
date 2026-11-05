@@ -209,8 +209,6 @@ def test_accepted_non_movement_clause_with_para_blocks(interpreter, catalog, rul
         "você pode parar de me seguir",
         "ei para de me seguir",
         "olha para com isso que você tá fazendo",
-        "robô para de me seguir",
-        "hey jarvis para de me seguir",
         "você para de dançar",
         "você está batendo para e anda para trás",  # "para" no fim da cláusula
         "senta e você para com isso",
@@ -221,6 +219,15 @@ def test_f1_is_what_blocks(interpreter, catalog, rules, text):
     """Os casos acima chegam a ter cláusula de conversa: quem barra é o F1."""
     decision, _ = route(interpreter, catalog, rules, text)
     assert decision.reason == "f1_stop_word"
+
+
+@pytest.mark.parametrize("text", ["robô para de me seguir", "hey jarvis para de me seguir"])
+def test_stop_prefix_stops_before_f1(interpreter, catalog, rules, text):
+    """Com os prefixos de parada ("para de", em discovery/inferred.yaml), estes casos
+    viram parada antes de chegar ao F1: param o robô e não vão ao Llama."""
+    decision, interpretation = route(interpreter, catalog, rules, text)
+    assert interpretation.kind is Kind.STOP
+    assert decision.route is Route.NONE
 
 
 def test_para_in_the_middle_of_conversation_passes(interpreter, catalog, rules):
