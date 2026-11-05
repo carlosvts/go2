@@ -104,6 +104,8 @@ def build() -> tuple[str, list[str], list[str]]:
         f"  id: {stop_name}",
         f"  call: {flow(call_of(api[stop_name]))}",
         f"  words: {flow(phrases['parada']['palavras'])}  # discovery",
+        f"  phrases: {flow(inferred.get('stop', {}).get('phrases', []))}  {INFERRED_TAG}",
+        f"  prefixes: {flow(inferred.get('stop', {}).get('prefixes', []))}  {INFERRED_TAG}",
         "",
         "commands:",
     ]

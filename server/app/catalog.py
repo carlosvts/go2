@@ -10,7 +10,7 @@ from typing import Any
 
 import yaml
 
-from app.interpret.text import fold, tokenize
+from app.interpret.text import fold, remove_sequences, tokenize
 
 
 class CatalogError(Exception):
@@ -62,6 +62,8 @@ class Catalog:
     stop_id: str
     stop_call: Call
     stop_words: frozenset[str]  # sem acento
+    stop_phrases: frozenset[tuple[str, ...]]  # cláusula inteira, sem acento e sem enchimento
+    stop_prefixes: tuple[tuple[str, ...], ...]  # começo de cláusula
     commands: dict[str, Command]
     verbs: dict[str, tuple[str, ...]]  # verbo canônico → palavras aceitas
     directions: dict[str, tuple[str, ...]]
@@ -106,6 +108,11 @@ def load_catalog(path: Path) -> Catalog:
 
     def phrase(text: str) -> tuple[str, ...]:
         return tuple(fold(token) for token in tokenize(text, replacements))
+
+    def clean(text: str) -> tuple[str, ...]:
+        """Como a cláusula chega ao interpretador: sem enchimento ("para o robô" → "para o")."""
+        fillers = [phrase(f) for f in language["fillers"]]
+        return tuple(remove_sequences(list(phrase(text)), fillers))
 
     commands: dict[str, Command] = {}
     for name, raw in data["commands"].items():
@@ -179,6 +186,8 @@ def load_catalog(path: Path) -> Catalog:
         stop_id=data["stop"]["id"],
         stop_call=_call(data["stop"]["call"]),
         stop_words=frozenset(fold(word) for word in data["stop"]["words"]),
+        stop_phrases=frozenset(clean(text) for text in data["stop"].get("phrases", [])),
+        stop_prefixes=tuple(clean(text) for text in data["stop"].get("prefixes", [])),
         commands=commands,
         verbs=verbs,
         directions=directions,

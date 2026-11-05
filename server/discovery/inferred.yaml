@@ -30,13 +30,51 @@ durations:
 # Variações de fala além das frases de phrases.json. Entram como exemplos para o
 # vizinho mais próximo por embeddings.
 extra_examples:
-  stand_up: [levantar, levante, fica de pé, ficar de pé]
-  sit: [sentar, sente]
-  stand_down: [deitar, deite]
-  hello: [cumprimenta, acenar, acena, dá um oi, dar tchau]
+  stand_up: [levantar, levante, fica de pé, ficar de pé, vamos levantar]
+  # "santar": o Whisper ouviu assim um "senta!" na sessão de 2026-11-04.
+  sit: [sentar, sente, sente-se, vamos sentar, santar]
+  stand_down: [deitar, deite, deite-se, pode deitar, vamos deitar]
+  hello: [cumprimenta, acenar, acena, dá um oi, dar tchau, olá, dá oi, dar oi]
   stretch: [alongar, alongue, se alonga, espreguiçar, se espreguiça]
   finger_heart: [faz um coração, fazer coração, coraçãozinho]
   damp: [desligar os motores, desliga os motores, desligue os motores]
+
+# Parada além das palavras de phrases.json (para, pare, parar, stop). Parar por
+# engano é seguro; deixar de parar não é. Só por cláusula EXATA (depois de tirar
+# enchimento) ou por prefixo; não entram no índice de embeddings, para não
+# puxar gestos para a parada.
+stop:
+  # A cláusula inteira é uma destas.
+  phrases:
+    - chega
+    - já chega
+    - basta
+    - para tudo
+    - pare tudo
+    - para já
+    - pare já
+    - para com isso
+    - para o robô
+    - pare o robô
+    - para o movimento
+    - fica quieto
+    - fique quieto
+    - quieto
+    - espera
+    - calma
+    - freia
+    - segura
+    - cancela
+    - cancelar
+    - cancela tudo
+    - interrompe
+    - emergência
+    - socorro
+    # O Whisper às vezes ouve "para" assim.
+    - paro
+    - parei
+  # A cláusula começa por um destes ("para de andar pra frente", "pare com a dança").
+  prefixes: [para de, pare de, parar de, para com, pare com]
 
 # Aceitos só por frase exata (depois de normalizar), nunca por embedding.
 # `damp` tira a força dos motores: de pé, o robô cai.
@@ -52,7 +90,7 @@ enabled_inferred:
   wiggle_hips: [rebola, rebolar, rebole, mexe o quadril]
   # "dança" sem número aponta para a dança 1 (decisão da equipe); a dança 2 só
   # com o número ou "segunda".
-  dance1: [dança, dançar, dance, dança um, dança 1, primeira dança, dança número um]
+  dance1: [dança, dançar, dance, dança um, dança 1, primeira dança, dança número um, vamos dançar]
   dance2: [dança dois, dança 2, segunda dança, dança número dois]
   scrape: [arranha, arranhar o chão, arranha o chão]
 
