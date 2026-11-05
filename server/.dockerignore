@@ -7,4 +7,6 @@
 !uv.lock
 !.python-version
 !catalog.yaml
+# E-002: prompt, parâmetros e listas da resposta falada.
+!llm
 **/__pycache__

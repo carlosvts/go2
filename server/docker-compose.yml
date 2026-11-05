@@ -41,8 +41,9 @@ services:
     volumes:
       # Vozes do Piper, as mesmas de scripts/tts.py.
       - ./models/piper:/srv/models/piper:ro
-    command: ["uv", "run", "--frozen", "--no-dev", "--extra", "llm", "python", "-m",
-              "app.reply.piper_service", "--voice", "/srv/models/piper/pt_BR-faber-medium.onnx",
+    # Sem `uv run`: a imagem multi-stage (PR #8) não tem o uv; o python do
+    # `.venv` já está no PATH.
+    command: ["python", "-m", "app.reply.piper_service", "--voice", "/srv/models/piper/pt_BR-faber-medium.onnx",
               "--host", "127.0.0.1", "--port", "5002"]
     # Teto de CPU INFERIDO: ninguém mediu. Ajuste ao hardware do server.
     cpus: 1.0
