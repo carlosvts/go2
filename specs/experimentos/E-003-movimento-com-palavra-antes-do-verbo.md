@@ -139,6 +139,18 @@ Não há comparador por exemplos em `inferred.yaml`, como havia na E-001: cláus
 - Um FP de movimento desloca o robô por até `duration_s` ou até o `stop`, o que vier antes. `duration_s` vem de `discovery/phrases.json` (3 s para `move_*`, 1 s para `strafe_*`/`turn_*`) e não foi medido no robô. A distância (0,5 m/s × 3 s ≈ 1,5 m) é **inferida**: TODO(humano): medir. O desvio de obstáculo só faz o robô parar antes de bater; não contorna.
 - Uma fala que não era pedido ("mas vamos andar para frente depois") pode virar movimento. Ainda não há caso medido.
 
+## Impacto HRI
+
+Seção acrescentada em 2026-11-05, depois do congelamento, por causa da regra 7 de `specs/README.md` (PR #7). Ela descreve; não muda o critério congelado.
+
+- **O que a pessoa percebe hoje:** fala natural como "vamos andar pra frente" toca `rejected` ("não entendi"), e a pessoa tem de reformular. Na sessão de 2026-11-04, isso aconteceu 7 vezes seguidas com a mesma intenção. Rejeitar fala natural é falha de interação (`AGENTS.md`, HRI).
+- **Com a E-003:** essas frases tocam `confirmed` e o robô anda. Nenhum som novo, nenhuma latência nova (consulta em conjunto, sem modelo): a latência percebida é a de hoje. **Inferido**: ninguém mediu a latência percebida desta branch.
+- **O retorno não promete mais do que hoje:** `confirmed` continua sendo aceite, não fim do movimento (a api devolve 202).
+- **Casos que continuam sem ação:** "mas vamos…", "você vai pra frente", "pode andar para frente?", direção sem verbo ("vamos para frente") e a pontuação do Whisper ("Vamos, anda pra frente"). Todos tocam `rejected`, como hoje. A pessoa tem retorno, mas não sabe **o que** reformular, e esta spec não resolve isso.
+- **Segurança percebida:** um FP de movimento desloca o robô perto de gente. Os edge cases mostraram que palavras como `mas` e `você` criariam esse risco; por isso ficaram fora da lista.
+- **Eco:** não muda. A E-003 não acrescenta som nem fala do robô.
+- **Sem critério `usuario`:** o critério foi congelado antes de a regra existir. Que a pessoa leiga perceba o ganho ("agora ele entende") é **inferido**. TODO(humano): decidir se um critério `usuario` entra num experimento seguinte.
+
 ## Dados de teste
 
 1. **Conjunto 1, regressão:** `eval/phrases.yaml` como está em `a5396dc` (merge de `feat/frases-parada-gestos`): 78 acertos, 0 FP, 40 de 40 paradas no limiar 0.95/0.10. Tem de manter 0 FP, 0 parada virando comando e todos os acertos atuais.
