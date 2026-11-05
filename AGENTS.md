@@ -14,7 +14,18 @@ Fluxo: TV Box (wake word + VAD) → server (STT → interpretação → fila) �
 
 ## Spec-driven
 
-Regras do processo em `specs/README.md`. Leia antes de mexer em contrato, feature de comportamento ou experimento.
+Regras do processo em `specs/README.md`. Leia antes de mexer em contrato, feature de comportamento ou experimento. Toda feature e todo experimento têm a seção **Impacto HRI** (ver abaixo).
+
+## HRI (interação humano-robô)
+
+O robô é usado por pessoas, não só chamado por HTTP. Código correto que deixa a pessoa sem saber o que aconteceu, ou assustada, é falha. Antes de propor ou implementar algo que muda o que alguém vê, ouve ou espera do robô, pergunte: o que a pessoa percebe?
+
+- **Todo caminho tem retorno perceptível:** sucesso, rejeição, erro e espera. Silêncio nunca é retorno. Rejeitar corretamente não basta; a pessoa tem de saber o que fazer (repetir, reformular, desistir). Rejeições diferentes pedem retornos diferentes, quando a ação da pessoa muda (ex.: `blocked` ≠ "não entendi").
+- **O retorno não promete o que não aconteceu.** "Entendi" é aceite, não execução: a api devolve 202 sem esperar o fim do gesto, e o desvio de obstáculo não contorna. A fala do robô (E-002) não afirma capacidade nem fato que o sistema não tem.
+- **A latência que conta é a percebida:** da última palavra da pessoa até o primeiro retorno. Meça nesse ponto, não só por componente. Latência alta se cobre com retorno de espera, nunca relaxando limite (ver `GO2S_MAX_UTTERANCE_AGE_S`).
+- **Segurança percebida é segurança.** Movimento inesperado perto de gente, ou som/fala do robô que o microfone capte e vire comando (eco), é falha mesmo que cada componente esteja certo.
+- **Pense em quem usa:** leigo, criança, plateia em apresentação, não só quem desenvolveu. Fala real varia (sinônimos, erro de transcrição, "-vis" vazando); rejeitar fala natural é falha de interação, não só de interpretação.
+- **Percepção também é `inferido` até medir.** "A pessoa entende o som", "parece natural" ou "não assusta" só viram fato com uma pessoa que não conhece o sistema, e quem registra é humano (critério tipo `usuario`, ver `specs/README.md`). Log mostrando que o som tocou não prova que alguém entendeu.
 
 ## Verificação
 

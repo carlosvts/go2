@@ -23,6 +23,9 @@ alternativa-a: null            # E-00N que este experimento substitui se for rej
 <O que será implementado na branch do experimento. Limites: o que não pode mudar
 (ex.: nunca gerar comando fora do catálogo; `damp` só por frase exata).>
 
+## Impacto HRI
+<Obrigatória, ou `Sem impacto HRI: <motivo>`. O que muda para a pessoa que fala com o robô (retorno, espera, erro)? Algum caso novo fica sem retorno perceptível? O retorno promete algo que não aconteceu? Pode o som/fala do robô voltar pelo microfone? A métrica de experiência está na tabela abaixo, ou diga por que não se aplica.>
+
 ## Dados de teste
 <Conjunto usado: arquivo, origem, tamanho, como foi rotulado. Congelado: não adicionar casos depois de ver o resultado para fazer passar.>
 
@@ -32,6 +35,7 @@ alternativa-a: null            # E-00N que este experimento substitui se for rej
 | Falsos positivos em movimento e `damp` | `<comando>` | 0 |
 | Revocação | `<comando>` | <valor atual> |
 | Latência p95 | `<comando>` | <valor atual> |
+| Latência percebida (última palavra → primeiro retorno) | `<log da TV Box>` | <valor atual ou `TODO(humano): medir`> |
 
 ## Critério de decisão (congelar antes de testar)
 - **Adota se:** <condições objetivas, com números>.

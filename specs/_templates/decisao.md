@@ -22,7 +22,7 @@ substitui: null
 - <opção>: <por que não>.
 
 ## Consequências
-<O que isto impede ou obriga. O que precisa ser revisitado e quando (ex.: "só no final do projeto").>
+<O que isto impede ou obriga. O que precisa ser revisitado e quando (ex.: "só no final do projeto"). Efeito para quem interage com o robô: o que a pessoa deixa de poder fazer ou passa a ter de saber.>
 
 ## Como garantir
 <Teste, check de CI ou regra no AGENTS.md que impede violar esta decisão. Se não houver, escreva "nenhum".>
