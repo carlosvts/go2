@@ -6,7 +6,7 @@ status: em-teste               # proposta | em-teste | adotada | rejeitada
 servicos: [server, tvbox]
 branch: exp/resposta-falada-llama   # parte da main; se a E-001 for adotada antes, rebase sobre ela
 criterio-congelado-em: 2026-11-04 @ 9913f05   # etapa 1 (recongelada a pedido do humano; 193ac50 invalidado)
-parametros-congelados-em: null # etapa 2 (antes do hardware): AAAA-MM-DD @ commit; só humano preenche
+parametros-congelados-em: 2026-11-05 @ 1a7ae7e   # etapa 2; registrado a pedido do humano (carlosvts)
 verificacao: testado-software  # inferido | testado-software | testado-hardware (2026-11-04 @ 53b011e; mocks, não prova o robô)
 verificado-em: null            # AAAA-MM-DD @ <commit>; só humano preenche testado-hardware
 alternativa-a: null
@@ -334,3 +334,11 @@ Segurança: deixar `python -m sense.stop` à mão. A parada falada não é garan
 - 2026-11-04: implementação de software concluída (`53b011e`): server 252 testes e tvbox 113 testes passando, incluindo o eval com o modelo real. Llama, Piper (exceto um teste manual de síntese), go2-api e aplay são falsos nos testes: nada disso prova latência nem comportamento no robô. Pendente: congelamento da etapa 2 (prompt, SHA do modelo, parâmetros) e o teste em hardware.
 - 2026-11-05: decisões do humano após a revisão de código: o experimento roda só com a wake word `hey_jarvis` (`hey_go2` fica fora, porque a resposta diz "Go2"); a imagem do llama-server foi fixada em `server-cuda12-b11749` com digest (entra na etapa 2); o Piper passou para um processo separado.
 - 2026-11-05: três frases de `thinking` passavam de 1,5 s e foram trocadas por versões curtas ("Deixa eu pensar.", "Já te respondo.", "Opa, vendo aqui."), a pedido do humano. Tamanho dos WAVs acima de 500 KB aceito pelo humano.
+- 2026-11-05: etapa 2 congelada em `1a7ae7e`, a pedido do humano. Ficam congelados:
+  - o prompt (`server/llm/prompt.md`);
+  - o modelo `Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf` (bartowski@bf5b95e, SHA-256 `7b064f58…557c`, publicado pelo Hugging Face e conferido com `sha256sum` ao instalar);
+  - os parâmetros: temperature 0,4, top_p 0,9, max_tokens 24, stop `\n`;
+  - o llama-server `server-cuda12-b11749` com digest, ctx 2048, todas as camadas na GPU, parallel 1;
+  - o Piper em processo separado, com 1 CPU.
+
+  Observação: o prompt manda dizer "que não sabe" e também proíbe "não"; quando a resposta usar "não", o filtro de eco a troca por uma frase fixa, o que é esperado e fica no log.
