@@ -35,14 +35,16 @@ Linha de base do conjunto 1 (`eval/phrases.yaml`), medida na E-001 em `2516071`,
 
 Fora deste experimento:
 
-- "Santar" (erro do Whisper para "senta"): é transcrição, não interpretação. Candidato a outro experimento (`initial_prompt` do Whisper).
+- "Santar" (erro do Whisper para "senta") e os gestos que não convergiam ("vamos sentar", "olá"…): tratados à parte, com exemplos em `discovery/inferred.yaml`, na branch `feat/frases-parada-gestos` (`ac8720d`).
+- Frases de parada ("para tudo", "chega", "para de andar"…): mesma branch.
+- Pontuação do Whisper que quebra a frase em duas cláusulas ("Vamos, anda pra frente", "Vai, anda pra frente", "Anda... pra frente"): fora por decisão do humano (2026-11-05). Continua rejeitada; é um candidato a outro experimento.
 - "Vamos caminhar 5 passos à frente": o move não aceita distância, então a rejeição é correta.
 - Limiares de embedding: não mudam.
 - Gestos: não mudam.
 
 ## Hipótese
 
-Se a cláusula de movimento passar a ignorar uma **lista fechada** de palavras ("vamos", "mas"…) e verbos repetidos que levam ao mesmo verbo do catálogo contarem como um só, então, numa sessão nova no robô, pelo menos N frases de movimento que a `main` rejeita saem com o comando pretendido, com 0 comando errado e 0 parada virando comando. N é decisão do humano (ver Critério).
+Se a cláusula de movimento passar a ignorar uma **lista fechada** de palavras ("vamos", "bora", "lado") e verbos repetidos que levam ao mesmo verbo do catálogo contarem como um só, então, numa sessão nova no robô, pelo menos N frases de movimento que a `main` rejeita saem com o comando pretendido, com 0 comando errado e 0 parada virando comando. N é decisão do humano (ver Critério).
 
 ## Abordagem
 
@@ -52,24 +54,32 @@ Na branch `exp/movimento-prefixo`.
 
 As palavras novas entram em `movement.ignore` de `discovery/inferred.yaml`, e o `catalog.yaml` é regenerado com `scripts/build_catalog.py`. O mecanismo já existe, então não entra código novo de interpretação para isso.
 
-Lista proposta, que o humano decide antes de congelar:
+Lista decidida pelo humano em 2026-11-05, a partir dos edge cases em texto (ver Problema):
 
 | Palavra | Origem |
 |---|---|
 | `vamos` | sessão de 2026-11-04 (7×) |
-| `mas` | sessão de 2026-11-04 (1×) |
-| TODO(humano): decidir se entram `pode`, `consegue`, `bora`, `você`, `que`, `quero` | não ouvidas na sessão; **inferidas** |
+| `bora` | inferida; sem FP nos edge cases |
+| `lado` | inferida; já aceita na E-001 (C1). "anda pro lado direito" → `strafe_right`, "vira pro lado esquerdo" → `turn_left`, "anda pro lado" continua rejeitada |
+
+Ficam **fora**, com o motivo medido nos edge cases:
+
+| Palavra | Motivo |
+|---|---|
+| `mas` | autocorreção vira dois movimentos: "Vai pra frente, mas vai pra trás." → `move_forward` + `move_backward` |
+| `você` | afirmação vira comando: "Você vai pra frente" → `move_forward`; "Você vai para trás?" → `move_backward` |
+| `que`, `quero` | iriam junto com `você` ("quero que você ande…") |
+| `pode`, `consegue` | pergunta vira comando ("Pode andar para frente?") |
+| `de`, `em` | **"Para de andar pra frente" → `move_forward`**, porque `para` já é ignorado. Só serviriam como expressão fechada ("de ré", "em frente"), o que fica fora deste experimento |
 
 Efeitos que valem para qualquer palavra da lista:
 
-- `movement.ignore` vale em **qualquer posição** da cláusula de movimento, não só antes do verbo. "anda mas para frente" também passaria. Isso é aceito ou não? TODO(humano): decidir. Se não for aceito, a palavra só pode ser ignorada **antes do primeiro verbo**, e aí entra código em `_resolve_movement`.
+- `movement.ignore` vale em **qualquer posição** da cláusula de movimento, não só antes do verbo. É o mecanismo atual, sem código novo; com `vamos`, `bora` e `lado` não apareceu caso ruim nos edge cases.
 - A lista só age na resolução de movimento (`_resolve_movement`). Chega-se a ela por palavra do léxico (exata ou com uma letra de erro, como o código já aceita) ou por embedding com rótulo `__movement__`. Frase exata, parada, negação e o embedding de gesto usam a cláusula inteira, então `damp`, parada e gestos não mudam. "vamos desligar" não passa pela lista.
-- Se a palavra for `pode`, `consegue` ou `quero`, uma pergunta ("pode andar para frente?") vira comando. Com `você`, "você vai para trás?" também vira, e o Whisper às vezes tira o "?". TODO(humano): decidir se isso é desejado.
-- `mas` não é separador. Se o Whisper puser vírgula, uma autocorreção como "vai pra frente, mas vai pra trás" vira duas cláusulas. Na `main`, a segunda dá `movement_unknown_word` e a frase inteira é rejeitada. Com `mas` ignorado, a branch enfileira `move_forward` e depois `move_backward`, e o robô executa os dois. O mesmo vale para "anda pra frente, mas vira pra direita". TODO(humano): decidir se `mas` entra na lista mesmo assim.
 
 ### Mudança 2: verbo repetido conta como um
 
-Em `_resolve_movement`, os verbos são deduplicados pelo verbo do catálogo (`andar`, `virar`) antes de checar ambiguidade. `score` e `margin` continuam sendo o mínimo sobre **todos** os slots, como hoje.
+Decidido pelo humano em 2026-11-05. Em `_resolve_movement`, os verbos são deduplicados pelo verbo do catálogo (`andar`, `virar`) antes de checar ambiguidade. `score` e `margin` continuam sendo o mínimo sobre **todos** os slots, como hoje.
 
 Origem dos slots: um verbo pode vir do léxico exato, do erro de uma letra (`_slot_lexical`) ou do embedding (`_slot_embedding`). Proposta: deduplicar **só os verbos do léxico exato**, para que uma palavra mal transcrita, aproximada de `andar` por embedding, continue dando `movement_ambiguous` ao lado de "anda". TODO(humano): confirmar.
 
@@ -100,7 +110,14 @@ Novos em `server/tests/`, com o catálogo regenerado:
 | "vamos andar" | `movement_missing_direction` |
 | "banana andar pra frente" | `movement_unknown_word` |
 | "vamos caminhar 5 passos à frente" | rejeitada |
-| "vai pra frente, mas vai pra trás" | rejeitada, se `mas` entrar na lista: exige tratar autocorreção, o que hoje não existe. TODO(humano): decidir junto com `mas` |
+| "bora andar pra frente" | `move_forward` |
+| "anda pro lado direito" | `strafe_right` |
+| "vira pro lado esquerdo" | `turn_left` |
+| "anda pro lado" | `movement_missing_direction` |
+| "vai pra frente, mas vai pra trás" | rejeitada (`mas` fora da lista) |
+| "você vai pra frente" | rejeitada (`você` fora da lista) |
+| "pode andar para frente?" | rejeitada (`pode` fora da lista) |
+| "para de andar pra frente" | não pode virar movimento |
 
 Mais o conjunto 1 inteiro com 0 FP (`pytest -m model`). O conjunto 3 é `hardware-only`, com roteiro em `specs/checklists/E-003.md`, que será criado antes de congelar o critério.
 
@@ -121,17 +138,16 @@ Não há comparador por exemplos em `inferred.yaml`, como havia na E-001: cláus
 
 - Um FP de movimento desloca o robô por até `duration_s` ou até o `stop`, o que vier antes. `duration_s` vem de `discovery/phrases.json` (3 s para `move_*`, 1 s para `strafe_*`/`turn_*`) e não foi medido no robô. A distância (0,5 m/s × 3 s ≈ 1,5 m) é **inferida**: TODO(humano): medir. O desvio de obstáculo só faz o robô parar antes de bater; não contorna.
 - Uma fala que não era pedido ("mas vamos andar para frente depois") pode virar movimento. Ainda não há caso medido.
-- Se `mas` entrar na lista, uma autocorreção pode virar dois movimentos (ver Mudança 1).
 
 ## Dados de teste
 
-1. **Conjunto 1, regressão:** `eval/phrases.yaml` como está em `f0862f3` (178 frases). Tem de manter 0 FP, 0 parada virando comando e todos os acertos atuais.
+1. **Conjunto 1, regressão:** `eval/phrases.yaml`. Se a branch `feat/frases-parada-gestos` for para a `main` antes, a linha de base passa a ser o eval dela: 78 acertos, 0 FP, 40 de 40 paradas no limiar 0.95/0.10, medidos em `ac8720d`. Senão vale o eval de `f0862f3` (178 frases, 66 acertos). TODO(humano): decidir a ordem; o commit da linha de base é registrado ao congelar. Tem de manter 0 FP, 0 parada virando comando e todos os acertos atuais.
 2. **Conjunto 2, sessão de 2026-11-04:** as transcrições registradas na E-001, num arquivo novo `server/eval/sessao-2026-11-04.yaml`, no formato de `eval/phrases.yaml` (`text`/`expect`), com o pretendido deduzido. Ficam de fora: #1 (sem transcrição) e #18 "Amaralre" (pretendido indefinido). #6 "caminhar 5 passos" entra como `reject`. **Não é teste independente**: a lista e a mudança 2 foram escritas olhando essas falas. Serve só como regressão e conferência.
 3. **Conjunto 3, sessão nova no robô** (é o conjunto que decide):
    - Pelo menos 30 frases, com o server da branch e `GO2S_SAVE_UTTERANCES=1`.
    - O desfecho pretendido é anotado **antes** de cada frase e não muda depois.
    - Pelo menos M frases-alvo, ou seja, movimento com palavra da lista antes do verbo ou com verbo repetido, escritas no roteiro antes da sessão. TODO(humano): M. Proposta: 10.
-   - Pelo menos 10 negativas, entre elas autocorreção ("vai pra frente, mas vai pra trás"), se `mas` entrar na lista, movimento sem direção ("vamos andar", "vamos lá"), palavra fora da lista ("banana andar pra frente"), verbos diferentes ("anda vira para a direita") e frases com palavras da lista que não são pedido. TODO(humano): exemplos dessas últimas.
+   - Pelo menos 10 negativas, entre elas autocorreção ("vai pra frente, mas vai pra trás"), afirmação com "você" ("você vai pra frente"), "para de andar pra frente", movimento sem direção ("vamos andar", "vamos lá"), palavra fora da lista ("banana andar pra frente"), verbos diferentes ("anda vira para a direita") e frases com palavras da lista que não são pedido. TODO(humano): exemplos dessas últimas.
    - Antes da sessão, liberar espaço na TV Box. Na sessão de 2026-11-04 ela não salvou nenhum áudio (`No space left on device`).
    - Depois, as transcrições salvas passam, em texto, pelo interpretador da `main` e da branch.
 
@@ -176,6 +192,8 @@ Segurança: área livre na direção do movimento; `python -m sense.stop` e o co
 
 ## Hipóteses não verificadas
 
+- Edge cases em texto, com o modelo real e no limiar de produção, sem Whisper e sem robô, em 2026-11-05 @ `f0862f3`: 140 frases, entre alvos, negativas, parada, gestos, `damp`, várias cláusulas, alucinações do Whisper e wake word. A E-003 foi **simulada** num script fora do repo. Com a lista `vamos` e a deduplicação: 0 FP, e 7 das 8 falas de movimento rejeitadas na sessão passam. Com a lista ampla (`mas`, `você`, `pode`…): 4 FP (ver tabela da Mudança 1). Isso não prova nada sobre fala nova.
+
 - Que "vamos", "mas" e as outras palavras da lista sejam frequentes em fala nova. A sessão de 2026-11-04 tinha um falante só e frases repetidas.
 - Que nenhuma frase comum com palavra da lista e direção deixe de ser pedido. TODO(humano): pensar em contraexemplos.
 - `duration_s` das regras de movimento vem de `discovery/phrases.json`, sem medida no robô; a distância percorrida é **inferida**.
@@ -190,5 +208,6 @@ Segurança: área livre na direção do movimento; `python -m sense.stop` e o co
 
 ## Histórico
 
+- 2026-11-05: decisões do humano: lista `vamos`, `bora`, `lado`; deduplicação de verbo sim; pontuação do Whisper fora. Edge cases em texto registrados.
 - 2026-11-05: revisada pelo `spec-reviewer`. Entraram: ferramenta trazida da E-001, testes de software, risco de autocorreção com `mas`, origem dos verbos deduplicados e mínimo de frases-alvo.
 - 2026-11-05: criada (proposta), a partir da sessão da E-001 de 2026-11-04. Sucede a E-001 (rejeitada).
