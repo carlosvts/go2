@@ -40,6 +40,7 @@ verificado-em: null          # AAAA-MM-DD @ <commit>
   - `testado-hardware`: um humano da equipe rodou no robô/TV Box e relatou. **Só humano preenche.**
 - `status` de experimento: `proposta → em-teste → adotada | rejeitada`.
 - Critério individual também tem estado: cada linha da tabela de aceite marca `inferido`, `software` ou `hardware`.
+- Critério de percepção humana tem tipo próprio, `usuario`: o que uma pessoa que **não conhece o sistema** vê, ouve, entende ou sente (retorno compreendido, susto, naturalidade). Estado: `testado-usuario (AAAA-MM-DD @ commit, n=<pessoas>)`. **Só humano preenche.** Conta como `hardware-only` para o frontmatter: `testado-hardware` só quando todos os critérios `hardware-only` **e** `usuario` passaram.
 
 ## Regras
 
@@ -49,6 +50,7 @@ verificado-em: null          # AAAA-MM-DD @ <commit>
 4. **Rejeitado não é deletado.** O código sai; a spec fica com `status: rejeitada` e a seção Resultado preenchida. É o registro do que já foi tentado.
 5. **Mesmo commit.** Mudança de comportamento ou contrato atualiza a spec junto com o código.
 6. **Adotada ≠ eterna.** Feature removida vira `obsoleta` com o motivo; spec desatualizada é bug.
+7. **Impacto HRI obrigatório.** Feature e experimento têm a seção "Impacto HRI" preenchida, ou `Sem impacto HRI: <motivo>`. Em branco não vale. Resposta, som, fala ou movimento que a pessoa percebe é comportamento: entra na spec e nos critérios de aceite, não só no código.
 
 ## Fluxo de experimento
 
