@@ -13,11 +13,13 @@ from app.reply.engine import Generation
 
 
 class LlamaServer:
-    def __init__(self, base_url: str, llm_dir: Path) -> None:
+    def __init__(
+        self, base_url: str, llm_dir: Path, transport: httpx.AsyncBaseTransport | None = None
+    ) -> None:
         params = yaml.safe_load((llm_dir / "generation.yaml").read_text(encoding="utf-8"))
         self.params = params
         self._system = (llm_dir / "prompt.md").read_text(encoding="utf-8").strip()
-        self._client = httpx.AsyncClient(base_url=base_url)
+        self._client = httpx.AsyncClient(base_url=base_url, transport=transport)
 
     async def health(self, timeout_s: float) -> bool:
         try:
@@ -35,6 +37,7 @@ class LlamaServer:
             "max_tokens": int(self.params["max_tokens"]),
             "temperature": float(self.params["temperature"]),
             "top_p": float(self.params["top_p"]),
+            "stop": list(self.params.get("stop") or []),
             "stream": False,
         }
         response = await self._client.post(

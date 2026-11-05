@@ -1,12 +1,21 @@
-# Parâmetros da geração do Llama (E-002). Entram no congelamento da etapa 2
-# (parametros-congelados-em), junto com prompt.md e o arquivo do modelo.
-# Mudar depois de congelar invalida a medida de latência.
-#
-# INFERIDO: ninguém mediu. temperature e top_p são valores usuais, não escolhidos
-# por medida; TODO(humano): confirmar antes da etapa 2.
+# Parâmetros da geração do Llama (E-002). Congelados na etapa 2
+# (parametros-congelados-em), junto com prompt.md, o arquivo do modelo e a
+# imagem do llama-server (docker-compose.yml). Mudar depois de congelar
+# invalida a medida de latência. Todos INFERIDOS: ninguém mediu.
 
+# O modelo (não versionado, 4,9 GB). Baixe exatamente esta revisão e confira o hash:
+#   mkdir -p models/llm && curl -L -o models/llm/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf \
+#     https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/bf5b95e96dac0462e2a09145ec66cae9a3f12067/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
+#   sha256sum models/llm/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf   # tem de dar o model_sha256 abaixo
 model_file: Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf  # decisão do humano (8B Instruct, Q4_K_M)
-model_sha256: null  # TODO(humano): sha256sum do arquivo usado no server, antes da etapa 2
-max_tokens: 24      # aceito pelo humano em 2026-11-03; inferido
-temperature: 0.7
-top_p: 0.9
+model_source: bartowski/Meta-Llama-3.1-8B-Instruct-GGUF@bf5b95e96dac0462e2a09145ec66cae9a3f12067
+model_bytes: 4920739232
+model_sha256: 7b064f5842bf9532c91456deda288a1b672397a54fa729aa665952863033557c  # publicado pelo Hugging Face (LFS)
+
+max_tokens: 24       # aceito pelo humano em 2026-11-03
+temperature: 0.4     # aprovado pelo humano em 2026-11-05
+top_p: 0.9           # aprovado pelo humano em 2026-11-05
+stop: ["\n"]         # corta na primeira quebra de linha; aprovado em 2026-11-05
+
+# llama-server (docker-compose.yml): --ctx-size 2048, --n-gpu-layers 999 (todas),
+# --parallel 1. Imagem server-cuda12-b11749 com digest.
