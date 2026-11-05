@@ -6,7 +6,7 @@ status: em-teste               # proposta | em-teste | adotada | rejeitada
 servicos: [server]
 branch: exp/movimento-prefixo
 criterio-congelado-em: 2026-11-05 @ a5396dc   # aprovado pelo humano no chat
-verificacao: inferido          # inferido | testado-software | testado-hardware
+verificacao: testado-software  # inferido | testado-software | testado-hardware
 verificado-em: null            # AAAA-MM-DD @ <commit>; só humano preenche testado-hardware
 alternativa-a: null            # sucede a E-001 (rejeitada em 2026-11-05); ver Histórico
 ---
@@ -119,6 +119,8 @@ Novos em `server/tests/`, com o catálogo regenerado:
 | "pode andar para frente?" | rejeitada (`pode` fora da lista) |
 | "para de andar pra frente" | não pode virar movimento |
 
+Em `server/tests/test_movement_prefix.py`, todos passam: `testado-software` (2026-11-05, branch `exp/movimento-prefixo`). Há também um teste de que verbo aproximado por erro de letra não é deduplicado ("caminhat anda para frente" → `movement_ambiguous`).
+
 Mais o conjunto 1 inteiro com 0 FP (`pytest -m model`). O conjunto 3 é `hardware-only`, com roteiro em `specs/checklists/E-003.md`, que será criado antes de congelar o critério.
 
 ### Limites que não mudam
@@ -208,6 +210,11 @@ Segurança: área livre na direção do movimento; `python -m sense.stop` e o co
 
 ## Histórico
 
+- 2026-11-05: implementado na branch. Testes passam (194 rápidos e 4 com o modelo real). `calibrate.py --fixed`:
+  - conjunto 1: main 78 / 0 FP / 40 de 40 paradas; branch 78 / 0 FP / 40 de 40, sem nada recuperado e nada perdido;
+  - conjunto 2 (`eval/sessao-2026-11-04.yaml`): main 11 acertos / 0 FP; branch 18 / 0 FP, com 7 recuperadas. A única que continua perdida é "Mas vamos andar para frente" (`mas` fora da lista).
+  Otimista: o conjunto 2 foi usado para escrever a mudança. Só texto; nada no robô.
+  Para reproduzir a `main` no mesmo processo, o `Interpreter` ganhou `dedupe_verbs`, ligado por padrão; só o `calibrate.py` o desliga.
 - 2026-11-05: critério congelado (N = 2, M = 10, deduplicação só do léxico exato, linha de base `a5396dc`); status `em-teste`, branch `exp/movimento-prefixo`.
 - 2026-11-05: decisões do humano: lista `vamos`, `bora`, `lado`; deduplicação de verbo sim; pontuação do Whisper fora. Edge cases em texto registrados.
 - 2026-11-05: revisada pelo `spec-reviewer`. Entraram: ferramenta trazida da E-001, testes de software, risco de autocorreção com `mas`, origem dos verbos deduplicados e mínimo de frases-alvo.

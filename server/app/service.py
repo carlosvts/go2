@@ -164,6 +164,9 @@ class Service:
         record = {
             "event": "utterance",
             "utterance_id": meta.utterance_id,
+            # Relógio de parede do servidor: ordena as capturas (calibrate.py --dump-captures).
+            "received_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "received_unix": round(time.time(), 3),
             "edge_id": meta.edge_id,
             "reason": meta.reason,
             "audio_s": round(len(audio) / SAMPLE_RATE, 2),

@@ -79,9 +79,15 @@ class _Slot:
 
 class Interpreter:
     def __init__(
-        self, catalog: Catalog, embedder: Embedder | None, thresholds: Thresholds | None = None
+        self,
+        catalog: Catalog,
+        embedder: Embedder | None,
+        thresholds: Thresholds | None = None,
+        dedupe_verbs: bool = True,
     ) -> None:
         self._catalog = catalog
+        # E-003. Desligado só pelo calibrate.py, para reproduzir a main.
+        self._dedupe_verbs = dedupe_verbs
         self._embedder = embedder
         self._t = thresholds or Thresholds()
 
@@ -275,13 +281,24 @@ class Interpreter:
         """Verbo e direção, cada um resolvido sozinho. Os dois são obrigatórios."""
         result.method = "slots"
         slots: list[_Slot] = []
+        verbs: list[_Slot] = []
+        exact_verbs: set[str] = set()
         for word in core:
             slot = self._slot_lexical(word) or self._slot_embedding(word)
             if slot is None:
                 result.reject_reason = "movement_unknown_word"
                 return result
             slots.append(slot)
-        verbs = [slot for slot in slots if slot.kind == "verb"]
+            if slot.kind != "verb":
+                continue
+            # E-003: verbo repetido do léxico EXATO que leva ao mesmo verbo ("vai
+            # andar") conta como um. Por erro de letra ou embedding, não.
+            exact = self._dedupe_verbs and fold(word) in self._slot_words
+            if exact and slot.name in exact_verbs:
+                continue
+            if exact:
+                exact_verbs.add(slot.name)
+            verbs.append(slot)
         directions = [slot for slot in slots if slot.kind == "direction"]
         if not verbs:
             result.reject_reason = "movement_missing_verb"
