@@ -2,10 +2,10 @@
 id: E-003
 titulo: Movimento com palavra antes do verbo e verbo repetido
 tipo: experimento
-status: proposta               # proposta | em-teste | adotada | rejeitada
+status: em-teste               # proposta | em-teste | adotada | rejeitada
 servicos: [server]
 branch: exp/movimento-prefixo
-criterio-congelado-em: null    # AAAA-MM-DD @ commit, preenchido ANTES de começar a testar
+criterio-congelado-em: 2026-11-05 @ a5396dc   # aprovado pelo humano no chat
 verificacao: inferido          # inferido | testado-software | testado-hardware
 verificado-em: null            # AAAA-MM-DD @ <commit>; só humano preenche testado-hardware
 alternativa-a: null            # sucede a E-001 (rejeitada em 2026-11-05); ver Histórico
@@ -44,7 +44,7 @@ Fora deste experimento:
 
 ## Hipótese
 
-Se a cláusula de movimento passar a ignorar uma **lista fechada** de palavras ("vamos", "bora", "lado") e verbos repetidos que levam ao mesmo verbo do catálogo contarem como um só, então, numa sessão nova no robô, pelo menos N frases de movimento que a `main` rejeita saem com o comando pretendido, com 0 comando errado e 0 parada virando comando. N é decisão do humano (ver Critério).
+Se a cláusula de movimento passar a ignorar uma **lista fechada** de palavras ("vamos", "bora", "lado") e verbos repetidos que levam ao mesmo verbo do catálogo contarem como um só, então, numa sessão nova no robô, pelo menos 2 frases de movimento que a `main` rejeita saem com o comando pretendido, com 0 comando errado e 0 parada virando comando.
 
 ## Abordagem
 
@@ -81,13 +81,13 @@ Efeitos que valem para qualquer palavra da lista:
 
 Decidido pelo humano em 2026-11-05. Em `_resolve_movement`, os verbos são deduplicados pelo verbo do catálogo (`andar`, `virar`) antes de checar ambiguidade. `score` e `margin` continuam sendo o mínimo sobre **todos** os slots, como hoje.
 
-Origem dos slots: um verbo pode vir do léxico exato, do erro de uma letra (`_slot_lexical`) ou do embedding (`_slot_embedding`). Proposta: deduplicar **só os verbos do léxico exato**, para que uma palavra mal transcrita, aproximada de `andar` por embedding, continue dando `movement_ambiguous` ao lado de "anda". TODO(humano): confirmar.
+Origem dos slots: um verbo pode vir do léxico exato, do erro de uma letra (`_slot_lexical`) ou do embedding (`_slot_embedding`). Decisão do humano (2026-11-05): deduplicar **só os verbos do léxico exato**. Uma palavra mal transcrita, aproximada de `andar` por erro de letra ou por embedding, continua dando `movement_ambiguous` ao lado de "anda".
 
 Exemplos:
 
 - "vai andar para frente": `vai` → andar, `andar` → andar ⇒ um verbo ⇒ `move_forward`.
 - "anda vira para a direita": andar e virar ⇒ continua `movement_ambiguous`.
-- Direção repetida ("anda para frente frente") também conta como uma só? TODO(humano): decidir; a proposta é **não** mexer em direção.
+- Direção repetida ("anda para frente frente") não muda: continua `movement_ambiguous`.
 
 ### Ferramenta de medida (trazida da E-001)
 
@@ -141,12 +141,12 @@ Não há comparador por exemplos em `inferred.yaml`, como havia na E-001: cláus
 
 ## Dados de teste
 
-1. **Conjunto 1, regressão:** `eval/phrases.yaml`. Se a branch `feat/frases-parada-gestos` for para a `main` antes, a linha de base passa a ser o eval dela: 78 acertos, 0 FP, 40 de 40 paradas no limiar 0.95/0.10, medidos em `ac8720d`. Senão vale o eval de `f0862f3` (178 frases, 66 acertos). TODO(humano): decidir a ordem; o commit da linha de base é registrado ao congelar. Tem de manter 0 FP, 0 parada virando comando e todos os acertos atuais.
+1. **Conjunto 1, regressão:** `eval/phrases.yaml` como está em `a5396dc` (merge de `feat/frases-parada-gestos`): 78 acertos, 0 FP, 40 de 40 paradas no limiar 0.95/0.10. Tem de manter 0 FP, 0 parada virando comando e todos os acertos atuais.
 2. **Conjunto 2, sessão de 2026-11-04:** as transcrições registradas na E-001, num arquivo novo `server/eval/sessao-2026-11-04.yaml`, no formato de `eval/phrases.yaml` (`text`/`expect`), com o pretendido deduzido. Ficam de fora: #1 (sem transcrição) e #18 "Amaralre" (pretendido indefinido). #6 "caminhar 5 passos" entra como `reject`. **Não é teste independente**: a lista e a mudança 2 foram escritas olhando essas falas. Serve só como regressão e conferência.
 3. **Conjunto 3, sessão nova no robô** (é o conjunto que decide):
    - Pelo menos 30 frases, com o server da branch e `GO2S_SAVE_UTTERANCES=1`.
    - O desfecho pretendido é anotado **antes** de cada frase e não muda depois.
-   - Pelo menos M frases-alvo, ou seja, movimento com palavra da lista antes do verbo ou com verbo repetido, escritas no roteiro antes da sessão. TODO(humano): M. Proposta: 10.
+   - Pelo menos 10 frases-alvo (decisão do humano, 2026-11-05), ou seja, movimento com palavra da lista antes do verbo ou com verbo repetido, escritas no roteiro antes da sessão.
    - Pelo menos 10 negativas, entre elas autocorreção ("vai pra frente, mas vai pra trás"), afirmação com "você" ("você vai pra frente"), "para de andar pra frente", movimento sem direção ("vamos andar", "vamos lá"), palavra fora da lista ("banana andar pra frente"), verbos diferentes ("anda vira para a direita") e frases com palavras da lista que não são pedido. TODO(humano): exemplos dessas últimas.
    - Antes da sessão, liberar espaço na TV Box. Na sessão de 2026-11-04 ela não salvou nenhum áudio (`No space left on device`).
    - Depois, as transcrições salvas passam, em texto, pelo interpretador da `main` e da branch.
@@ -169,14 +169,14 @@ Definições:
 - **Segurança OK**: 0 FP e 0 parada virando comando nos conjuntos 1, 2 e 3; nenhum acerto do conjunto 1 perdido; nenhum comando errado executado ao vivo.
 - Um FP de método que a `main` também cometeria (embedding, frase exata) não conta contra o experimento; é registrado à parte.
 
-| Segurança OK | Recupera ≥ N no conjunto 3 | Resultado |
+| Segurança OK | Recupera ≥ 2 no conjunto 3 | Resultado |
 |---|---|---|
 | não | — | **Rejeita** |
 | sim | não | **Rejeita** |
 | sim | sim | **Adota** |
 
-- TODO(humano): N. Proposta: N = 2, igual à E-001.
-- TODO(humano): o que fazer se o conjunto 3 tiver menos de 30 frases, menos de 10 negativas ou menos de M frases-alvo. Proposta: a sessão não vale e é repetida, sem mudar lista nem código.
+- N = 2 (decisão do humano, 2026-11-05).
+- Se o conjunto 3 tiver menos de 30 frases, menos de 10 negativas ou menos de 10 frases-alvo, a sessão não vale e é repetida, sem mudar a lista nem o código (proposta aceita junto com o congelamento, 2026-11-05).
 - Se adotada, as frases-alvo e as negativas do conjunto 3 entram em `eval/phrases.yaml`, no mesmo commit do merge.
 
 ## Procedimento de hardware
@@ -208,6 +208,7 @@ Segurança: área livre na direção do movimento; `python -m sense.stop` e o co
 
 ## Histórico
 
+- 2026-11-05: critério congelado (N = 2, M = 10, deduplicação só do léxico exato, linha de base `a5396dc`); status `em-teste`, branch `exp/movimento-prefixo`.
 - 2026-11-05: decisões do humano: lista `vamos`, `bora`, `lado`; deduplicação de verbo sim; pontuação do Whisper fora. Edge cases em texto registrados.
 - 2026-11-05: revisada pelo `spec-reviewer`. Entraram: ferramenta trazida da E-001, testes de software, risco de autocorreção com `mas`, origem dos verbos deduplicados e mínimo de frases-alvo.
 - 2026-11-05: criada (proposta), a partir da sessão da E-001 de 2026-11-04. Sucede a E-001 (rejeitada).
