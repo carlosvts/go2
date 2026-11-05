@@ -137,7 +137,15 @@ class Interpreter:
         return self._all_stop(self._clean(self._catalog.tokenize(text)))
 
     def _all_stop(self, clause: list[str]) -> bool:
-        return bool(clause) and all(fold(word) in self._catalog.stop_words for word in clause)
+        """Cláusula de parada: só palavras de parada, uma frase de parada exata ou
+        um prefixo de parada ("para de andar pra frente")."""
+        if not clause:
+            return False
+        catalog = self._catalog
+        key = tuple(fold(word) for word in clause)
+        if all(word in catalog.stop_words for word in key) or key in catalog.stop_phrases:
+            return True
+        return any(key[: len(prefix)] == prefix for prefix in catalog.stop_prefixes)
 
     # ─── Frase ─────────────────────────────────────────────────────────────
 

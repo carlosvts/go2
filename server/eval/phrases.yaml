@@ -38,6 +38,18 @@
 - {text: "fica de pé", expect: [stand_up]}
 - {text: "pode levantar", expect: [stand_up]}
 - {text: "fique em pé", expect: [stand_up]}
+# Exemplos novos em discovery/inferred.yaml (2026-11-05), da sessão de 2026-11-04 e
+# dos edge cases em texto. INFERIDOS: nenhum foi falado ao robô depois da mudança.
+- {text: "Santar!", expect: [sit]}
+- {text: "Vamos sentar.", expect: [sit]}
+- {text: "Sente-se.", expect: [sit]}
+- {text: "Pode deitar.", expect: [stand_down]}
+- {text: "Deite-se.", expect: [stand_down]}
+- {text: "Vamos deitar.", expect: [stand_down]}
+- {text: "Vamos levantar.", expect: [stand_up]}
+- {text: "Olá!", expect: [hello]}
+- {text: "Dá oi.", expect: [hello]}
+- {text: "Vamos dançar!", expect: [dance1]}
 - {text: "deite-se", expect: [stand_down]}
 - {text: "pode deitar", expect: [stand_down]}
 - {text: "deita no chão", expect: [stand_down]}
@@ -109,6 +121,34 @@
 - {text: "pode parar", expect: stop}
 - {text: "fica parado", expect: stop}
 - {text: "senta e para", expect: stop}
+# Frases e prefixos de parada de discovery/inferred.yaml (`stop`), INFERIDOS.
+- {text: "Para tudo!", expect: stop}
+- {text: "Pare tudo.", expect: stop}
+- {text: "Chega!", expect: stop}
+- {text: "Já chega.", expect: stop}
+- {text: "Basta!", expect: stop}
+- {text: "Para já!", expect: stop}
+- {text: "Para com isso!", expect: stop}
+- {text: "Para o robô!", expect: stop}
+- {text: "Para o movimento.", expect: stop}
+- {text: "Fica quieto.", expect: stop}
+- {text: "Quieto!", expect: stop}
+- {text: "Espera aí.", expect: stop}
+- {text: "Calma!", expect: stop}
+- {text: "Freia!", expect: stop}
+- {text: "Segura!", expect: stop}
+- {text: "Cancela!", expect: stop}
+- {text: "Emergência!", expect: stop}
+- {text: "Socorro!", expect: stop}
+- {text: "Paro.", expect: stop}
+- {text: "Para de andar.", expect: stop}
+- {text: "Pare de andar para frente.", expect: stop}
+- {text: "Para de andar pra frente.", expect: stop}
+- {text: "Para de virar.", expect: stop}
+- {text: "Para de girar pra direita.", expect: stop}
+- {text: "Para de se mexer.", expect: stop}
+- {text: "Pare com a dança.", expect: stop}
+- {text: "Anda pra frente e para de andar.", expect: stop}
 
 # ─── "para" como preposição não é parada ───────────────────────────────────
 - {text: "para frente", expect: reject}
@@ -181,9 +221,8 @@
 - {text: "anda rebolando", expect: reject}
 - {text: "desliga o modo equilíbrio", expect: reject}
 - {text: "desligar a dança", expect: reject}
-# Hoje "para de X" não é tratado como parada (nem "para de andar"): o robô não
-# se move, mas também não para. Fica como reject até a inferência melhorar.
-- {text: "para de dançar", expect: reject}
+# "para de X" é parada (prefixo em discovery/inferred.yaml): parar por engano é seguro.
+- {text: "para de dançar", expect: stop}
 - {text: "não dança", expect: reject}
 - {text: "não rebola", expect: reject}
 
