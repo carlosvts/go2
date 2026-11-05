@@ -210,6 +210,7 @@ Segurança: área livre na direção do movimento; `python -m sense.stop` e o co
 
 ## Histórico
 
+- 2026-11-05: sessão de hardware conjunta com a E-002 na branch de integração `exp/e002-e003` (`5ad890d`; roteiro em `specs/checklists/E-002-E-003.md`), por decisão do humano. Em software, uma não mudou o resultado da outra; ver o roteiro.
 - 2026-11-05: implementado na branch. Testes passam (194 rápidos e 4 com o modelo real). `calibrate.py --fixed`:
   - conjunto 1: main 78 / 0 FP / 40 de 40 paradas; branch 78 / 0 FP / 40 de 40, sem nada recuperado e nada perdido;
   - conjunto 2 (`eval/sessao-2026-11-04.yaml`): main 11 acertos / 0 FP; branch 18 / 0 FP, com 7 recuperadas. A única que continua perdida é "Mas vamos andar para frente" (`mas` fora da lista).

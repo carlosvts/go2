@@ -303,6 +303,7 @@ Segurança: deixar `python -m sense.stop` à mão. A parada falada não é garan
 
 ## Histórico
 
+- 2026-11-05: sessão de hardware conjunta com a E-003 na branch de integração `exp/e002-e003` (`5ad890d`; roteiro em `specs/checklists/E-002-E-003.md`), por decisão do humano. Em software, uma não mudou o resultado da outra; ver o roteiro.
 - 2026-11-03: criada (proposta), separada da E-001 por decisão do humano; revisada pelo `spec-reviewer`.
 - 2026-11-04: revisada antes de implementar, por decisões do humano:
   - frase mista com despacho parcial (qualquer comando menos `damp`; restringido depois pelo F4);
