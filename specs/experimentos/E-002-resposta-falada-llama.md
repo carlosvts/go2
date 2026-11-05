@@ -196,6 +196,18 @@ Piper no server, **na CPU** (aceito pelo humano; motivo **inferido**: não dispu
 - `GO2S_MAX_UTTERANCE_AGE_S` não muda.
 - A TV Box continua sem executar nada e sem expor HTTP.
 
+## Impacto HRI
+
+Seção acrescentada em 2026-11-05, depois dos congelamentos, por causa da regra 7 de `specs/README.md` (PR #7). Ela **resume** o que a spec já define; não muda critério nem parâmetro.
+
+- **Hoje:** fala que não é comando toca só `rejected`. A pessoa não tem resposta.
+- **Com a E-002:** em conversa pura, toca um áudio de espera (`thinking`) e depois o robô responde falando. Na frase mista, o comando é despachado (`confirmed`) e a conversa vai para o Llama. Quando a resposta não vem: `rejected` na conversa pura, `reply_failed` na mista. `reply_failed` diz que a **resposta** falhou, sem sugerir que o comando foi recusado.
+- **Latência percebida** (fim da fala → primeiro retorno): o critério mede "fim da fala → início real do áudio de espera" ≤ 1,5 s e "fim da fala → resposta pronta" ≤ 6 s (ver Critério). É a métrica de experiência desta spec. Os valores são **inferidos** até a sessão de hardware.
+- **O retorno não pode prometer o que não aconteceu:** o prompt e a lista de palavras proibidas tentam impedir que a fala afirme capacidade ou ação que o robô não tem. Que isso funcione é **inferido**.
+- **Eco:** a fala do robô pode voltar pelo microfone. O filtro de eco e a métrica "comando por eco" (0) cobrem isso.
+- **A parada não pode piorar:** H6 e H7 do roteiro.
+- **Sem critério `usuario`:** os congelamentos são anteriores à regra. Que a pessoa leiga entenda a espera, entenda `reply_failed` e ache a resposta natural é **inferido**. A seção "Livre" do roteiro anota inteligibilidade, mas não conta como `testado-usuario`, porque quem testa é o time. TODO(humano): decidir se um critério `usuario` entra num experimento seguinte.
+
 ## Dados de teste
 
 **Antes do hardware (software):** um conjunto próprio, `server/eval/conversation_e002.yaml`, com o resultado esperado de cada frase. Ele é separado do `eval/phrases.yaml` (decisão do humano, 2026-11-04) porque o `phrases.yaml` mede só o interpretador: lá a frase de conversa continua `reject`, e está certo, porque nada é executado. Este conjunto mede a camada da E-002 por cima do interpretador, com os rótulos `llm` e `{commands: [...], llm: true}`. O `phrases.yaml` continua passando sem mudança, e a meta de 0 FP vale para os dois. Categorias do conjunto novo:
@@ -342,3 +354,4 @@ Segurança: deixar `python -m sense.stop` à mão. A parada falada não é garan
   - o Piper em processo separado, com 1 CPU.
 
   Observação: o prompt manda dizer "que não sabe" e também proíbe "não"; quando a resposta usar "não", o filtro de eco a troca por uma frase fixa, o que é esperado e fica no log.
+- 2026-11-05: merge da `main` (PR #8, Dockerfile multi-stage). O build ganhou `--extra llm`, `COPY llm` e `!llm` no `.dockerignore`. O `piper-tts` agora sobe com `python -m`, porque a imagem nova não tem `uv`. Conferido com `docker build` e `docker run` (sem GPU, sem robô). A etapa 2 (modelo, imagem do llama-server e parâmetros) não muda. Seção Impacto HRI acrescentada (regra 7).

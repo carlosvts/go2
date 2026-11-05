@@ -1,0 +1,12 @@
+# Tudo fora, menos o que a imagem realmente usa. Sem isto, `captures/` (WAVs de
+# falas reais), `.env`, `tests/`, `eval/` e `docs/` são enviados ao Docker a cada
+# build. O `.env` nunca entra na imagem: a configuração vem por `env_file`.
+*
+!app
+!pyproject.toml
+!uv.lock
+!.python-version
+!catalog.yaml
+# E-002: prompt, parâmetros e listas da resposta falada.
+!llm
+**/__pycache__

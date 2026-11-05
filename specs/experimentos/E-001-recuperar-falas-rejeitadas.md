@@ -2,11 +2,11 @@
 id: E-001
 titulo: Recuperar falas rejeitadas por incerteza com regex
 tipo: experimento
-status: proposta               # proposta | em-teste | adotada | rejeitada
+status: rejeitada              # proposta | em-teste | adotada | rejeitada
 servicos: [server]
 branch: exp/recuperar-rejeitadas
-criterio-congelado-em: null    # AAAA-MM-DD @ commit, preenchido ANTES de começar a testar
-verificacao: inferido          # inferido | testado-software | testado-hardware
+criterio-congelado-em: 2026-11-03 @ 5f23fe6   # aprovado pelo humano no chat
+verificacao: testado-software  # inferido | testado-software | testado-hardware
 verificado-em: null            # AAAA-MM-DD @ <commit>; só humano preenche testado-hardware
 alternativa-a: null            # comparador interno: exemplos em discovery/inferred.yaml (ver Abordagem)
 ---
@@ -19,7 +19,7 @@ O que acontece quando a regex também falha (resposta falada do Llama) é a E-00
 
 O interpretador (`server/app/interpret/interpreter.py`) prioriza precisão: no limiar de produção (`accept=0.95`, `margin=0.10`), a cláusula que não bate por frase exata nem por slots de movimento e fica abaixo do limiar de embedding é rejeitada.
 
-Linha de base em `eval/phrases.yaml` (219 frases **escritas à mão**, sem fala real), medida com `uv run python scripts/calibrate.py` em 2026-11-03 @ `2516071`:
+Linha de base em `eval/phrases.yaml` (178 frases **escritas à mão**, sem fala real: 81 comandos, 97 negativas ou parada), medida com `uv run python scripts/calibrate.py` em 2026-11-03 @ `2516071`:
 
 | accept | margin | precisão | revocação | acertos | FP | perdidas |
 |---|---|---|---|---|---|---|
@@ -123,7 +123,7 @@ Efeito colateral: os exemplos exigem rodar `build_catalog.py`, o que muda o `cat
 
 ## Dados de teste
 
-1. **Conjunto 1, regressão:** `eval/phrases.yaml` como está em `2516071` (219 frases). Tem de manter 0 FP, 0 parada virando comando e todos os acertos atuais.
+1. **Conjunto 1, regressão:** `eval/phrases.yaml` como está em `2516071` (178 frases). Tem de manter 0 FP, 0 parada virando comando e todos os acertos atuais.
 2. **Conjunto 2, sessão ao vivo:** decisão do humano, frases ditas na hora, sem arquivo pronto.
    - Pelo menos 30 frases, faladas no robô com o server da branch e `GO2S_SAVE_UTTERANCES=1`.
    - **Antes de cada frase**, o humano anota o desfecho pretendido (comando, `stop` ou `reject`). A anotação não muda depois de ver o resultado.
@@ -165,7 +165,7 @@ O limite de 2 frases recuperadas é decisão do humano (2026-11-03).
 
 ## Procedimento de hardware
 
-1. Escrever `server/regex/patterns.yaml` e a lista de exemplos do comparador. Congelar (commit em `criterio-congelado-em`).
+1. Critério congelado em `5f23fe6` (decisão do humano). `server/regex/patterns.yaml` e a lista de exemplos do comparador são escritos na implementação e ficam commitados **antes da sessão**; não mudam depois de ver o resultado.
 2. Subir a api com o robô e o server da branch com `GO2S_SAVE_UTTERANCES=1`.
 3. Para cada frase (≥ 30): anotar o desfecho pretendido, falar depois da wake word e anotar o que o robô fez.
 4. Comando executado que não era o pretendido: parar o teste e anotar. Depois, o log (`clauses[].method`) diz se veio da regex (rejeita) ou de outro método (registrado à parte).
@@ -183,12 +183,70 @@ Segurança: gesto despachado não é cancelável. Deixar `python -m sense.stop` 
 
 ## Resultado
 
-<Preencher depois.>
+Sessão no robô em 2026-11-04, das 18:21 às 18:36, com o roteiro de `specs/checklists/E-001.md`. A fonte é o log da TV Box (`sense`, código `main@ceffedf`) trazido pelo humano em 2026-11-05. O commit do server na sessão não foi anotado: TODO(humano): confirmar se era `exp/recuperar-rejeitadas` @ `c53b805`/`3864489`.
+
+Transcrições e desfecho (o "pretendido" foi **deduzido da fala**, não anotado antes; a folha de anotação não foi trazida):
+
+| # | transcrição (Whisper) | desfecho | motivo | pretendido (deduzido) |
+|---|---|---|---|---|
+| 1 | — | `unconfirmed` | server fora do ar | — |
+| 2 | Vamos andar para frente. | rejeitada | `movement_unknown_word` | `move_forward` |
+| 3 | Anda pra frente! | enfileirada | | `move_forward` |
+| 4 | Ah, o meu irmão. | rejeitada | `low_confidence` | `reject` |
+| 5 | e não tem... | rejeitada | `negation` | `reject` |
+| 6 | Vamos caminhar 5 passos à frente. | rejeitada | `movement_unknown_word` | fora do catálogo (move sem distância) |
+| 7 | Levanta! | enfileirada | | `stand_up` |
+| 8 | Fazer coração. | enfileirada | | `finger_heart` |
+| 9 | Anda pra frente! | enfileirada | | `move_forward` |
+| 10 | Santar! | rejeitada | `low_similarity` | `sit` (erro do Whisper para "senta") |
+| 11 | Sentar. | enfileirada | | `sit` |
+| 12 | Mas vamos andar para frente. | rejeitada | `movement_unknown_word` | `move_forward` |
+| 13 | Vamos andar para trás. | rejeitada | `movement_unknown_word` | `move_backward` |
+| 14 | Anda pra frente e depois senta. | enfileirada | | `move_forward`, `sit` |
+| 15 | Anda para frente! | enfileirada | | `move_forward` |
+| 16 | Andar para frente! | enfileirada | | `move_forward` |
+| 17 | Vamos andar para frente! | rejeitada | `movement_unknown_word` | `move_forward` |
+| 18 | Amaralre. | rejeitada | `low_similarity` | indefinido |
+| 19 | Gira para direita. | enfileirada | | `turn_right` |
+| 20 | Vamos andar para trás. | rejeitada | `movement_unknown_word` | `move_backward` |
+| 21 | Vai andar para frente! | rejeitada | `movement_ambiguous` | `move_forward` |
+| 22 | Vamos andar para trás. | rejeitada | `movement_unknown_word` | `move_backward` |
+| 23 | banana andar pra frente | rejeitada | `movement_unknown_word` | `reject` (deduzido: teste de negativa) |
+| 24 | Andar para frente! | enfileirada | | `move_forward` |
+| 25 | Vamos andar pra frente! | rejeitada | `movement_unknown_word` | `move_forward` |
+
+Mais uma ativação sem fala (`no_speech`). Os comandos enfileirados aparecem como `enqueued` no log; o que o robô executou não está no log da TV Box.
+
+Contagem contra o critério congelado, com o pretendido deduzido:
+
+- **Recuperadas pela regex: 0**, abaixo do mínimo de 2. Nenhuma frase rejeitada saiu como comando. As enfileiradas já passam na `main` por `lexical`/`slots`; o `method` não aparece no log da TV Box.
+- Foram 9 falas com intenção de comando rejeitadas: 7 com palavra antes do verbo ("vamos", "mas vamos"), 1 com dois verbos de `andar` ("vai andar", `movement_ambiguous`, fora do gatilho da E-001) e 1 com erro do Whisper ("santar").
+- FP: nenhum comando indevido aparece no log. A negativa "banana andar pra frente" foi rejeitada.
+- Comparador: não foi medido.
+
+Causa, conferida em texto (sem robô) sobre `server/regex/patterns.yaml`: os três padrões de movimento são `fullmatch` e começam no grupo `verb`, que é uma palavra só. Qualquer palavra antes do verbo derruba o match. "vamos andar para frente", "pode andar para frente", "vai andar para trás" e "quero que você ande para frente" não batem em nenhum padrão; "anda para frente" bate.
+
+Ficou faltando:
+
+- Os áudios da sessão: a TV Box estava com o disco cheio (`[Errno 28] No space left on device` em todas as falas) e não salvou nada.
+- `calibrate.py --fixed` sobre as transcrições, para ter o `method` de cada uma e o comparador.
+- A folha de anotação com o pretendido escrito **antes** de cada fala. Sem ela, o pretendido acima é dedução.
+- O que o robô fez de fato em cada comando enfileirado.
+- A sessão teve 25 falas, abaixo do mínimo de 30, e só 3 a 4 negativas, abaixo de 10.
+
+Conjunto 1 (software, `c53b805`): regex 79 acertos / 0 FP; comparador 78; custo p95 0,059 ms. Otimista, porque os padrões foram escritos olhando as perdidas desse conjunto.
 
 ## Decisão
 
-<Preencher depois.>
+**Rejeitada** (decisão do humano, 2026-11-05). Pelo critério congelado, a regex recuperou 0 frases, abaixo do mínimo de 2, o que dá rejeição. Ressalva: o pretendido foi deduzido, não anotado antes, e a sessão ficou abaixo do mínimo de frases e de negativas; nenhuma dessas falhas muda o desfecho, porque a regex não recuperou nada.
+
+Código não vai para a `main`. A branch `exp/recuperar-rejeitadas` fica como referência para o próximo experimento (regex mais ampla para movimento), que terá spec própria com critério congelado antes do teste.
 
 ## Histórico
 
+- 2026-11-05: registradas as 25 transcrições da sessão de 2026-11-04 (log da TV Box): 0 recuperadas pela regex.
+- 2026-11-05: rejeitada pelo humano após a sessão no robô ("vamos andar para frente" e variações não recuperadas). Causa: padrões de movimento exigem o verbo como primeira palavra da cláusula.
+- 2026-11-03: revisão de código aplicada antes da sessão. "segue"/"siga" saíram de `verb_words` ("segue direito" viraria andar de lado); "devagar" saiu dos padrões (o move tem velocidade fixa); padrões aceitam "ao" como o C1; o Dockerfile copia `regex/`; o `calibrate.py` conta por frase e ordena as capturas pelo novo campo `received_unix` do log. Conjunto 1 sem mudança: regex 79 / 0 FP; custo p95 0,059 ms.
+- 2026-11-03: implementado na branch (testes de software passam; ver abaixo). Conjunto 1, `calibrate.py --fixed`: main 66 acertos / 0 FP; regex 79 / 0 FP / 0 parada→comando / 0 acerto perdido (13 recuperadas); comparador 78 / 0 FP (12 recuperadas); custo da regex p95 0,104 ms por cláusula. **Atenção:** os padrões foram escritos olhando as 15 perdidas do conjunto 1, então esses números são otimistas; quem decide é a sessão ao vivo (conjunto 2). As 2 que continuam perdidas ("dá um oi para a gente", "acena para mim") têm "para" fora de movimento e ficam bloqueadas por C1, como a spec manda. Nada disso foi testado no robô.
+- 2026-11-03: critério congelado em `5f23fe6` (aprovado pelo humano); status `em-teste`, branch `exp/recuperar-rejeitadas`.
 - 2026-11-03: criada (proposta), revisada pelo `spec-reviewer`. Mesmo dia: o Llama saiu desta spec e foi para a E-002 (decisão do humano: o Llama não escolhe comando).

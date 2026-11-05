@@ -173,6 +173,37 @@ def test_stop_inside_a_sentence_still_stops(interpreter, text):
     assert run(interpreter, text)[0] == STOP
 
 
+@pytest.mark.parametrize(
+    "text",
+    ["Para tudo!", "Chega.", "Para o robô!", "Espera aí.", "Fica quieto", "Paro."],
+)
+def test_stop_phrase(interpreter, text):
+    """Frase de parada exata (discovery/inferred.yaml), sem embedding: pega o caminho curto."""
+    assert interpreter.is_stop_only(text)
+    assert run(interpreter, text)[0] == STOP
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["para de andar", "Pare de andar para frente.", "para de dançar", "pare com a dança"],
+)
+def test_stop_prefix(interpreter, text):
+    """ "para de X" é parada, mesmo com movimento no X."""
+    assert interpreter.is_stop_only(text)
+    assert run(interpreter, text)[0] == STOP
+
+
+@pytest.mark.parametrize("text", ["anda pra frente e para de andar", "senta, chega"])
+def test_stop_phrase_inside_a_sentence_still_stops(interpreter, text):
+    assert run(interpreter, text)[0] == STOP
+
+
+@pytest.mark.parametrize("text", ["chega mais perto", "espera um minuto e senta"])
+def test_stop_phrase_is_whole_clause_only(interpreter, text):
+    """A frase de parada tem de ser a cláusula inteira: "chega mais perto" não é parada."""
+    assert not interpreter.is_stop_only(text)
+
+
 def test_preposition_is_not_a_stop(interpreter):
     assert not interpreter.is_stop_only("andar para frente")
     assert run(interpreter, "andar para frente")[0] == ["move_forward"]

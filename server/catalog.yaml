@@ -13,6 +13,8 @@ stop:
   id: stop
   call: {method: POST, endpoint: /commands/stop}
   words: [para, pare, parar, stop]  # discovery
+  phrases: [chega, já chega, basta, para tudo, pare tudo, para já, pare já, para com isso, para o robô, pare o robô, para o movimento, fica quieto, fique quieto, quieto, espera, calma, freia, segura, cancela, cancelar, cancela tudo, interrompe, emergência, socorro, paro, parei]  # INFERIDO
+  prefixes: [para de, pare de, parar de, para com, pare com]  # INFERIDO
 
 commands:
   stand_up:
@@ -27,6 +29,7 @@ commands:
       - levante  # INFERIDO
       - fica de pé  # INFERIDO
       - ficar de pé  # INFERIDO
+      - vamos levantar  # INFERIDO
   sit:
     enabled: true
     match: embedding
@@ -37,6 +40,9 @@ commands:
       - senta  # discovery
       - sentar  # INFERIDO
       - sente  # INFERIDO
+      - sente-se  # INFERIDO
+      - vamos sentar  # INFERIDO
+      - santar  # INFERIDO
   stand_down:
     enabled: true
     match: embedding
@@ -47,6 +53,9 @@ commands:
       - deita  # discovery
       - deitar  # INFERIDO
       - deite  # INFERIDO
+      - deite-se  # INFERIDO
+      - pode deitar  # INFERIDO
+      - vamos deitar  # INFERIDO
   hello:
     enabled: true
     match: embedding
@@ -61,6 +70,9 @@ commands:
       - acena  # INFERIDO
       - dá um oi  # INFERIDO
       - dar tchau  # INFERIDO
+      - olá  # INFERIDO
+      - dá oi  # INFERIDO
+      - dar oi  # INFERIDO
   stretch:
     enabled: true
     match: embedding
@@ -154,6 +166,7 @@ commands:
       - dança 1  # INFERIDO
       - primeira dança  # INFERIDO
       - dança número um  # INFERIDO
+      - vamos dançar  # INFERIDO
   dance2:
     enabled: true
     match: embedding
