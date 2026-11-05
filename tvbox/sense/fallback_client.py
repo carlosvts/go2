@@ -7,6 +7,7 @@ resposta só vira retorno sonoro para a pessoa.
     POST /v1/utterance   multipart: `audio` (WAV mono 16 kHz PCM16) + `meta` (JSON)
     POST /v1/cancel      JSON: {"reason": "stop"} (só a parada manual usa)
     GET  /health         só para saber, na partida, se o servidor está no ar
+    GET  /v1/reply/{id}  E-002: resposta falada, buscada por `sense.reply_fetcher`
 
 O nome "fallback" ficou do tempo em que o servidor só recebia o que a gramática
 local não resolvia; as variáveis do .env (FALLBACK_*) mantêm o nome.
@@ -40,6 +41,9 @@ class Outcome(Enum):
     # (`reject_reason: command_disabled`): "não entendi" seria mentira.
     BLOCKED = "comando desligado"
     UNCONFIRMED = "não confirmado"  # timeout, rede ou resposta ilegível
+    # E-002: conversa (status `thinking`). Nada foi enfileirado; há uma
+    # resposta falada a buscar. Não é confirmação de comando.
+    THINKING = "pensando"
 
 
 # `reject_reason` do servidor que vira BLOCKED em vez de REJECTED.
@@ -52,7 +56,10 @@ OUTCOME_SOUNDS = {
     Outcome.REJECTED: "rejected",
     Outcome.BLOCKED: "blocked",  # sem os WAVs, toca `rejected` (ver sense/audio.py)
     Outcome.UNCONFIRMED: "unconfirmed",
+    Outcome.THINKING: "thinking",  # o áudio de espera
 }
+
+THINKING_STATUS = "thinking"
 
 
 @dataclass(frozen=True)
@@ -72,6 +79,8 @@ class Reply:
     transcript: str | None = None
     error: str | None = None  # por que não houve confirmação
     reject_reason: str | None = None  # o `reject_reason` do servidor, se recusou
+    # E-002: há resposta falada em GET /v1/reply/{utterance_id}.
+    reply_pending: bool = False
 
 
 def wav_bytes(pcm: bytes) -> bytes:
@@ -138,7 +147,10 @@ class FallbackClient:
         return True
 
     def send(self, utterance: Utterance) -> Reply:
-        """Faz o POST e espera a resposta. Só lê `status`, `transcript` e `reject_reason`."""
+        """Faz o POST e espera a resposta.
+
+        Só lê `status`, `transcript`, `reject_reason` e `reply_pending` (E-002).
+        """
         utterance_id = utterance.utterance_id or str(uuid.uuid4())
         meta = {
             "utterance_id": utterance_id,
@@ -159,6 +171,7 @@ class FallbackClient:
             status = str(answer["status"]).lower()
             transcript = answer.get("transcript")
             reject_reason = answer.get("reject_reason")
+            reply_pending = answer.get("reply_pending") is True
         except urllib.error.HTTPError as error:
             # O servidor respondeu com erro; não dá para saber o que ele fez.
             log.warning("Fallback %s não confirmado: HTTP %d.", utterance_id, error.code)
@@ -171,12 +184,22 @@ class FallbackClient:
             self._counters["fallback_unconfirmed"] += 1
             return Reply(Outcome.UNCONFIRMED, utterance_id, error=str(error) or repr(error))
 
+        if status == THINKING_STATUS:
+            log.info("Fallback %s: conversa, resposta falada a buscar. transcript=%r.",
+                     utterance_id, transcript)
+            self._counters["fallback_thinking"] += 1
+            return Reply(
+                Outcome.THINKING, utterance_id, status, transcript, reply_pending=reply_pending
+            )
         if status in self._ok_statuses:
             log.info(
-                "Fallback %s confirmado: status=%s transcript=%r.", utterance_id, status, transcript
+                "Fallback %s confirmado: status=%s transcript=%r reply_pending=%s.",
+                utterance_id, status, transcript, reply_pending,
             )
             self._counters["fallback_confirmed"] += 1
-            return Reply(Outcome.CONFIRMED, utterance_id, status, transcript)
+            return Reply(
+                Outcome.CONFIRMED, utterance_id, status, transcript, reply_pending=reply_pending
+            )
         if reject_reason in BLOCKED_REASONS:
             log.info(
                 "Fallback %s recusado: comando desligado no servidor (%s) transcript=%r.",

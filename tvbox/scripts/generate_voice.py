@@ -23,6 +23,15 @@ O que cada som significa no código (para escolher frases que não mintam):
                (`reject_reason: command_disabled`, ex.: "dançar"). Nada de "não
                entendi". Sem estes WAVs, a TV Box toca `rejected` no lugar.
   unconfirmed  nenhuma resposta do servidor (timeout ou erro de rede).
+  thinking     E-002: conversa; a resposta falada do Llama está sendo gerada.
+               Toca depois do `processing` (e do `confirmed`, na frase mista).
+  reply_failed E-002: frase mista, o comando FOI aceito, mas a resposta falada
+               não veio. Nada de "não entendi" nem de "me chama de novo".
+
+As frases da E-002 evitam "para" (parada), "não" (negação) e nomes de comando:
+o fim do som pode entrar no pré-roll da frase seguinte. A exceção, aceita pelo
+humano, é "Não sei te responder isso." (no pior caso, a próxima frase é
+rejeitada por negação, o que é seguro).
 
 O `beep` da wake word NÃO é gerado aqui, de propósito: ele toca durante a escuta
 e entra no áudio enviado ao servidor. Uma frase ali seria transcrita junto com o
@@ -59,12 +68,30 @@ PHRASES: dict[str, list[str]] = {
         "Não tive resposta do servidor.",
         "Hum, não consegui confirmar. Tenta de novo.",
     ],
+    # E-002: frases aprovadas pelo humano em 2026-11-04 (≥ 4 de cada, redundância).
+    "thinking": [
+        "Deixa eu pensar.",
+        "Boa pergunta, peraí.",
+        "Pensando aqui...",
+        "Já te respondo.",
+        "Opa, vendo aqui.",
+        "Hum... pensando.",
+    ],
+    "reply_failed": [
+        "Essa pergunta eu fiquei devendo.",
+        "Hum, a resposta me escapou.",
+        "Dessa vez fiquei sem resposta.",
+        "Deu branco na resposta, desculpa.",
+        "Essa eu vou ficar devendo.",
+        "Não sei te responder isso.",
+    ],
 }
 
 # Acima disto a frase passa a atrapalhar: `processing` não pode ficar mais
 # longa que a espera típica pela resposta, senão `confirmed` entra atrasado.
 MAX_DURATION_S = {
     "processing": 1.3, "confirmed": 1.0, "rejected": 2.8, "blocked": 2.8, "unconfirmed": 2.8,
+    "thinking": 1.5, "reply_failed": 2.8,  # E-002, aprovados pelo humano; inferidos
 }
 
 TRIM_DB = -40.0  # silêncio = abaixo disto em relação ao pico
