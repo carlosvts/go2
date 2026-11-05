@@ -183,7 +183,7 @@ Definições:
 
 ## Procedimento de hardware
 
-1. Criar `specs/checklists/E-003.md` (skill `hardware-checklist`). Congelar o critério e a lista de palavras antes da sessão; `discovery/inferred.yaml` não muda depois de ver o resultado.
+1. Roteiro em `specs/checklists/E-003.md`. Congelar o critério e a lista de palavras antes da sessão; `discovery/inferred.yaml` não muda depois de ver o resultado.
 2. Liberar espaço na TV Box (`df -h`) e conferir que os áudios estão sendo salvos.
 3. Subir a api com o robô e o server da branch com `GO2S_SAVE_UTTERANCES=1`. Anotar o commit.
 4. Para cada frase (≥ 30): anotar o desfecho pretendido, falar depois da wake word e anotar o que o robô fez, inclusive a direção.
