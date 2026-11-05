@@ -19,3 +19,6 @@ Termo, definição curta e o que **não** significa.
 | **VAD** | Detector de fim de fala (por volume; Silero opcional na wake word). | Wake word. |
 | **Lease** | Arbitragem de qual cliente controla o robô. Fora de escopo até o final, junto com autenticação. | Fila do server. |
 | **Hardware-only** | Critério que só se valida com robô ou TV Box reais. | Teste automático com mock. |
+| **Retorno ao usuário** | O que a pessoa percebe depois de falar: som da TV Box (`beep`, `processing`, `confirmed`, `rejected`, `unconfirmed`, `blocked`), fala ou movimento do robô. | Resposta HTTP (`status`). O `status` só vira retorno quando a TV Box o traduz em som. |
+| **Latência percebida** | Tempo da última palavra da pessoa até o primeiro retorno que ela percebe. | Latência de componente (`stt_ms`, `total_ms`): a soma delas não inclui o silêncio do VAD nem o atraso do som. |
+| **Critério `usuario`** | Critério de aceite que só uma pessoa que não conhece o sistema valida (entendeu o retorno, se assustou, achou natural). Conta como `hardware-only`; só humano marca `testado-usuario`. | Teste com o próprio time, que já sabe como o sistema responde. |

@@ -17,6 +17,7 @@ Escreve a spec **antes** do código. As decisões são humanas: você redige, el
    - `TODO(humano): ...` na seção Hipóteses não verificadas.
    Nunca preencha número que ninguém mediu.
 5. **Critérios de aceite**: cada um observável e verificável (dado/quando/então). Classifique como `software` (vai virar teste) ou `hardware-only` (com roteiro). Critério vago ("rápido", "robusto") não vale; peça o número a um humano ou marque TODO.
+   **Impacto HRI** (feature e experimento): preencha a seção entrevistando o humano, sem inventar. Pergunte o que a pessoa vê/ouve em sucesso, rejeição, erro e espera; quem vai usar; se alguém perto do robô pode se assustar. Se há retorno ao usuário novo ou alterado, escreva um critério `software` para o mapeamento resultado → retorno e um `usuario` para a percepção. Sem efeito perceptível, escreva `Sem impacto HRI: <motivo>`; nunca deixe em branco.
 6. **Experimento**: preencha hipótese, dados de teste, métricas com linha de base, e o **critério de decisão** com números. Deixe `criterio-congelado-em: null`; ele só é preenchido quando um humano aprovar o critério, antes de qualquer teste.
 7. **Frontmatter**: `status: proposta`, `verificacao: inferido`, `verificado-em: null`. Nunca `testado-hardware`.
 8. **Revise**: rode o agente `spec-reviewer` na spec e corrija o que ele apontar de ambiguidade ou critério não testável.

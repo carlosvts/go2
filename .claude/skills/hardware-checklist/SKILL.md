@@ -22,6 +22,14 @@ Registrar: <valores, logs, vídeo, hora; nomes de campos/logs a copiar>
 Passa se: <número ou observação do critério, copiado da spec>
 ```
 
+Critério `usuario`: mesma forma, mais estas linhas. A pessoa **não conhece o sistema e não recebe explicação antes**.
+```
+Perceber: <o que observar sem perguntar: reação, hesitação, susto, se repetiu ou desistiu>
+Perguntar depois: <ex.: "o que você acha que o robô entendeu?", "o que faria agora?">
+Registrar: <o que a pessoa disse e fez, com as palavras dela; n de pessoas; vídeo se ela autorizar>
+```
+Só vale pessoa de fora do time: quem desenvolveu já sabe o que cada som significa.
+
 3. **Antes de tudo**, lembrete curto de pré-condições do ambiente: a api e o server rodando na versão que contém a mudança (`git pull` + rebuild), `df -h` e `free -h` na TV Box antes de rodar nela, `GO2S_SAVE_UTTERANCES=1` se o teste envolve fala.
 4. **Ordem**: do mais seguro para o mais arriscado. Postura e gesto antes de movimento; comandos com risco (dança longa, `stop` durante gesto) por último e com supervisão total.
 5. Escreva o roteiro em `specs/checklists/<id-da-spec>.md` ou na seção "Roteiro hardware-only" da própria spec, conforme o humano preferir. Não crie checklists soltas sem vínculo com spec.
@@ -32,12 +40,13 @@ Quando o humano trouxer os resultados:
 
 1. Anote na spec, por critério: valor medido, data, commit, observações. Cole os números que ele deu; não os arredonde nem "limpe".
 2. Marque `testado-hardware (AAAA-MM-DD @ commit)` **apenas no critério que o humano disse ter passado**, e só depois de ele relatar. Critério que falhou: marque `falhou` com o que foi observado e abra o ponto para decisão.
-3. `verificacao: testado-hardware` e `verificado-em` no frontmatter só quando **todos** os critérios `hardware-only` passaram e o humano confirmou.
+3. `verificacao: testado-hardware` e `verificado-em` no frontmatter só quando **todos** os critérios `hardware-only` e `usuario` passaram e o humano confirmou. Critério `usuario` que passou: `testado-usuario (AAAA-MM-DD @ commit, n=<pessoas>)`, com as palavras da pessoa, não um resumo seu.
 4. Resultado que contradiz a spec? Diga isso explicitamente e proponha a correção da spec. Não ajuste o critério para encaixar.
 5. Se o teste foi parte de um experimento, encaminhe para `close-experiment`.
 
 ## Não faça
 
 - Não invente medidas nem assuma que "deve ter funcionado".
+- Não conclua percepção a partir de log: "o som tocou" não prova que a pessoa entendeu nem que não se assustou.
 - Não rode comandos que movam o robô.
 - Não sugira desligar proteções (desvio de obstáculo, limites de velocidade) para facilitar o teste.
