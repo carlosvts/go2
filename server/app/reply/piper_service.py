@@ -22,7 +22,7 @@ from typing import Protocol
 
 log = logging.getLogger(__name__)
 
-MAX_TEXT_CHARS = 500  # a resposta tem no máximo 24 tokens; acima disto é erro
+MAX_TEXT_CHARS = 500  # a resposta tem no máximo 32 tokens; acima disto é erro
 
 
 class _Synth(Protocol):

@@ -27,7 +27,7 @@ async def test_request_uses_frozen_parameters():
     await llama.aclose()
     params = yaml.safe_load((LLM_DIR / "generation.yaml").read_text(encoding="utf-8"))
     assert generation.text == "Eu. Go2." and generation.tokens == 4
-    assert seen["max_tokens"] == params["max_tokens"] == 24
+    assert seen["max_tokens"] == params["max_tokens"] == 32
     assert seen["temperature"] == params["temperature"] == 0.4
     assert seen["top_p"] == 0.9 and seen["stop"] == ["\n"]
     assert seen["messages"][0]["role"] == "system"

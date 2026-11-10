@@ -6,7 +6,7 @@ status: em-teste               # proposta | em-teste | adotada | rejeitada
 servicos: [server, tvbox]
 branch: exp/resposta-falada-llama   # parte da main; se a E-001 for adotada antes, rebase sobre ela
 criterio-congelado-em: 2026-11-04 @ 9913f05   # etapa 1 (recongelada a pedido do humano; 193ac50 invalidado)
-parametros-congelados-em: 2026-11-05 @ 1a7ae7e   # etapa 2; registrado a pedido do humano (carlosvts)
+parametros-congelados-em: 2026-11-05 @ 1a7ae7e   # etapa 2; INVALIDADO em 2026-11-10 (prompt e max_tokens mudaram); recongelar
 verificacao: testado-software  # inferido | testado-software | testado-hardware (2026-11-04 @ 53b011e; mocks, não prova o robô)
 verificado-em: null            # AAAA-MM-DD @ <commit>; só humano preenche testado-hardware
 alternativa-a: null
@@ -150,9 +150,10 @@ A resposta tocada pelo alto-falante pode ser captada pelo microfone na gravaçã
 - Llama 3.1 8B Instruct, quantização Q4_K_M (decisão do humano), via llama.cpp, **na GPU do server**, com todas as camadas na GPU (`n_gpu_layers` anotado no log de partida).
 - Server de destino: 8 GB de VRAM e 16 GB de RAM (informado pelo humano). Que o Whisper medium e o Llama caibam juntos é **inferido**; ninguém mediu. A GPU de desenvolvimento (RTX 3050 Ti, 4 GiB) provavelmente não comporta os dois (inferido). Nesse caso o teste roda no server.
 - Saída: texto livre, **curto, em estilo caveman**, definido no prompt com exemplos do humano:
-  - "eu amo você" → "Eu. Amar. Você."
-  - "Eu sou o go2, um robô quadrúpede" → "Eu. Go2. Robô quadrúpede."
-- Limite de tokens na geração: 24 (aceito pelo humano; **inferido**); o texto é cortado no limite. Aumentar o limite fica para um experimento posterior, com spec própria. Mudar aqui depois de congelar invalida a medida de latência.
+  - "eu amo você" → "Eu também gostar muito de você."
+  - "quem é você?" → "Eu ser Go2, robô quadrúpede da UFLA."
+  - o caveman é só o verbo no infinitivo; artigos e preposições são permitidos (mudança de 2026-11-10, ver Histórico). No máximo 9 palavras.
+- Limite de tokens na geração: 32 (era 24; subido a pedido do humano em 2026-11-10; **inferido**); o texto é cortado no limite. Mudar aqui depois de congelar invalida a medida de latência.
 - Conversa livre e FAQ (decisão do humano). **Risco aceito:** sem ferramentas, o Llama pode inventar fatos (hora, clima, nomes).
 - O prompt, o arquivo do modelo (nome e SHA-256), os parâmetros de geração e o limite de tokens ficam versionados em `server/llm/` e entram no congelamento da etapa 2.
 - Concorrência: o Llama **não pode** atrasar a transcrição da fala seguinte, principalmente a parada. Isolamento (decisão do humano, 2026-11-04): o `llama-server` oficial do llama.cpp roda em **processo separado** (serviço próprio no `docker-compose.yml` do server, imagem CUDA), e o go2-server fala com ele por HTTP em localhost.
@@ -356,3 +357,10 @@ Segurança: deixar `python -m sense.stop` à mão. A parada falada não é garan
   Observação: o prompt manda dizer "que não sabe" e também proíbe "não"; quando a resposta usar "não", o filtro de eco a troca por uma frase fixa, o que é esperado e fica no log.
 - 2026-11-05: merge da `main` (PR #8, Dockerfile multi-stage). O build ganhou `--extra llm`, `COPY llm` e `!llm` no `.dockerignore`. O `piper-tts` agora sobe com `python -m`, porque a imagem nova não tem `uv`. Conferido com `docker build` e `docker run` (sem GPU, sem robô). A etapa 2 (modelo, imagem do llama-server e parâmetros) não muda. Seção Impacto HRI acrescentada (regra 7).
 - 2026-11-05: sessão de hardware conjunta com a E-003 na branch de integração `exp/e002-e003` (`5ad890d`; roteiro em `specs/checklists/E-002-E-003.md`), por decisão do humano. Em software, uma não mudou o resultado da outra; ver o roteiro.
+- 2026-11-10: após a primeira sessão de hardware, o humano relatou que a resposta no formato "Verbo. Verbo. Verbo." soa mal no Piper (um ponto por palavra) e que 24 tokens é pouco. A pedido do humano:
+  - o prompt passou a pedir uma ou duas frases curtas, com o verbo no infinitivo como única marca caveman (artigos e preposições liberados), e exemplos novos;
+  - o máximo de palavras da resposta subiu de 8 para 9;
+  - `max_tokens` subiu de 24 para 32 (valor escolhido sem medida; **inferido**);
+  - a orientação "se não souber" agora sugere "desconhecer", para não cair no "não" proibido.
+
+  A etapa 2 (`1a7ae7e`) fica **invalidada**: a latência do hardware anterior foi medida com o prompt e o limite antigos. `TODO(humano)`: aprovar o prompt, recongelar a etapa 2 e refazer a medida de latência no hardware. Que a fala nova soa melhor no Piper é **inferido** até alguém ouvir.

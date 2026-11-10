@@ -12,7 +12,7 @@ model_source: bartowski/Meta-Llama-3.1-8B-Instruct-GGUF@bf5b95e96dac0462e2a09145
 model_bytes: 4920739232
 model_sha256: 7b064f5842bf9532c91456deda288a1b672397a54fa729aa665952863033557c  # publicado pelo Hugging Face (LFS)
 
-max_tokens: 24       # aceito pelo humano em 2026-11-03
+max_tokens: 32       # 24 (2026-11-03) subido a pedido do humano em 2026-11-10, após o hardware
 temperature: 0.4     # aprovado pelo humano em 2026-11-05
 top_p: 0.9           # aprovado pelo humano em 2026-11-05
 stop: ["\n"]         # corta na primeira quebra de linha; aprovado em 2026-11-05
