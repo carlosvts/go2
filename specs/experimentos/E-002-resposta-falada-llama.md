@@ -366,7 +366,7 @@ Segurança: deixar `python -m sense.stop` à mão. A parada falada não é garan
   A etapa 2 (`1a7ae7e`) fica **invalidada**: a latência do hardware anterior foi medida com o prompt e o limite antigos. `TODO(humano)`: aprovar o prompt, recongelar a etapa 2 e refazer a medida de latência no hardware. Que a fala nova soa melhor no Piper é **inferido** até alguém ouvir.
 - 2026-11-10: segunda mudança no prompt, a pedido do humano:
   - **respostas fixas** do humano para 6 perguntas de demonstração (quem é você, quem te criou, o que sabe fazer, quanto custa, quanto dura a bateria, sabe falar). Para custo e bateria, o humano escolheu "Eu desconhecer isso." no lugar de "Eu não saber.", porque "não" faria o filtro de eco trocar a resposta;
-  - nome escrito como se pronuncia, para o Piper: "Gou Tiu" e "Úflá";
+  - nome escrito como se pronuncia, para o Piper: "Gou Tchu" e "Úflá";
   - instruções para evitar o que o filtro de eco barra: "Olá" (lido como o comando `hello`), "para" no início ("para fazer bolo..."), direções e negações.
 
   Conferido com o modelo de embeddings real (sem Llama): as 6 perguntas vão ao Llama, e as respostas fixas e os exemplos do prompt passam no filtro de eco. Que o Llama devolva as respostas fixas exatamente como escritas é **inferido**. A causa do bloqueio da receita de bolo no hardware é **inferida** ("para" no começo, que é forbidden_word), porque o log do teste não estava disponível. `TODO(humano)`: conferir o campo `echo_filter` no log.
