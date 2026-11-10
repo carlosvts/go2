@@ -56,7 +56,7 @@ cp api/.env.example api/.env
 
 Edite `api/.env` conforme o caso. Os campos estão comentados no `api/.env.example`.
 
-**Com o robô, na mesma rede Wi-Fi do PC (o caso normal do lab):**
+**Com o robô:** o Go2 se conecta ao roteador do lab, e o PC fica na mesma rede. Use:
 
 ```
 GO2_CONNECTION_METHOD=LocalSTA
@@ -67,16 +67,7 @@ GO2_CONNECT_ON_STARTUP=true
 
 Prefira o serial ao IP: com o serial a api acha o robô por multicast, e o IP dele pode mudar (DHCP). Se for usar o IP, deixe o serial vazio e preencha `GO2_ROBOT_IP` com o endereço do robô na rede do roteador. **Nunca** use um endereço `192.168.123.x`: essa é a rede interna do robô.
 
-**Com o robô como ponto de acesso (sem roteador):** conecte o PC ao Wi-Fi do próprio robô e use:
-
-```
-GO2_CONNECTION_METHOD=LocalAP
-GO2_CONNECT_ON_STARTUP=true
-```
-
-O robô fica no endereço fixo `192.168.12.1`. Neste modo, a TV Box também precisa estar no Wi-Fi do robô para alcançar o PC.
-
-**Sem o robô (testar os endpoints):**
+**Sem o robô (testar os endpoints):** o `LocalAP` aqui só serve para a api não exigir serial nem IP. Ele não é usado com o robô:
 
 ```
 GO2_CONNECTION_METHOD=LocalAP
