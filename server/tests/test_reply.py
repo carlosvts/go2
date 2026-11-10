@@ -66,7 +66,8 @@ def engine(llm, tts, echo, deadline_s=1.0, ttl_s=3.0) -> ReplyEngine:
         "Eu. Sentar.",  # comando do catálogo (léxico e lista)
         "Eu. Andar. Frente.",
         "Para.",  # parada
-        "Eu. Não. Saber.",  # negação: só as frases fixas têm exceção
+        "Eu. Nunca. Saber.",  # negação que continua proibida
+        "Não dá um oi.",  # "não" esconderia o comando do interpretador
         "Eu. Desligar. Motores.",
         "Eu. Dançar. Muito.",
     ],
@@ -77,7 +78,16 @@ def test_echo_filter_replaces_suspicious_replies(echo, text):
     assert final in echo.fallback_replies
 
 
-@pytest.mark.parametrize("text", ["Eu. Go2. Robô quadrúpede.", "Eu. Amar. Você.", "Oi. Eu. Feliz."])
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Eu. Go2. Robô quadrúpede.",
+        "Eu. Amar. Você.",
+        "Oi. Eu. Feliz.",
+        "Eu não saber.",
+        "Não, obrigado.",
+    ],
+)
 def test_echo_filter_keeps_harmless_replies(echo, text):
     assert echo.check(text) == (text, None)
 
@@ -93,12 +103,11 @@ def test_echo_filter_sees_commands_hidden_by_many_sentences(echo):
     assert reason is not None and reason.startswith("interpreter")
 
 
-def test_fixed_replies_pass_the_filter_except_for_nao(echo):
-    """Nenhuma frase fixa vira comando nem parada; só "não" é exceção na lista."""
+def test_fixed_replies_pass_the_filter(echo):
+    """Nenhuma frase fixa vira comando nem parada nem tem palavra proibida."""
     assert len(echo.fallback_replies) >= 3
     for reply in echo.fallback_replies:
-        assert echo.command_like(reply) is None, reply
-        assert echo.forbidden(reply, allow={"nao"}) is None, reply
+        assert echo.check(reply) == (reply, None), reply
 
 
 # ─── Store: long-poll ──────────────────────────────────────────────────────

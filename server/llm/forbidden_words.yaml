@@ -49,9 +49,12 @@ stop_words:
   - parar
   - stop
 
-# language.negation (catalog.yaml)
+# language.negation (catalog.yaml), menos "não": liberado pelo humano em
+# 2026-11-10, porque barrava respostas comuns ("Eu não saber"). Se "não" vazar
+# no pré-roll, a próxima frase é rejeitada por `negation` (seguro). Para que
+# "não" não esconda um comando ("Não dá um oi"), o item 1 confere cada
+# variante também sem as palavras de negação (echo.py).
 negation:
-  - não
   - nunca
   - sem
 

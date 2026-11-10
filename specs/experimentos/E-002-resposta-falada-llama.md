@@ -5,7 +5,7 @@ tipo: experimento
 status: em-teste               # proposta | em-teste | adotada | rejeitada
 servicos: [server, tvbox]
 branch: exp/resposta-falada-llama   # parte da main; se a E-001 for adotada antes, rebase sobre ela
-criterio-congelado-em: 2026-11-04 @ 9913f05   # etapa 1 (recongelada a pedido do humano; 193ac50 invalidado)
+criterio-congelado-em: 2026-11-04 @ 9913f05   # etapa 1; INVALIDADO em 2026-11-10 ("não" liberado no filtro de eco); recongelar
 parametros-congelados-em: 2026-11-05 @ 1a7ae7e   # etapa 2; INVALIDADO em 2026-11-10 (prompt e max_tokens mudaram); recongelar
 verificacao: testado-software  # inferido | testado-software | testado-hardware (2026-11-04 @ 53b011e; mocks, não prova o robô)
 verificado-em: null            # AAAA-MM-DD @ <commit>; só humano preenche testado-hardware
@@ -132,17 +132,17 @@ A resposta tocada pelo alto-falante pode ser captada pelo microfone na gravaçã
 
 - O prompt proíbe anunciar ação ("Eu. Andar.", "Eu. Sentar.").
 - Antes do TTS, o server confere o texto da resposta de duas formas. Se qualquer uma acusar, a resposta é **trocada** por uma **frase fixa**, sorteada entre as variantes aprovadas pelo humano (2026-11-04) e versionadas em `server/llm/`: "Eu. Não. Entender.", "Eu. Confuso.", "Eu. Não. Saber.". As duas verificações:
-  1. Passa pelo interpretador. Acusa se `is_stop_only` der verdadeiro, se o `Kind` for `STOP` ou `COMMANDS`, ou se **qualquer** cláusula tiver `command_id` aceito, mesmo que a frase seja rejeitada ou fosse mista. Inclui a regex da E-001, se estiver ativa.
+  1. Passa pelo interpretador. Acusa se `is_stop_only` der verdadeiro, se o `Kind` for `STOP` ou `COMMANDS`, ou se **qualquer** cláusula tiver `command_id` aceito, mesmo que a frase seja rejeitada ou fosse mista. Inclui a regex da E-001, se estiver ativa. Cada variante do texto é conferida também sem as palavras de negação, para que "não" não esconda um comando ("Não dá um oi").
   2. Acusa se contém palavra de uma **lista explícita de palavras proibidas**, versionada em `server/llm/`, comparada sem acento. A lista tem:
      - verbos e direções de `movement.verbs` e `movement.directions`;
-     - `stop_words` e `negation`;
+     - `stop_words` e `negation`, menos "não" (liberado em 2026-11-10, ver Histórico);
      - as palavras de `damp` ("desligar", "motores");
      - a palavra principal de cada comando habilitado no catálogo (ex.: senta, sentar, levanta, deita, dança, rebola, alonga, coração, cumprimenta, acena, equilíbrio, recupera, arranha).
      Palavras funcionais ("a", "o", "um", "de", "faz", "fica") e saudações ("oi", "tchau") **não** entram, para o filtro não trocar quase toda resposta. "para" está em `stop_words`.
 - As frases fixas passam por um teste automático:
   - item 1 (interpretador): nenhuma pode virar comando nem parada;
   - item 2 (lista proibida): nenhuma pode conter palavra da lista, **exceto "não"**. Essa exceção foi aceita pelo humano em 2026-11-04, como na frase "Não sei te responder isso." do `reply_failed`. Se "não" vazar no pré-roll, a próxima frase pode ser rejeitada por `negation`, o que é seguro.
-  - A exceção vale só para as frases fixas. Uma resposta do Llama com "não" continua sendo trocada.
+  - Desde 2026-11-10 "não" saiu da lista, e a exceção deixou de ser necessária. "nunca" e "sem" continuam proibidos.
 - O log registra quando o filtro trocou a resposta e por quê.
 
 ### Llama
@@ -364,3 +364,10 @@ Segurança: deixar `python -m sense.stop` à mão. A parada falada não é garan
   - a orientação "se não souber" agora sugere "desconhecer", para não cair no "não" proibido.
 
   A etapa 2 (`1a7ae7e`) fica **invalidada**: a latência do hardware anterior foi medida com o prompt e o limite antigos. `TODO(humano)`: aprovar o prompt, recongelar a etapa 2 e refazer a medida de latência no hardware. Que a fala nova soa melhor no Piper é **inferido** até alguém ouvir.
+- 2026-11-10: segunda mudança no prompt, a pedido do humano:
+  - **respostas fixas** do humano para 6 perguntas de demonstração (quem é você, quem te criou, o que sabe fazer, quanto custa, quanto dura a bateria, sabe falar). Para custo e bateria, o humano escolheu "Eu desconhecer isso." no lugar de "Eu não saber.", porque "não" faria o filtro de eco trocar a resposta;
+  - nome escrito como se pronuncia, para o Piper: "Gou Tiu" e "Úflá";
+  - instruções para evitar o que o filtro de eco barra: "Olá" (lido como o comando `hello`), "para" no início ("para fazer bolo..."), direções e negações.
+
+  Conferido com o modelo de embeddings real (sem Llama): as 6 perguntas vão ao Llama, e as respostas fixas e os exemplos do prompt passam no filtro de eco. Que o Llama devolva as respostas fixas exatamente como escritas é **inferido**. A causa do bloqueio da receita de bolo no hardware é **inferida** ("para" no começo, que é forbidden_word), porque o log do teste não estava disponível. `TODO(humano)`: conferir o campo `echo_filter` no log.
+- 2026-11-10: **mudança de régua da etapa 1** (decisão do humano). No hardware, a resposta à receita de bolo foi trocada por `forbidden_word:nao` (relato do humano). "não" sai da lista de palavras proibidas. Motivo: barrava respostas comuns, e o vazamento de "não" no pré-roll só faz a frase seguinte ser rejeitada por `negation`, o que é seguro (o mesmo argumento da exceção das frases fixas). Risco encontrado e coberto: o interpretador rejeita por `negation` antes de resolver as cláusulas, então "Não dá um oi" passava nos dois itens do filtro. Agora o item 1 confere cada variante também sem as palavras de negação (`echo.py`, com teste). "nunca" e "sem" continuam proibidos. As respostas fixas de custo e bateria voltaram para "Eu não saber.", o texto original do humano. O congelamento `9913f05` fica **invalidado**; `TODO(humano)`: recongelar a etapa 1 e a etapa 2. O eval `conversation_e002.yaml` não muda (0 comando fora do esperado com o modelo real).

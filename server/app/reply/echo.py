@@ -51,17 +51,30 @@ class EchoFilter:
         o texto é conferido inteiro, sem pontuação, e em janelas de 1 a 3 frases
         seguidas. Assim o `too_many_clauses` e o `negation` do interpretador,
         que rejeitam antes de resolver as cláusulas, não escondem um comando.
+
+        Cada variante também é conferida sem as palavras de negação: "não" é
+        permitido na resposta, mas "Não dá um oi" seria rejeitado por `negation`
+        e esconderia o "dá um oi" que o microfone pode captar sozinho.
         """
         sentences = [part for part in _SENTENCE_BREAK.split(text) if part.strip()]
         variants = [text, " ".join(sentences)]
         for size in range(1, 4):
             for start in range(len(sentences) - size + 1):
                 variants.append(" ".join(sentences[start : start + size]))
+        variants += [self._without_negation(variant) for variant in variants]
         for variant in dict.fromkeys(variants):
+            if not variant.strip():
+                continue
             reason = self._command_like_one(variant)
             if reason is not None:
                 return reason
         return None
+
+    def _without_negation(self, text: str) -> str:
+        negation = self._interpreter.negation
+        return " ".join(
+            word for word in words(self._interpreter.tokenize(text)) if fold(word) not in negation
+        )
 
     def _command_like_one(self, text: str) -> str | None:
         if self._interpreter.is_stop_only(text):

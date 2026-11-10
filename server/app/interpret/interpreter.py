@@ -146,6 +146,11 @@ class Interpreter:
     def has_embedder(self) -> bool:
         return self._embedder is not None
 
+    @property
+    def negation(self) -> frozenset[str]:
+        """Palavras de negação do catálogo, sem acento."""
+        return self._catalog.negation
+
     def tokenize(self, text: str) -> list[str]:
         """A mesma normalização da interpretação (minúsculas, "pra" → "para"...)."""
         return self._catalog.tokenize(text)
