@@ -54,12 +54,38 @@ git checkout <branch>     # main, ou a branch do experimento em teste (ex.: exp/
 cp api/.env.example api/.env
 ```
 
-Em `api/.env`, preencha `GO2_ROBOT_SERIAL_NUMBER`. O serial é melhor que `GO2_ROBOT_IP`, porque o IP do robô pode mudar. Para testar sem o robô, use:
+Edite `api/.env` conforme o caso. Os campos estão comentados no `api/.env.example`.
+
+**Com o robô, na mesma rede Wi-Fi do PC (o caso normal do lab):**
+
+```
+GO2_CONNECTION_METHOD=LocalSTA
+GO2_ROBOT_SERIAL_NUMBER=<serial do robô, ex.: B42D...>
+GO2_ROBOT_IP=
+GO2_CONNECT_ON_STARTUP=true
+```
+
+Prefira o serial ao IP: com o serial a api acha o robô por multicast, e o IP dele pode mudar (DHCP). Se for usar o IP, deixe o serial vazio e preencha `GO2_ROBOT_IP` com o endereço do robô na rede do roteador. **Nunca** use um endereço `192.168.123.x`: essa é a rede interna do robô.
+
+**Com o robô como ponto de acesso (sem roteador):** conecte o PC ao Wi-Fi do próprio robô e use:
+
+```
+GO2_CONNECTION_METHOD=LocalAP
+GO2_CONNECT_ON_STARTUP=true
+```
+
+O robô fica no endereço fixo `192.168.12.1`. Neste modo, a TV Box também precisa estar no Wi-Fi do robô para alcançar o PC.
+
+**Sem o robô (testar os endpoints):**
 
 ```
 GO2_CONNECTION_METHOD=LocalAP
 GO2_CONNECT_ON_STARTUP=false
 ```
+
+A api sobe sem conectar. Os comandos respondem `503`.
+
+Os limites de movimento (`GO2_MAX_VX`, `GO2_MOVE_MAX_DURATION_S` etc.) já vêm baixos no exemplo, por segurança. Não aumente sem a equipe decidir.
 
 ### 4. Configurar o server
 
