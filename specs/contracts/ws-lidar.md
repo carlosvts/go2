@@ -5,7 +5,7 @@ Stream da nuvem de pontos do LiDAR do Go2. Comportamento e critérios em [`F-001
 | | |
 |---|---|
 | Dono | api |
-| Consumidores | `api/scripts/ws_lidar_client.py` (visualização/debug) e `api/scripts/record_lidar.py` (gravação). O server ainda não. |
+| Consumidores | `api/scripts/lidar_viewer.html` (visualização 3D no navegador), `api/scripts/ws_lidar_client.py` (diagnóstico no terminal) e `api/scripts/record_lidar.py` (gravação). O server ainda não. |
 | Ativação | Compartilhada com [`/ws/telemetry`](ws-telemetry.md) (F-002): o LiDAR é ligado e decodificado se houver cliente em qualquer das duas rotas. |
 | Rota | `GET /ws/lidar` (upgrade para WebSocket), sem autenticação |
 | Processo | Um só (`uvicorn` sem `--workers`): `seq` e o limite de clientes valem por processo |

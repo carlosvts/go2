@@ -1,0 +1,312 @@
+<!doctype html>
+<!--
+  Visualizador da nuvem de pontos do /ws/lidar (F-001). Ferramenta de lab.
+
+  Abra este arquivo no navegador (duplo clique ou file://). Sem dependências
+  externas: funciona sem internet. Ocupa 1 vaga de GO2_LIDAR_MAX_CLIENTS.
+
+  Mouse: arrastar gira, roda dá zoom, botão direito/shift+arrastar move.
+  lidar_viewer.html#auto conecta ao abrir (#auto=ws://IP:8000/ws/lidar).
+  Formato do frame: specs/contracts/ws-lidar.md.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LiDAR Go2</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #0d1117; color: #e6edf3;
+    font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; cursor: grab; }
+  canvas:active { cursor: grabbing; }
+  #panel { position: fixed; top: 12px; left: 12px; background: rgba(13,17,23,.85);
+    border: 1px solid #30363d; border-radius: 8px; padding: 10px 12px; min-width: 260px; }
+  #panel input[type=text] { width: 230px; background: #161b22; color: inherit;
+    border: 1px solid #30363d; border-radius: 4px; padding: 3px 6px; }
+  #panel button { background: #21262d; color: inherit; border: 1px solid #30363d;
+    border-radius: 4px; padding: 3px 8px; cursor: pointer; margin: 4px 4px 0 0; }
+  #panel button:hover { background: #30363d; }
+  #stats { margin-top: 8px; font-family: ui-monospace, monospace; font-size: 12px;
+    white-space: pre; }
+  .ok { color: #3fb950; } .warn { color: #d29922; } .bad { color: #f85149; }
+  label { display: inline-block; margin-top: 6px; margin-right: 8px; }
+  #legend { margin-top: 6px; height: 8px; border-radius: 4px;
+    background: linear-gradient(90deg, #3b4cc0, #5ec962, #fde725, #f85149); }
+  #legend-l { display: flex; justify-content: space-between; font-size: 11px; color: #8b949e; }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="panel">
+  <div><input id="url" type="text" value="ws://localhost:8000/ws/lidar"></div>
+  <button id="connect">Conectar</button>
+  <button id="top">Vista de cima</button>
+  <button id="recenter">Centralizar</button>
+  <button id="pause">Pausar</button>
+  <div>
+    <label><input id="axes" type="checkbox" checked> eixos (0,0,0)</label>
+    <label><input id="grid" type="checkbox" checked> grade 1 m</label>
+    <label><input id="center" type="checkbox" checked> centro do grid</label>
+  </div>
+  <div>cor por
+    <select id="colormode">
+      <option value="dist" selected>distância horizontal do centro do grid</option>
+      <option value="height">altura (z)</option>
+    </select>
+  </div>
+  <div>tamanho do ponto <input id="size" type="range" min="1" max="4" value="2"></div>
+  <div id="legend"></div>
+  <div id="legend-l"><span id="zmin">z mín</span><span id="legendlabel">cor</span><span id="zmax">z máx</span></div>
+  <div id="stats">desconectado</div>
+</div>
+<script>
+"use strict";
+const HEADER_LEN = 40;
+const canvas = document.getElementById("view");
+const ctx = canvas.getContext("2d");
+const statsEl = document.getElementById("stats");
+
+// Câmera orbital: alvo, distância, yaw (em torno de z) e pitch.
+const cam = { target: [0, 0, 0], dist: 12, yaw: -Math.PI / 4, pitch: 0.6 };
+let points = null;          // Float32Array [x0,y0,z0, x1,...]
+let header = null;
+let paused = false;
+let ws = null;
+let state = "desconectado";
+let centeredOnce = false;
+const frameTimes = [];
+let lastSeq = null, gaps = 0, frames = 0;
+
+function resize() {
+  canvas.width = innerWidth * devicePixelRatio;
+  canvas.height = innerHeight * devicePixelRatio;
+  draw();
+}
+addEventListener("resize", resize);
+
+function parseFrame(buf) {
+  const v = new DataView(buf);
+  const h = {
+    version: v.getUint8(0), headerLen: v.getUint16(2, true), seq: v.getUint32(4, true),
+    ts: v.getFloat64(8, true), n: v.getUint32(16, true), resolution: v.getFloat32(20, true),
+    origin: [v.getFloat32(24, true), v.getFloat32(28, true), v.getFloat32(32, true)],
+  };
+  if (h.version !== 1) throw new Error("versão de frame desconhecida: " + h.version);
+  if (buf.byteLength !== h.headerLen + 12 * h.n) throw new Error("tamanho não bate com n_points");
+  return { h, pts: new Float32Array(buf, h.headerLen, h.n * 3) };
+}
+
+function centroid(pts) {
+  const n = pts.length / 3;
+  if (!n) return [0, 0, 0];
+  let x = 0, y = 0, z = 0;
+  for (let i = 0; i < pts.length; i += 3) { x += pts[i]; y += pts[i + 1]; z += pts[i + 2]; }
+  return [x / n, y / n, z / n];
+}
+
+function connect() {
+  if (ws) { ws.close(); return; }
+  const url = document.getElementById("url").value;
+  ws = new WebSocket(url);
+  ws.binaryType = "arraybuffer";
+  state = "conectando…";
+  document.getElementById("connect").textContent = "Desconectar";
+  ws.onmessage = (ev) => {
+    if (typeof ev.data === "string") {
+      const msg = JSON.parse(ev.data);
+      if (msg.topic === "connection") state = "robô: " + msg.data.state;
+      return;
+    }
+    let f;
+    try { f = parseFrame(ev.data); } catch (e) { state = "frame inválido: " + e.message; return; }
+    frames++;
+    if (lastSeq !== null) gaps += (f.h.seq - lastSeq - 1) >>> 0;
+    lastSeq = f.h.seq;
+    const now = performance.now();
+    frameTimes.push(now);
+    while (frameTimes.length && now - frameTimes[0] > 2000) frameTimes.shift();
+    if (paused) return;
+    header = f.h;
+    points = f.pts;
+    if (!centeredOnce && f.h.n > 0) { cam.target = centroid(points); centeredOnce = true; }
+    draw();
+  };
+  ws.onclose = (ev) => {
+    state = `fechado (${ev.code}${ev.reason ? " " + ev.reason : ""})`;
+    if (ev.code === 1013) state += " — vagas ocupadas (GO2_LIDAR_MAX_CLIENTS)";
+    ws = null;
+    document.getElementById("connect").textContent = "Conectar";
+    updateStats();
+  };
+  ws.onerror = () => { state = "erro de conexão (api rodando? URL certa?)"; };
+}
+
+// Cor pela altura: azul → verde → amarelo → vermelho.
+const STOPS = [[59, 76, 192], [94, 201, 98], [253, 231, 37], [248, 81, 73]];
+function colorFor(t) {
+  t = Math.min(Math.max(t, 0), 1) * (STOPS.length - 1);
+  const i = Math.min(Math.floor(t), STOPS.length - 2), f = t - i, a = STOPS[i], b = STOPS[i + 1];
+  return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
+}
+
+function projector() {
+  const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
+  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  const W = canvas.width, H = canvas.height, f = Math.min(W, H) * 0.9;
+  const [tx, ty, tz] = cam.target;
+  // Câmera olhando para o alvo; z é "para cima".
+  return (x, y, z) => {
+    x -= tx; y -= ty; z -= tz;
+    const rx = cy * x + sy * y;          // direita
+    const ry = -sy * x + cy * y;         // frente (horizontal)
+    const depth = cp * ry + sp * z;      // para longe da câmera
+    const up = -sp * ry + cp * z;        // para cima na tela
+    const d = cam.dist - depth;
+    if (d <= 0.1) return null;
+    return [W / 2 + (rx * f) / d, H / 2 - (up * f) / d, d];
+  };
+}
+
+function line(p, a, b, color) {
+  const A = p(...a), B = p(...b);
+  if (!A || !B) return;
+  ctx.strokeStyle = color; ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke();
+}
+
+function gridCenter() {
+  if (!header) return [0, 0, 0];
+  const half = 64 * header.resolution;
+  return [header.origin[0] + half, header.origin[1] + half, header.origin[2]];
+}
+
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  ctx.fillStyle = "#0d1117"; ctx.fillRect(0, 0, W, H);
+  const p = projector();
+  ctx.lineWidth = devicePixelRatio;
+  if (document.getElementById("grid").checked) {
+    const [tx, ty] = cam.target, gz = 0;
+    const r = 10, cx = Math.round(tx), cy = Math.round(ty);
+    for (let k = -r; k <= r; k++) {
+      line(p, [cx + k, cy - r, gz], [cx + k, cy + r, gz], "#1f2630");
+      line(p, [cx - r, cy + k, gz], [cx + r, cy + k, gz], "#1f2630");
+    }
+  }
+  if (points && points.length) {
+    // Cor: distância horizontal até o centro do grid, ou altura (z).
+    const byDist = document.getElementById("colormode").value === "dist";
+    const [gx, gy] = gridCenter();
+    const value = byDist
+      ? (i) => Math.hypot(points[i] - gx, points[i + 1] - gy)
+      : (i) => points[i + 2];
+    let vmin = Infinity, vmax = -Infinity;
+    for (let i = 0; i < points.length; i += 3) { const v = value(i); if (v < vmin) vmin = v; if (v > vmax) vmax = v; }
+    if (byDist) vmin = 0;
+    document.getElementById("zmin").textContent = vmin.toFixed(2) + " m";
+    document.getElementById("zmax").textContent = vmax.toFixed(2) + " m";
+    document.getElementById("legendlabel").textContent = byDist
+      ? "perto → longe do centro" : "baixo → alto (z)";
+    const span = vmax - vmin || 1;
+    const img = ctx.getImageData(0, 0, W, H), data = img.data;
+    const s = +document.getElementById("size").value * devicePixelRatio;
+    for (let i = 0; i < points.length; i += 3) {
+      const q = p(points[i], points[i + 1], points[i + 2]);
+      if (!q) continue;
+      const [r, g, b] = colorFor((value(i) - vmin) / span);
+      const x0 = q[0] | 0, y0 = q[1] | 0;
+      for (let dy = 0; dy < s; dy++) {
+        const yy = y0 + dy; if (yy < 0 || yy >= H) continue;
+        for (let dx = 0; dx < s; dx++) {
+          const xx = x0 + dx; if (xx < 0 || xx >= W) continue;
+          const o = (yy * W + xx) * 4; data[o] = r; data[o + 1] = g; data[o + 2] = b; data[o + 3] = 255;
+        }
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  if (header && document.getElementById("center").checked) {
+    // Centro do grid de 128×128 voxels: origin + 64 × resolution (pelo formato
+    // do decoder). Provável posição do robô; NÃO verificado no robô.
+    const [cx, cy, cz] = gridCenter();
+    ctx.lineWidth = 2 * devicePixelRatio;
+    line(p, [cx - 0.3, cy, cz], [cx + 0.3, cy, cz], "#db61a2");
+    line(p, [cx, cy - 0.3, cz], [cx, cy + 0.3, cz], "#db61a2");
+    line(p, [cx, cy, cz], [cx, cy, cz + 0.5], "#db61a2");
+    const c = p(cx, cy, cz + 0.5);
+    if (c) { ctx.fillStyle = "#db61a2"; ctx.font = `${12 * devicePixelRatio}px sans-serif`;
+      ctx.fillText("centro do grid (robô? não verificado)", c[0] + 6, c[1] + 28 * devicePixelRatio); }
+  }
+  if (document.getElementById("axes").checked) {
+    ctx.lineWidth = 2 * devicePixelRatio;
+    line(p, [0, 0, 0], [1, 0, 0], "#f85149");   // x vermelho
+    line(p, [0, 0, 0], [0, 1, 0], "#3fb950");   // y verde
+    line(p, [0, 0, 0], [0, 0, 1], "#58a6ff");   // z azul
+    const o = p(0, 0, 0);
+    if (o) { ctx.fillStyle = "#e6edf3"; ctx.font = `${12 * devicePixelRatio}px sans-serif`;
+      ctx.fillText("(0,0,0)  x vermelho · y verde · z azul", o[0] + 6, o[1] - 6); }
+  }
+  updateStats();
+}
+
+function updateStats() {
+  const span = frameTimes.length > 1 ? frameTimes[frameTimes.length - 1] - frameTimes[0] : 0;
+  const fps = span > 0 ? ((frameTimes.length - 1) * 1000) / span : 0;
+  const cls = state.startsWith("robô: connected") ? "ok" : state.startsWith("robô") || state.startsWith("conect") ? "warn" : "bad";
+  let s = `<span class="${cls}">${state}</span>\n`;
+  s += `frames/s  ${fps.toFixed(1)}   recebidos ${frames}\n`;
+  s += `buracos no seq  ${gaps}${paused ? "   (PAUSADO)" : ""}\n`;
+  if (header) {
+    s += `seq ${header.seq}   pontos ${header.n}\n`;
+    s += `resolution ${header.resolution.toFixed(3)} m\n`;
+    s += `origin ${header.origin.map((v) => v.toFixed(2)).join(", ")}\n`;
+    s += `centro do grid ${gridCenter().slice(0, 2).map((v) => v.toFixed(2)).join(", ")}\n`;
+    s += `atraso api→tela ${(Date.now() / 1000 - header.ts).toFixed(3)} s`;
+  }
+  statsEl.innerHTML = s;
+}
+
+// ─── Mouse ──────────────────────────────────────────────────────────────────
+let drag = null;
+canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+canvas.addEventListener("mousedown", (e) => { drag = { x: e.clientX, y: e.clientY, pan: e.button === 2 || e.shiftKey }; });
+addEventListener("mouseup", () => { drag = null; });
+addEventListener("mousemove", (e) => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  drag.x = e.clientX; drag.y = e.clientY;
+  if (drag.pan) {
+    const k = cam.dist / 800, cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
+    cam.target[0] -= (cy * dx - sy * dy) * k;
+    cam.target[1] -= (sy * dx + cy * dy) * k;
+  } else {
+    cam.yaw -= dx * 0.008;
+    cam.pitch = Math.min(Math.max(cam.pitch + dy * 0.008, -1.5), 1.5);
+  }
+  draw();
+});
+canvas.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  cam.dist = Math.min(Math.max(cam.dist * Math.exp(e.deltaY * 0.001), 1), 200);
+  draw();
+}, { passive: false });
+
+document.getElementById("connect").onclick = connect;
+document.getElementById("top").onclick = () => { cam.pitch = 1.5; cam.yaw = -Math.PI / 2; draw(); };
+document.getElementById("recenter").onclick = () => { if (points) cam.target = centroid(points); draw(); };
+document.getElementById("pause").onclick = (e) => { paused = !paused; e.target.textContent = paused ? "Continuar" : "Pausar"; updateStats(); };
+for (const id of ["axes", "grid", "center", "size", "colormode"]) {
+  document.getElementById(id).oninput = draw;
+  document.getElementById(id).onchange = draw;
+}
+setInterval(updateStats, 500);
+resize();
+// lidar_viewer.html#auto conecta ao abrir; #auto=ws://ip:8000/ws/lidar troca a URL.
+if (location.hash.startsWith("#auto")) {
+  const custom = location.hash.split("=")[1];
+  if (custom) document.getElementById("url").value = decodeURIComponent(custom);
+  connect();
+}
+</script>
+</body>
+</html>

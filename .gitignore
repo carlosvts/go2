@@ -6,3 +6,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+
+# Dados de sessão de hardware (F-001/F-002): gravações do record_lidar.py e
+# logs da api. Ficam no disco do lab, nunca no repo (centenas de MB).
+gravacoes/
+/api-*.log

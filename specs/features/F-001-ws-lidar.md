@@ -165,6 +165,8 @@ A feature futura que usar o LiDAR para decidir movimento terá impacto HRI diret
 - Taxa de mensagens de LiDAR que o robô envia pelo WebRTC. `TODO(humano): medir` (H1, frames/s).
 - `n_points` típico, `src_size` e bytes por frame no lab. `TODO(humano): medir` (H1). Alimenta a carga de A8.
 - Custo de CPU da decodificação `native` por mensagem, na máquina onde a api roda. `TODO(humano): medir` (H1).
+- O voxel map é a varredura do momento ou um mapa que **acumula** (e por quanto tempo um objeto que saiu continua aparecendo)? Na primeira observação do humano, mover uma caixa em volta do robô mudou pouco a cena. `TODO(humano): verificar` (roteiro H1.10).
+- Se o robô fica no centro do grid de 128×128 voxels (`origin + 64 × resolution` em x e y). Inferido pelo formato do decoder; o visualizador marca esse ponto. `TODO(humano): verificar` (H1.8).
 - Referencial dos pontos: o `origin` muda quando o robô anda? `TODO(humano): verificar` (H1.6).
 - Formato de `origin`/`resolution` em `message["data"]`. Lido no código do decoder, não visto no robô.
 - Formato da resposta de `disableTrafficSaving` (`info.execution`). Lido no código da lib, não visto no robô.
