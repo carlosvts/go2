@@ -229,9 +229,33 @@ Valores do F-001 (das janelas de `lidar_metrics` e dos frames):
 - Nenhuma mensagem malformada nem falha de decodificação; nenhum frame descartado na fila do cliente; 1 descarte na fila do decoder em 120 s.
 - Visualizador: o humano conferiu que a nuvem muda conforme o ambiente.
 
+**Reenvio do `move` com o LiDAR ativo (dado informal, fora do protocolo do H3).** No log `api-teste-visualizador-html.log` (fora do repo), o humano mandou vários `move` por `curl` entre 19:06 e 19:17, com o LiDAR ativo e 2 clientes (visualizador e gravador). Os parâmetros dos `move` não ficaram registrados. `GO2_MOVE_RATE_HZ=40` (período de 25 ms):
+
+| | Reenvios | Mediana | p95 | p99 | Máx. | > 37,5 ms (1,5×) | > 50 ms (2×) |
+|---|---|---|---|---|---|---|---|
+| LiDAR ativo | 805 | 25,9 ms | 62,2 ms | 71,2 ms | 76,3 ms | 210 (26%) | 115 (14%) |
+| LiDAR inativo | 40 (um único `move`) | 25,5 ms | 26,6 ms | 26,9 ms | 26,9 ms | 0 | 0 |
+
+- Pela régua do A14 (máx. ≤ 2× o período), estes dados **indicam falha**: houve 76,3 ms contra 50 ms. **O A14 não é marcado**: a linha de base tem só 40 amostras, de um único `move`, e o protocolo do H3 não foi seguido.
+- O A8 (software) passou nesta mesma máquina; portanto, a decodificação sozinha não explica o atraso. Hipóteses não verificadas:
+  - o tráfego extra do WebRTC processado no mesmo event loop (aiortc, depois do `disableTrafficSaving`);
+  - o envio de frames de 300–600 KB a 2 clientes.
+
+  `TODO: medir o atraso do event loop na api real, com e sem LiDAR` (pede critério novo).
+- O `stop` passa pelo mesmo event loop, e o A13 nunca foi medido. Até medir, a recomendação é não mover o robô com o LiDAR ativo.
+
+**Robô andando torto (observação do humano).** O humano viu o Go2 andar "meio torto" durante esses `move`, e **avalia que provavelmente não tem relação com o LiDAR** (o robô talvez já desvie). Caminhos possíveis, nenhum verificado:
+1. atraso do reenvio do `move` (acima) virando micro-desacelerações, se a tolerância interna do Go2 for curta (valor desconhecido);
+2. Wi-Fi mais carregado pelo `disableTrafficSaving`, atrasando os comandos a caminho do robô;
+3. desvio de obstáculo nativo, se estava ligado (houve um `GET /safety/obstacle-avoidance` às 19:05; o valor não foi registrado);
+4. nada relacionado: o `move` só manda velocidade, sem corrigir a direção, e a pose girou 3,5° em 60 s com o robô parado.
+
+Teste que separa as causas: os mesmos `move` com o LiDAR desligado (`GO2_LIDAR_MAX_CLIENTS=0` e `GO2_TELEMETRY_MAX_CLIENTS=0`, api reiniciada) e ligado, com o desvio de obstáculo no mesmo estado, marcando no chão onde o robô termina; mais `scripts/move_jitter.py` nos dois logs. `TODO(humano): executar`.
+
 Por critério:
 - **A12** (parede × trena): **não medido** nesta sessão. Continua `inferido`.
-- **A13 / A14** (`stop` e `move` sob carga): **não executados**; o humano manteve o robô parado. Continuam `inferido`.
+- **A13** (`stop` sob carga): **não executado**. Continua `inferido`.
+- **A14** (`move` sob carga): **não executado formalmente**; o dado informal acima indica falha. Continua `inferido`.
 
 ## Histórico
 - 2026-11-17: criada (proposta). Decisões do humano:
@@ -248,3 +272,4 @@ Por critério:
 - 2026-11-17: A12 (≤ 5 cm, meta 1 cm) definido; A13 confirmado; A8/A14 aceitos. Sem decisões pendentes; pronta para `implement-spec`.
 - 2026-11-17: implementada em `feat/ws-lidar` (em-implementacao). A1–A11 passam em teste automático, com dublês e com a classe real de data channel da lib em A3; nada disso prova comportamento no robô. A12–A14 pendentes (H1/H2).
 - 2026-11-17: resultados da primeira sessão de hardware registrados (gravações com o robô parado e uma andando). Respondidas: robô no centro do grid, referencial `odom`, taxa, tamanhos e custo de decodificação. A12–A14 não medidos.
+- 2026-11-17: dado informal do reenvio do `move` com o LiDAR ativo (máx. 76,3 ms, 14% acima de 2× o período, contra 0 sem LiDAR) e observação do robô andando torto, que o humano acredita não ter relação com o LiDAR. Recomendação: não mover o robô com o LiDAR ativo até medir.
