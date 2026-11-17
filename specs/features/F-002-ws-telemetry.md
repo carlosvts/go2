@@ -202,6 +202,8 @@ Tomadas (2026-11-17, humano):
 Pendentes: nenhuma.
 
 ## Roteiro hardware-only
+
+**Roteiro executável da sessão (F-001 + F-002 juntos):** [`specs/checklists/F-001-F-002.md`](../checklists/F-001-F-002.md). Lá, H1 é o H1 daqui, H2 é a parte "andando" (observação) e H3 é o H2 daqui. O log DEBUG do `move` só aparece com `--log-config logging-debug.json`, e `scripts/move_jitter.py` faz a conta do A14.
 Preparação: a mesma do F-001:
 - área livre;
 - `python -m sense.stop` pronto;

@@ -189,6 +189,8 @@ Tomadas (2026-11-17, humano):
 Pendentes (humano): nenhuma.
 
 ## Roteiro hardware-only
+
+**Roteiro executável da sessão (F-001 + F-002 juntos):** [`specs/checklists/F-001-F-002.md`](../checklists/F-001-F-002.md). Lá, H1 é o H1 daqui, H2 é a parte "andando" (observação) e H3 é o H2 daqui. O log DEBUG do `move` só aparece com `--log-config logging-debug.json`, e `scripts/move_jitter.py` faz a conta do A14.
 Preparação comum (H1 e H2): área livre de pessoas e obstáculos no raio de deslocamento, uma pessoa com `python -m sense.stop` pronto para rodar, robô em `balance_stand` (`stand_up` não basta para `move`), api subindo com log em DEBUG. Registrar o commit.
 
 **H1 — dados reais (A12 e hipóteses)**
