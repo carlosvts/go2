@@ -215,6 +215,7 @@ Preparação comum (H1 e H2): área livre de pessoas e obstáculos no raio de de
   - decodificação fora do event loop;
   - LiDAR antes da telemetria (inverte §5 da arquitetura);
   - se o repasse sem patch falhar, revisar a spec em vez de abandonar a feature.
+- 2026-11-17: **regra alterada pelo F-002**: o LiDAR é ativado e decodificado com cliente em `/ws/lidar` **ou** em `/ws/telemetry` (refcount comum). "Sem clientes" passa a significar sem cliente em nenhuma das duas rotas. Falha na ativação continua fechando o `/ws/lidar` com `1011`; a telemetria fica aberta.
 - 2026-11-17: decisões do humano: `MAX_CLIENTS=1`, filas `2`, `disableTrafficSaving(False)` ao sair o último cliente, A13 0,2–0,4 s. Limites de A8/A14 sugeridos pelo Claude (10% do período sobre a linha de base, teto 2× o período), pendentes de aceite.
 
   Revisada pelo `spec-reviewer`: mecanismo de decodificação definido, worker único com fila limitada, estado `reconnecting`, ativação com casos de corrida e falha, `balance_stand` e linha de base no roteiro, instrumentação do `move`.

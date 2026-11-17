@@ -17,7 +17,16 @@ from app.config import Settings
 from app.error_handlers import ErrorHandlers
 from app.robot.ports import ConnectionFactory
 from app.robot.service import Go2Robot
-from app.routers import capabilities, gesture, lidar, movement, posture, safety, speed
+from app.routers import (
+    capabilities,
+    gesture,
+    lidar,
+    movement,
+    posture,
+    safety,
+    speed,
+    telemetry,
+)
 from app.routers import status as status_router
 
 log = logging.getLogger(__name__)
@@ -107,4 +116,5 @@ def create_app(
     app.include_router(speed.router)
     app.include_router(safety.router)
     app.include_router(lidar.router)
+    app.include_router(telemetry.router)
     return app

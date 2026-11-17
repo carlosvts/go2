@@ -78,6 +78,8 @@ class Go2Robot:
                 client_queue=settings.lidar_client_queue,
                 decode_queue=settings.lidar_decode_queue,
                 request_timeout_s=settings.request_timeout_s,
+                telemetry_max_clients=settings.telemetry_max_clients,
+                telemetry_queue=settings.telemetry_client_queue,
             ),
         )
 

@@ -237,7 +237,7 @@ Mapa completo dos tópicos encontrados no `constants.py`, por categoria:
 
 **Vídeo** — `FRONT_PHOTO_REQ` (`rt/api/videohub/request`): não é o stream (isso é a track WebRTC separada, já coberta em 12.1) — é a API de controle, tipo "tirar uma foto e salvar no robô".
 
-**LiDAR bruto** — `ULIDAR_SWITCH` (liga/desliga o sensor), `ULIDAR` (dado não comprimido), `ULIDAR_STATE` (saúde do sensor), `ROBOTODOM` (`rt/utlidar/robot_pose`, pose calculada pelo SLAM interno do robô).
+**LiDAR bruto** — `ULIDAR_SWITCH` (liga/desliga o sensor), `ULIDAR` (dado não comprimido), `ULIDAR_STATE` (saúde do sensor), `ROBOTODOM` (`rt/utlidar/robot_pose`, pose calculada pelo SLAM interno do robô — **inferido** pelo nome, não verificado; ver F-002).
 
 **Posicionamento UWB** — `UWB_REQ`/`UWB_STATE`: liga/desliga e lê o módulo de rádio UWB — provável mecanismo do Side-Follow (seção 9).
 
