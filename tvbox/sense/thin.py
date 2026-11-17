@@ -10,6 +10,12 @@ e log.
 
 O áudio enviado começa `PRE_ROLL_S` antes da detecção, tirado do buffer
 circular: a wake word é detectada com atraso e o comando pode já ter começado.
+
+E-002 (resposta falada): com `thinking`, ou `enqueued` + `reply_pending`, a
+máquina volta ao OCIOSO como em qualquer resposta, toca o áudio de espera e
+busca a resposta numa thread à parte (`sense.reply_fetcher`), sem ENVIO: a
+wake word nova é aceita durante toda a espera e reprodução. Wake word nova
+descarta a resposta pendente e corta qualquer som em curso.
 """
 
 import json
@@ -25,9 +31,10 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Protocol
 
-from sense.audio import Microphone, play_sound
+from sense.audio import Microphone, play_file, play_sound, stop_sounds
 from sense.config import SAMPLE_RATE, Config
-from sense.fallback_client import OUTCOME_SOUNDS, FallbackClient, Reply, Utterance
+from sense.fallback_client import OUTCOME_SOUNDS, FallbackClient, Outcome, Reply, Utterance
+from sense.reply_fetcher import REPLY_TIMEOUT_S, ReplyFetcher
 from sense.ring_buffer import RingBuffer
 from sense.stats import Stats
 from sense.vad import End, Segmenter, rms, speech_level
@@ -50,6 +57,14 @@ class WakeEngine(Protocol):
 
 class Sender(Protocol):
     def submit(self, utterance: Utterance, on_reply: Callable[[Reply], None]) -> bool: ...
+
+
+class Fetcher(Protocol):
+    """E-002: busca a resposta falada. Nunca passa pelo `Sender`."""
+
+    def fetch(
+        self, utterance_id: str, on_result: Callable[[str, Path | None, str | None], None]
+    ) -> None: ...
 
 
 class _State(Enum):
@@ -98,6 +113,9 @@ class ThinMachine:
         counters: Counter,
         feedback: Callable[[str], None] = lambda name: None,
         clock: Callable[[], float] = time.time,
+        fetcher: Fetcher | None = None,
+        play_file: Callable[[Path], None] = lambda path: None,
+        stop_sounds: Callable[[], None] = lambda: None,
     ) -> None:
         self._wake = wake
         self._sender = sender
@@ -116,6 +134,14 @@ class ThinMachine:
         self._sending_s = 0.0  # há quanto áudio o envio está em curso
         # As respostas chegam da thread de envio e são tratadas no `feed`.
         self._replies: queue.SimpleQueue[Reply] = queue.SimpleQueue()
+        # E-002: resposta falada.
+        self._fetcher = fetcher
+        self._play_file = play_file
+        self._stop_sounds = stop_sounds
+        self._fetched: queue.SimpleQueue[tuple[str, Path | None, str | None]] = (
+            queue.SimpleQueue()
+        )
+        self._pending_reply: dict | None = None  # a resposta que ainda vale tocar
 
     def feed(self, chunk: bytes) -> None:
         """Consome um chunk de áudio (PCM 16 kHz mono s16le)."""
@@ -123,6 +149,7 @@ class ThinMachine:
         self._buffer.append(chunk)
         self._cooldown_s -= seconds
         self._drain_replies()
+        self._drain_fetched()
 
         # A wake word é pontuada sempre, para os buffers internos do
         # openWakeWord acompanharem o áudio; fora do OCIOSO ela não dispara.
@@ -155,6 +182,14 @@ class ThinMachine:
     def _start_listening(self) -> None:
         config = self._config
         log.info("Wake word detectada. Ouvindo o comando...")
+        # Wake word nova tem prioridade: corta qualquer som e descarta a
+        # resposta falada que ainda não chegou (E-002).
+        self._stop_sounds()
+        if self._pending_reply is not None:
+            log.info("Resposta falada %s descartada: wake word nova.",
+                     self._pending_reply["utterance_id"])
+            self._counters["reply_discarded"] += 1
+            self._pending_reply = None
         self._counters["wake_detections"] += 1
         self.metrics.wakes += 1
         if config.wake_sound:
@@ -236,6 +271,51 @@ class ThinMachine:
             )
             self._feedback(OUTCOME_SOUNDS[reply.outcome])
             self._state = _State.IDLE
+            if reply.reply_pending and reply.outcome in (Outcome.THINKING, Outcome.CONFIRMED):
+                self._await_spoken_reply(reply)
+
+    def _await_spoken_reply(self, reply: Reply) -> None:
+        """E-002: áudio de espera e busca da resposta, fora do ENVIO."""
+        if self._fetcher is None:
+            return
+        mixed = reply.outcome is Outcome.CONFIRMED
+        if mixed:  # na conversa pura o `thinking` já tocou como som do resultado
+            self._feedback(OUTCOME_SOUNDS[Outcome.THINKING])
+        self._pending_reply = {
+            "utterance_id": reply.utterance_id,
+            "mixed": mixed,
+            "speech_end_at": self._speech_end_at,
+        }
+        self._fetcher.fetch(reply.utterance_id, lambda *result: self._fetched.put(result))
+
+    def _drain_fetched(self) -> None:
+        while not self._fetched.empty():
+            utterance_id, path, error = self._fetched.get()
+            pending = self._pending_reply
+            if pending is None or pending["utterance_id"] != utterance_id:
+                if path is not None:  # resposta descartada: não toca, apaga
+                    path.unlink(missing_ok=True)
+                continue
+            self._pending_reply = None
+            now = self._clock()
+            log.info(
+                "Resposta falada: %s",
+                json.dumps(
+                    {
+                        "utterance_id": utterance_id,
+                        "mixed": pending["mixed"],
+                        "ready": path is not None,
+                        "error": error,
+                        "reply_ready_latency_s": round(now - pending["speech_end_at"], 3),
+                    },
+                    ensure_ascii=False,
+                ),
+            )
+            if path is not None:
+                self._play_file(path)
+            else:
+                # Na mista o comando já foi aceito: som próprio, sem "não entendi".
+                self._feedback("reply_failed" if pending["mixed"] else "rejected")
 
     def _save(self, audio: bytes, utterance_id: str) -> None:
         directory = self._config.save_utterances_dir
@@ -289,7 +369,14 @@ def run(config: Config) -> None:
         log.info("Salvando os áudios enviados em %s", config.save_utterances_dir)
     mic = Microphone(config.mic_name, config.chunk_ms)
     machine = ThinMachine(
-        wake, client, config, stats.counters, feedback=lambda name: play_sound(mic.card, name)
+        wake,
+        client,
+        config,
+        stats.counters,
+        feedback=lambda name: play_sound(mic.card, name),
+        fetcher=ReplyFetcher(config.server_url, REPLY_TIMEOUT_S, stats.counters),
+        play_file=lambda path: play_file(mic.card, path),
+        stop_sounds=stop_sounds,
     )
 
     signal.signal(signal.SIGTERM, _raise_shutdown)

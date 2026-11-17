@@ -5,6 +5,10 @@
     uv run python scripts/send_wav.py --cancel stop
 
 `--say` sintetiza a frase (Piper se houver voz em models/piper, senão espeak-ng; e sox).
+
+E-002: se a resposta vier com `reply_pending: true` (status `thinking`, ou
+`enqueued` na frase mista), o script busca a resposta falada em
+GET /v1/reply/{utterance_id} e salva o WAV em `--reply-out`.
 """
 
 import argparse
@@ -31,6 +35,9 @@ def main() -> int:
     parser.add_argument("--reason", default="wake_word", help="padrão: wake_word, como a TV Box")
     parser.add_argument("--utterance-id", help="padrão: um UUID novo")
     parser.add_argument("--timeout", type=float, default=30.0)
+    parser.add_argument(
+        "--reply-out", type=Path, default=Path("reply.wav"), help="onde salvar a resposta falada"
+    )
     args = parser.parse_args()
 
     with httpx.Client(base_url=args.server, timeout=args.timeout) as client:
@@ -59,12 +66,29 @@ def main() -> int:
             data={"meta": json.dumps(meta, ensure_ascii=False)},
         )
         elapsed_ms = (time.perf_counter() - started) * 1000
-    print(f"HTTP {response.status_code} em {elapsed_ms:.0f} ms")
-    try:
-        print(json.dumps(response.json(), ensure_ascii=False, indent=2))
-    except ValueError:
-        print(response.text)
+        print(f"HTTP {response.status_code} em {elapsed_ms:.0f} ms")
+        try:
+            body = response.json()
+            print(json.dumps(body, ensure_ascii=False, indent=2))
+        except ValueError:
+            print(response.text)
+            return 1
+        if response.is_success and body.get("reply_pending"):
+            fetch_reply(client, meta["utterance_id"], args.reply_out)
     return 0 if response.is_success else 1
+
+
+def fetch_reply(client: httpx.Client, utterance_id: str, out: Path) -> None:
+    started = time.perf_counter()
+    reply = client.get(f"/v1/reply/{utterance_id}")
+    elapsed_ms = (time.perf_counter() - started) * 1000
+    if reply.status_code == 200:
+        out.write_bytes(reply.content)
+        print(f"resposta falada: {len(reply.content)} bytes em {elapsed_ms:.0f} ms → {out}")
+    elif reply.status_code == 204:
+        print(f"sem resposta falada (204) em {elapsed_ms:.0f} ms")
+    else:
+        print(f"GET /v1/reply: HTTP {reply.status_code} {reply.text}")
 
 
 if __name__ == "__main__":

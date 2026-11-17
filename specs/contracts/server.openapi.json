@@ -108,6 +108,11 @@
             ],
             "title": "Reject Reason"
           },
+          "reply_pending": {
+            "default": false,
+            "title": "Reply Pending",
+            "type": "boolean"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -233,6 +238,48 @@
           }
         },
         "summary": "Cancel"
+      }
+    },
+    "/v1/reply/{utterance_id}": {
+      "get": {
+        "description": "E-002. Long-poll: segura até o WAV ficar pronto ou até o prazo.",
+        "operationId": "reply_v1_reply__utterance_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "utterance_id",
+            "required": true,
+            "schema": {
+              "title": "Utterance Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "audio/wav": {}
+            },
+            "description": "a resposta falada (WAV)"
+          },
+          "204": {
+            "description": "sem resposta (falhou, passou do prazo ou Llama ocupado)"
+          },
+          "404": {
+            "description": "utterance_id desconhecido ou expirado"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reply"
       }
     },
     "/v1/stats": {

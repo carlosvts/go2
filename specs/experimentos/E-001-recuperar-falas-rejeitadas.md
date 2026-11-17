@@ -69,6 +69,7 @@ Há dois caminhos, conforme o motivo da rejeição.
   - A regex vê o texto **já normalizado** por `Catalog.tokenize`, que troca `pra → para`, `pro → para o`, `pras → para as`, `pros → para os` (`language.replacements`). Por isso "anda pra frente" chega como "anda para frente" e os padrões são escritos só com `para`.
   - No caminho de gestos a exceção não tem efeito: cláusula com palavra de direção sempre vai para a resolução de movimento.
 - C2. Nenhuma outra cláusula da frase foi rejeitada por motivo fora dos dois caminhos (regra atual: uma cláusula rejeitada rejeita a frase).
+  - Interação com a E-002: se as duas forem adotadas, cláusula recuperada pela regex **não** entra em frase mista da E-002 (F4 da E-002). Numa frase com uma cláusula de conversa, ela continua rejeitando a frase inteira.
 - C3. No máximo **uma** cláusula recuperada por frase. Duas ou mais candidatas ⇒ a frase continua rejeitada.
 
 Não roda no `no_match` de nível de frase (frase sem cláusula, só enchimento), na parada e na negação (decididas antes, como hoje).
