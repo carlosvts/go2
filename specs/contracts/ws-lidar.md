@@ -42,7 +42,7 @@ Little-endian, cabeçalho de 40 bytes (corpo alinhado em 8: `Float32Array(buf, 4
 | 36 | u32 | `reserved` | `0` |
 | 40 | f32×3×N | `points` | `(x, y, z)` em metros, `resolution` e `origin` já aplicados |
 
-Tamanho: `40 + 12 × n_points`. O referencial dos pontos ainda não foi verificado no robô (F-001, H1).
+Tamanho: `40 + 12 × n_points`. Referencial dos pontos: `odom`, fixo no mundo (observado em 2026-11-17, F-001 Resultados). O grid de 128×128 voxels acompanha o robô, que fica no centro: `origin + 64 × resolution` em x e y.
 
 ```python
 import numpy as np

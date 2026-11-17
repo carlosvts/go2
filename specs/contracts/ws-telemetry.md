@@ -24,10 +24,10 @@ Só texto, JSON estrito (sem `NaN`/`Infinity`), no envelope:
 |---|---|---|
 | `connection` | ao aceitar (sempre o primeiro frame) e a cada transição; nunca descartado | `{"state": "connected" \| "disconnected" \| "reconnecting"}` |
 | `lidar_metrics` | a cada 1 s, mesmo sem LiDAR ativo | ver abaixo |
-| `lidar_pose` | a cada mensagem de `rt/utlidar/robot_pose` | payload cru do robô, convertido |
-| `lidar_state` | a cada mensagem de `rt/utlidar/lidar_state` | payload cru do robô, convertido |
+| `lidar_pose` | a cada mensagem de `rt/utlidar/robot_pose` (~19/s observado) | payload cru do robô, convertido. Observado: `{"header": {"stamp": {"sec", "nanosec"}, "frame_id": "odom"}, "pose": {"position": {x,y,z}, "orientation": {x,y,z,w}}}` |
+| `lidar_state` | a cada mensagem de `rt/utlidar/lidar_state` (~5/s observado) | payload cru do robô, convertido. Observado: versões, `cloud_frequency`, `cloud_packet_loss_rate`, `imu_rpy`, `error_state` etc. O `stamp` dele tem precisão de ~128 s: não use como tempo |
 
-**Conversão dos payloads crus** (recursiva). Nenhum formato do robô foi verificado; a api não interpreta nada.
+**Conversão dos payloads crus** (recursiva). Os formatos acima foram observados em 2026-11-17 (F-002, Resultados), mas a api continua sem interpretá-los: repassa como chegam.
 
 | No robô | No JSON |
 |---|---|

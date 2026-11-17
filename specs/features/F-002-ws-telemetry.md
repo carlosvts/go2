@@ -150,7 +150,7 @@ O WebSocket do LiDAR abre com `max_size` explícito, pelo motivo do script do F-
 | A14 | `GO2_TELEMETRY_MAX_CLIENTS` (padrão 1): o segundo cliente leva `1013`; `0` desliga a rota; o limite do `/ws/lidar` não muda | teste de rota | software | testado-software (2026-11-17 @ 009f4bb) |
 | A15 | Pior caso só com telemetria: decoder ocupado sem parar (como o A8 do F-001) **e** `ROBOTODOM`/`ULIDAR_STATE` sintéticos chegando a uma taxa alta escolhida pelo teste (provisória até o H1). O `move` simulado respeita os limites do A8 do F-001: p99 do desvio ≤ linha de base + 10% do período; teto 2× o período | teste de carga (`slow`) | software | testado-software (2026-11-17 @ 009f4bb) (provisório: carga sintética até o H1) |
 | A16 | O gravador, alimentado com frames conhecidos, produz `telemetry.jsonl`, `lidar/<n>_<seq>.bin`, `lidar/index.jsonl` e `meta.json` corretos, não sobrescreve quando o `seq` se repete e registra em `meta.json` o fechamento pelo servidor (rota, código, motivo) | teste das funções do script | software | testado-software (2026-11-17 @ 009f4bb) |
-| A17 | Com o robô real, 60 s de gravação: `lidar_metrics` com `received > 0` e `active: true` na maior parte das janelas, e os `.bin` gravados abrem com o snippet do `ws-lidar.md`, com `n_points > 0` | roteiro H1 | hardware-only | inferido |
+| A17 | Com o robô real, 60 s de gravação: `lidar_metrics` com `received > 0` e `active: true` na maior parte das janelas, e os `.bin` gravados abrem com o snippet do `ws-lidar.md`, com `n_points > 0` | roteiro H1 | hardware-only | inferido — dados de 2026-11-17 atendem (ver Resultados); falta a confirmação humana |
 | A18 | Os limites do F-001 (A13: `stop` com mediana +0,2 s e pior caso +0,4 s; A14: p99 do intervalo do `move` ≤ linha de base + 10% do período, teto 2× o período) são respeitados com a configuração da sessão: `GO2_LIDAR_MAX_CLIENTS=2` com 2 clientes de LiDAR (visualizador e gravador) e 1 de telemetria (gravador), e o gravador na mesma máquina da api | roteiro H2 | hardware-only | inferido |
 
 ## Fora de escopo
@@ -181,11 +181,12 @@ O WebSocket do LiDAR abre com `max_size` explícito, pelo motivo do script do F-
 Sem impacto HRI: o stream é lido pela equipe e por um professor, para análise. O robô não emite som, fala nem movimento novo. O efeito indireto possível (atraso do `stop`) é tratado em Segurança e medido em A18.
 
 ## Hipóteses não verificadas
-- Se `ROBOTODOM` e `ULIDAR_STATE` são publicados pelo robô via WebRTC, com que taxa e em que formato (texto JSON ou binário). `TODO(humano): verificar` (H1). Isso define também a taxa realista para o A15.
-- O que é `ROBOTODOM` (pose do SLAM interno? odometria?), em que referencial e com que carimbo de tempo. O dossiê descreve como "pose do SLAM interno", mas ninguém verificou. `TODO(humano): observar` (H1.3).
+- ~~Se `ROBOTODOM` e `ULIDAR_STATE` chegam, taxa e formato~~ **Respondida (2026-11-17):** chegam como JSON (nenhum `base64`). `lidar_pose` ~18,9–19,0/s; `lidar_state` ~5,0/s. A carga sintética do A15 (200/s cada) fica bem acima do real.
+- O que é `ROBOTODOM`: **parcialmente respondida (2026-11-17).** Formato tipo `PoseStamped`: `header.stamp` (`sec`, `nanosec`), `header.frame_id = "odom"`, `pose.position` (x, y, z) e `pose.orientation` (quaternion). Com o robô parado, a pose andou 4,6 cm e girou 3,5° em 60 s (8,6 cm e 5,4° em 120 s): deriva da odometria ou balanço real em `balance_stand`, não dá para separar sem trena. Se é a saída do SLAM interno continua **não verificado**.
 - Se assinar esses tópicos exige algo além do `subscribe`, como o LiDAR exige o `disableTrafficSaving`.
 - Taxa real do LiDAR pelo WebRTC e quanto ela varia: o `rate_hz` vai medir (H1).
-- Tamanho em disco por minuto de gravação: o H1 vai medir (informa o `--max-mb` futuro).
+- ~~Tamanho em disco~~ **Medido (2026-11-17):** ~3,1 MB/s (180 MB em 60 s; 445 MB em 120 s), ~11 GB/h. O robô manda ~10–20 KB por mapa comprimido; o gravador salva os pontos em float32, ~30× maior. Gravar o payload comprimido reduziria muito, mas mexe na api: precisa de spec nova.
+- Relógio: o `header.stamp` da pose está ~0,02–0,08 s atrás do relógio da máquina da api (inclui a latência de rede), suficiente para alinhar pose e nuvem. O `stamp` de `lidar_state` **não serve** como tempo: vem sempre `1794952000.0`/`1794954000.0`, com precisão de ~128 s (provável float32).
 
 ## Decisões
 Tomadas (2026-11-17, humano):
@@ -234,6 +235,26 @@ Registrar o commit.
 
 Registrar a máquina, o vídeo, o log e o commit.
 
+## Resultados de hardware
+
+Sessão de 2026-11-17, api em `24ca9b5` (branch `ws-telemetry-and-lidar`), máquina da api com gravador e visualizador. Não houve trena nem `move`/`stop` medidos. Análise feita pelo Claude a partir das gravações (`gravacoes/`, fora do repo); os números abaixo são os calculados, sem arredondar além do mostrado.
+
+| Gravação | Duração | Frames | Taxa | Pontos/frame (mediana das janelas) | Perdas | Observação |
+|---|---|---|---|---|---|---|
+| `h1-parado` | 60,1 s | 587 | 9,82/s | 26 513 (24 701–28 203) | 0 | robô parado |
+| `teste-120segundos` | 120,1 s | 1186 | 9,88/s | 32 697 (30 337–34 016) | 1 (fila do decoder) | robô parado |
+| `h2-andando-novamente` | 20,0 s | 197 | 9,92/s | 49 650 (48 456–50 209) | 0 | robô **andou** 1,20 m pela pose (caminho 1,57 m); como foi movido não foi registrado |
+| `h2-andando` | 0 s | 0 | — | — | — | não gravou: `1013 max_clients` (vagas ocupadas) |
+
+`lidar_metrics` (janelas de 1 s): 59 + 119 + 19 janelas; `active: true` em **todas**; `last_error` sempre `null`; `received` = `decoded` (exceto 1 descarte na fila do decoder em 120 s); `malformed`, `decode_errors`, `dropped_lidar_clients` e `dropped` sempre 0. Clientes durante as gravações: 1 de LiDAR e 1 de telemetria (o gravador).
+
+`lidar_state` (exemplo real, `h1-parado`):
+`firmware_version` 1.2.3, `software_version` 1.0.0.39, `sdk_version` 1.0.9, `sys_rotation_speed` ~10 780, `com_rotation_speed` ~661, `error_state` 0, `dirty_percentage` 0, `cloud_frequency` 14,4–14,9, `cloud_packet_loss_rate` 1,66–6,63 (%), `cloud_size` ~21 400, `cloud_scan_num` 180, `imu_frequency` ~249,8, `imu_packet_loss_rate` 0, `imu_rpy` (graus), `serial_*`. Unidades de `sys_rotation_speed`/`com_rotation_speed` não documentadas.
+
+Por critério:
+- **A17:** os dados atendem ao critério (`received > 0` e `active: true` em 100% das janelas; frames abrem com 24–50 mil pontos). **Falta o humano declarar que passou** (e que a nuvem corresponde ao lab) para marcar `testado-hardware`.
+- **A18:** **não executado** (robô parado). Continua `inferido`.
+
 ## Histórico
 - 2026-11-17: criada (proposta), a partir do pedido do humano de telemetria do LiDAR para SLAM.
 - 2026-11-17: revisada pelo `spec-reviewer`:
@@ -247,3 +268,4 @@ Registrar a máquina, o vídeo, o log e o commit.
 
   Decisões humanas: falha mantém a telemetria aberta, fila 16, limite do LiDAR 2 na sessão, gravador na mesma máquina.
 - 2026-11-17: implementada em `feat/ws-telemetry` (em-implementacao). A1–A16 passam em teste automático (dublês; A15 com carga sintética). A17 e A18 pendentes (H1/H2).
+- 2026-11-17: resultados da primeira sessão de hardware registrados. Respondidas: formato e taxa de `lidar_pose`/`lidar_state`, disco por minuto, relógio. A17 com dados que atendem, aguardando confirmação; A18 não executado.

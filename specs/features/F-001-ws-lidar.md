@@ -162,12 +162,12 @@ A única ligação com quem está perto do robô é **indireta e de segurança p
 A feature futura que usar o LiDAR para decidir movimento terá impacto HRI direto e precisa preencher esta seção.
 
 ## Hipóteses não verificadas
-- Taxa de mensagens de LiDAR que o robô envia pelo WebRTC. `TODO(humano): medir` (H1, frames/s).
-- `n_points` típico, `src_size` e bytes por frame no lab. `TODO(humano): medir` (H1). Alimenta a carga de A8.
-- Custo de CPU da decodificação `native` por mensagem, na máquina onde a api roda. `TODO(humano): medir` (H1).
-- O voxel map é a varredura do momento ou um mapa que **acumula** (e por quanto tempo um objeto que saiu continua aparecendo)? Na primeira observação do humano, mover uma caixa em volta do robô mudou pouco a cena. `TODO(humano): verificar` (roteiro H1.10).
-- Se o robô fica no centro do grid de 128×128 voxels (`origin + 64 × resolution` em x e y). Inferido pelo formato do decoder; o visualizador marca esse ponto. `TODO(humano): verificar` (H1.8).
-- Referencial dos pontos: o `origin` muda quando o robô anda? `TODO(humano): verificar` (H1.6).
+- ~~Taxa de mensagens de LiDAR pelo WebRTC~~ **Medida (2026-11-17):** ~9,9 mapas/s (janelas de 1 s entre 6,0 e 13,0/s; intervalo máximo isolado de 0,72 s). O sensor reporta `cloud_frequency` ≈ 14,8 Hz: o mapa enviado tem taxa própria.
+- ~~`n_points`, `src_size` e bytes~~ **Medidos (2026-11-17):** 24–50 mil pontos por frame conforme o lugar; `src_size` sempre 77 824 bytes (38 fatias z de 0x800); 10–20 KB comprimidos por mapa; ~320–600 KB por frame decodificado. O A8 usa ~26 mil pontos sintéticos, na faixa medida.
+- ~~Custo da decodificação~~ **Medido (2026-11-17), tempo de parede no worker:** 4–12 ms em média por janela (`decode_ms`), máx. 17,7 ms; do callback ao frame pronto (`pipeline_ms`) média 4–33 ms, máx. 89 ms. CPU pura não foi medida.
+- O voxel map é a varredura do momento ou um mapa que **acumula**? **Inconclusivo** (ver Resultados): a nuvem muda devagar (~2% dos voxels a cada 1,4 s; 19% em 60 s em relação ao 1º frame), mas a rotação da pose no mesmo período também explica parte disso, e a caixa não foi mexida durante as gravações. `TODO(humano): repetir o H1.10 anotando os instantes`.
+- ~~Se o robô fica no centro do grid~~ **Respondida (2026-11-17):** sim. O centro (`origin + 64 × resolution`) coincide com a pose a 3,5–6,8 cm (mediana), máx. 11,4 cm com o robô andando.
+- ~~Referencial dos pontos~~ **Respondida (2026-11-17):** `odom` (fixo no mundo). A pose traz `frame_id: "odom"`; com o robô andando 1,2 m, o `origin` mudou 7 vezes acompanhando-o e os pontos seguiram em coordenadas do mundo. O grid anda com o robô; os pontos não são relativos a ele.
 - Formato de `origin`/`resolution` em `message["data"]`. Lido no código do decoder, não visto no robô.
 - Formato da resposta de `disableTrafficSaving` (`info.execution`). Lido no código da lib, não visto no robô.
 - Se é preciso publicar `"on"` em `rt/utlidar/switch`. `TODO(humano): verificar` (H1.4).
@@ -211,6 +211,28 @@ Preparação comum (H1 e H2): área livre de pessoas e obstáculos no raio de de
 4. Se houver queda de conexão durante uma repetição, descartar essa repetição: a reconexão trava o loop por motivo alheio à feature.
 5. Comparar com os limites de A13/A14. Registrar vídeo, log e commit.
 
+## Resultados de hardware
+
+Sessão de 2026-11-17, api em `24ca9b5` (branch `ws-telemetry-and-lidar`), máquina da api com gravador e visualizador. Não houve trena nem `move`/`stop` medidos. Análise feita pelo Claude a partir das gravações (`gravacoes/`, fora do repo); os números abaixo são os calculados, sem arredondar além do mostrado.
+
+| Gravação | Duração | Frames | Taxa | Pontos/frame (mediana das janelas) | Perdas | Observação |
+|---|---|---|---|---|---|---|
+| `h1-parado` | 60,1 s | 587 | 9,82/s | 26 513 (24 701–28 203) | 0 | robô parado |
+| `teste-120segundos` | 120,1 s | 1186 | 9,88/s | 32 697 (30 337–34 016) | 1 (fila do decoder) | robô parado |
+| `h2-andando-novamente` | 20,0 s | 197 | 9,92/s | 49 650 (48 456–50 209) | 0 | robô **andou** 1,20 m pela pose (caminho 1,57 m); como foi movido não foi registrado |
+| `h2-andando` | 0 s | 0 | — | — | — | não gravou: `1013 max_clients` (vagas ocupadas) |
+
+Valores do F-001 (das janelas de `lidar_metrics` e dos frames):
+- `resolution` 0,05 m em todos os frames; `origin` z = −0,575 m; pontos com z entre −0,47 e 1,27 m.
+- Extensão horizontal da nuvem: ~4 m de raio em volta do centro do grid (mediana 2,2–2,4 m).
+- Atraso da api ao gravador (`received_at − ts`): mediana 31–49 ms, máx. 157 ms.
+- Nenhuma mensagem malformada nem falha de decodificação; nenhum frame descartado na fila do cliente; 1 descarte na fila do decoder em 120 s.
+- Visualizador: o humano conferiu que a nuvem muda conforme o ambiente.
+
+Por critério:
+- **A12** (parede × trena): **não medido** nesta sessão. Continua `inferido`.
+- **A13 / A14** (`stop` e `move` sob carga): **não executados**; o humano manteve o robô parado. Continuam `inferido`.
+
 ## Histórico
 - 2026-11-17: criada (proposta). Decisões do humano:
   - frames de pontos float32, decodificados na api;
@@ -225,3 +247,4 @@ Preparação comum (H1 e H2): área livre de pessoas e obstáculos no raio de de
   Revisada pelo `spec-reviewer`: mecanismo de decodificação definido, worker único com fila limitada, estado `reconnecting`, ativação com casos de corrida e falha, `balance_stand` e linha de base no roteiro, instrumentação do `move`.
 - 2026-11-17: A12 (≤ 5 cm, meta 1 cm) definido; A13 confirmado; A8/A14 aceitos. Sem decisões pendentes; pronta para `implement-spec`.
 - 2026-11-17: implementada em `feat/ws-lidar` (em-implementacao). A1–A11 passam em teste automático, com dublês e com a classe real de data channel da lib em A3; nada disso prova comportamento no robô. A12–A14 pendentes (H1/H2).
+- 2026-11-17: resultados da primeira sessão de hardware registrados (gravações com o robô parado e uma andando). Respondidas: robô no centro do grid, referencial `odom`, taxa, tamanhos e custo de decodificação. A12–A14 não medidos.
