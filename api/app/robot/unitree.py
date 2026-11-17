@@ -4,8 +4,11 @@ Concentrar os imports da lib aqui (padrão *Anti-Corruption Layer*) deixa o
 resto do projeto livre de detalhes dela: se a lib mudar, só este módulo muda.
 """
 
+from collections.abc import Sequence
 from typing import Any, ClassVar
 
+import numpy as np
+from numpy.typing import NDArray
 from unitree_webrtc_connect import (
     DATA_CHANNEL_TYPE,
     OBSTACLES_AVOID_API,
@@ -13,6 +16,9 @@ from unitree_webrtc_connect import (
     SPORT_CMD,
     UnitreeWebRTCConnection,
     WebRTCConnectionMethod,
+)
+from unitree_webrtc_connect.lidar.lidar_decoder_native import (
+    LidarDecoder as _NativeLidarDecoder,
 )
 
 from app.config import ConnectionMethod, Settings
@@ -23,8 +29,59 @@ __all__ = [
     "OBSTACLES_AVOID_API",
     "RTC_TOPIC",
     "SPORT_CMD",
+    "RawLidarDecoder",
     "UnitreeConnectionFactory",
+    "decode_points",
+    "install_raw_lidar_decoder",
 ]
+
+_NATIVE_DECODER = _NativeLidarDecoder()
+
+
+class RawLidarDecoder:
+    """Decoder de repasse: não descomprime nada (F-001).
+
+    A lib chama `datachannel.decoder.decode(binário, metadados)` dentro do
+    handler do data channel, na thread do event loop, e põe o retorno em
+    `message["data"]["data"]`. Com este decoder instalado, o callback recebe
+    os bytes ainda comprimidos e a api decodifica fora do loop.
+    """
+
+    def decode(self, compressed_data: bytes, metadata: object) -> bytes:
+        """Devolve os bytes comprimidos, sem tocar neles."""
+        return bytes(compressed_data)
+
+    def get_decoder_name(self) -> str:
+        """Nome exibido pela lib, por simetria com `UnifiedLidarDecoder`."""
+        return "RawLidarDecoder"
+
+
+def install_raw_lidar_decoder(datachannel: Any) -> None:  # noqa: ANN401
+    """Troca o decoder do data channel pelo de repasse.
+
+    O data channel é recriado a cada `connect()` da lib, então isto precisa
+    ser refeito a cada conexão.
+    """
+    datachannel.decoder = RawLidarDecoder()
+
+
+def decode_points(
+    payload: bytes,
+    src_size: int,
+    origin: Sequence[float],
+    resolution: float,
+) -> NDArray[np.float64]:
+    """Decodifica o voxel map comprimido em pontos `(N, 3)`, em metros.
+
+    Usa o decoder `native` da lib (lz4 + numpy). Pesa na CPU: chame fora da
+    thread do event loop.
+    """
+    result = _NATIVE_DECODER.decode(
+        payload,
+        {"src_size": src_size, "origin": list(origin), "resolution": resolution},
+    )
+    points: NDArray[np.float64] = np.asarray(result["points"], dtype=np.float64)
+    return points
 
 
 class UnitreeConnectionFactory:

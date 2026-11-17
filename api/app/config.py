@@ -77,6 +77,17 @@ class Settings(BaseSettings):
     move_max_duration_s: float = Field(default=10.0, gt=0, le=300.0)
     """Janela máxima aceita em `POST /commands/move`."""
 
+    # ─── LiDAR (/ws/lidar, F-001) ──────────────────────────────────────────
+    lidar_max_clients: int = Field(default=1, ge=0)
+    """Clientes simultâneos em `/ws/lidar`. Acima disso o novo leva `1013`;
+    `0` desliga a rota."""
+
+    lidar_client_queue: int = Field(default=2, ge=1)
+    """Frames binários à espera por cliente; cheia, descarta o mais antigo."""
+
+    lidar_decode_queue: int = Field(default=2, ge=1)
+    """Mensagens do robô à espera do decoder; cheia, descarta a mais antiga."""
+
     max_vx: float = Field(default=1.0, gt=0)
     """Teto de velocidade frontal aceito em `POST /commands/move`, em m/s."""
 

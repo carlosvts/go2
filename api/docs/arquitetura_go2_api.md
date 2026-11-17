@@ -133,7 +133,7 @@ Convenções que valem para todo o REST (`README.md`): comandos respondem `202` 
 |---|---|---|---|
 | `LOW_STATE`/`SPORT_MOD_STATE` | `/ws/telemetry` | 🔜 carlosvts/go2-api#5 | Os tópicos acessíveis pelo WebRTC são os de baixa frequência (dossiê 12.4); a taxa real será medida. |
 | `WebRTCVideoChannel` (track) | `/ws/video` | 🔜 carlosvts/go2-api#4 | Codificar quadros fora do event loop; formato no WS a decidir. |
-| `ULIDAR_ARRAY` + decoder `native` | `/ws/lidar` | 🔜 carlosvts/go2-api#6 | O decoder padrão (`libvoxel`) devolve malha, não pontos. Basta `set_decoder("native")` a cada conexão; sem patch na lib. |
+| `ULIDAR_ARRAY` + decoder `native` | `/ws/lidar` | ✅ software (F-001; falta teste no robô) carlosvts/go2-api#6 | Frames binários de pontos float32; decodificação fora do event loop (decoder de repasse na lib + worker em thread). Contrato: `specs/contracts/ws-lidar.md`. Feito antes do `/ws/telemetry`, invertendo a ordem da §5 (decisão humana). |
 
 ### 4.6 Desenho interno dos streams (planejado)
 

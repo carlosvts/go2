@@ -7,6 +7,9 @@ Contratos HTTP entre os serviços. Cada arquivo é **commitado** e **conferido c
 | `api.openapi.json` | api | server (`build_catalog.py`, despacho); tvbox (só `POST /commands/stop`, em `sense.stop`) |
 | `server.openapi.json` | server | tvbox (`/v1/utterance`, `/v1/cancel`) |
 | `catalog.schema.json` (planejado) | server | server (validará o `catalog.yaml` gerado) |
+| `ws-lidar.md` | api | `api/scripts/ws_lidar_client.py` (visualização/debug); o server ainda não |
+
+`ws-lidar.md` descreve frames de WebSocket, que o OpenAPI não cobre: **o CI não o confere**. A conferência é a revisão humana e os testes de `api/tests/unit/test_lidar_frame.py` e `api/tests/api/test_ws_lidar.py` (F-001).
 
 O tvbox não expõe HTTP, então não tem contrato próprio: só consome os dois acima.
 

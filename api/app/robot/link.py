@@ -4,7 +4,13 @@ import contextlib
 
 from app.exceptions import RobotUnavailableError
 from app.robot.connection import ConnectionState, ConnectionStateTracker
-from app.robot.ports import ConnectionFactory, PeerConnection, PubSub, WebRTCConnection
+from app.robot.ports import (
+    ConnectionFactory,
+    DataChannel,
+    PeerConnection,
+    PubSub,
+    WebRTCConnection,
+)
 
 NOT_CONNECTED_MESSAGE = "❌ Sem conexão com o robô."
 
@@ -103,6 +109,17 @@ class RobotLink:
         if self._connection is None:
             raise RobotUnavailableError(NOT_CONNECTED_MESSAGE)
         return self._connection.datachannel.pub_sub
+
+    @property
+    def datachannel(self) -> DataChannel | None:
+        """Data channel da conexão atual, ou `None` se nunca houve conexão.
+
+        Muda a cada conexão: compare por identidade para saber se ainda é o
+        mesmo canal.
+        """
+        if self._connection is None:
+            return None
+        return self._connection.datachannel
 
     def ensure_connected(self) -> PubSub:
         """Devolve o canal pub/sub, exigindo conexão viva.
