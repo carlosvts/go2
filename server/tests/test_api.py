@@ -87,6 +87,7 @@ async def test_command_is_enqueued_and_dispatched(client, stt, go2):
         "commands": [{"id": "sit"}],
         "confidence": 1.0,
         "reject_reason": None,
+        "reply_pending": False,  # E-002: campo novo, False fora da resposta falada
     }
     await drain(client)
     assert go2.calls == ["sit"]

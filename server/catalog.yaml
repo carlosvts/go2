@@ -212,7 +212,7 @@ movement:
   params: [vx, vy, vyaw, duration_s]
   prepare: {command: balance_stand, wait_s: 1.5}  # INFERIDO, REVISAR
   settle_s: 0.5  # INFERIDO, REVISAR
-  ignore: [para, a, o, à, ao]  # INFERIDO
+  ignore: [para, a, o, à, ao, vamos, bora, lado]  # INFERIDO
   verbs:
     andar: [andar, anda, ande, caminhar, caminha, caminhe, vai, vá]  # 1ª de discovery/, demais INFERIDAS
     virar: [virar, vira, vire, girar, gira, gire]  # 1ª de discovery/, demais INFERIDAS

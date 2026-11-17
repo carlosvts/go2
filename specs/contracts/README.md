@@ -5,7 +5,7 @@ Contratos HTTP entre os serviços. Cada arquivo é **commitado** e **conferido c
 | Arquivo | Dono | Consumidores |
 |---|---|---|
 | `api.openapi.json` | api | server (`build_catalog.py`, despacho); tvbox (só `POST /commands/stop`, em `sense.stop`) |
-| `server.openapi.json` | server | tvbox (`/v1/utterance`, `/v1/cancel`) |
+| `server.openapi.json` | server | tvbox (`/v1/utterance`, `/v1/cancel`; `GET /v1/reply/{utterance_id}` e o campo `reply_pending` na E-002) |
 | `catalog.schema.json` (planejado) | server | server (validará o `catalog.yaml` gerado) |
 
 O tvbox não expõe HTTP, então não tem contrato próprio: só consome os dois acima.

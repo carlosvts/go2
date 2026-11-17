@@ -1,0 +1,27 @@
+# Sessão no robô de 2026-11-04 (E-001), transcrições do log da TV Box.
+# O `expect` foi DEDUZIDO da fala; não houve anotação antes de cada frase.
+# Ficam de fora: #1 (sem transcrição) e #18 "Amaralre." (pretendido indefinido).
+# E-003, conjunto 2: não é teste independente (a E-003 foi escrita olhando estas falas).
+- {text: "Vamos andar para frente.", expect: [move_forward]}        # 2
+- {text: "Anda pra frente!", expect: [move_forward]}                # 3
+- {text: "Ah, o meu irmão.", expect: reject}                        # 4
+- {text: "e não tem...", expect: reject}                            # 5
+- {text: "Vamos caminhar 5 passos à frente.", expect: reject}       # 6
+- {text: "Levanta!", expect: [stand_up]}                            # 7
+- {text: "Fazer coração.", expect: [finger_heart]}                  # 8
+- {text: "Anda pra frente!", expect: [move_forward]}                # 9
+- {text: "Santar!", expect: [sit]}                                  # 10
+- {text: "Sentar.", expect: [sit]}                                  # 11
+- {text: "Mas vamos andar para frente.", expect: [move_forward]}    # 12
+- {text: "Vamos andar para trás.", expect: [move_backward]}         # 13
+- {text: "Anda pra frente e depois senta.", expect: [move_forward, sit]}  # 14
+- {text: "Anda para frente!", expect: [move_forward]}               # 15
+- {text: "Andar para frente!", expect: [move_forward]}              # 16
+- {text: "Vamos andar para frente!", expect: [move_forward]}        # 17
+- {text: "Gira para direita.", expect: [turn_right]}                # 19
+- {text: "Vamos andar para trás.", expect: [move_backward]}         # 20
+- {text: "Vai andar para frente!", expect: [move_forward]}          # 21
+- {text: "Vamos andar para trás.", expect: [move_backward]}         # 22
+- {text: "banana andar pra frente", expect: reject}                 # 23
+- {text: "Andar para frente!", expect: [move_forward]}              # 24
+- {text: "Vamos andar pra frente!", expect: [move_forward]}         # 25

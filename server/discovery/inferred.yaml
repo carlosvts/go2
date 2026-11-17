@@ -119,7 +119,12 @@ movement:
     direita: []
     esquerda: []
   # Palavras de ligação ignoradas dentro de uma cláusula de movimento.
-  ignore: [para, a, o, à, ao]
+  # E-003: "vamos", "bora" e "lado" ("vamos andar pra frente", "anda pro lado
+  # direito"). Ficaram FORA de propósito (edge cases em texto, 2026-11-05):
+  # "mas" (autocorreção vira dois movimentos), "você"/"que"/"quero" (afirmação
+  # vira comando), "pode"/"consegue" (pergunta vira comando) e "de"/"em"
+  # ("para de andar pra frente" viraria move_forward).
+  ignore: [para, a, o, à, ao, vamos, bora, lado]
   # A go2-api só anda a partir de `balance_stand` (docs/essencial da go2-api).
   # O servidor manda essa postura antes de um movimento quando não sabe se o
   # robô já está nela. REVISAR com o robô: efeito com ele sentado ou deitado.

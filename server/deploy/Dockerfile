@@ -17,10 +17,11 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=never
 
 # cuBLAS e cuDNN vêm do extra `gpu`; sem GPU no container o Whisper usa a CPU.
+# E-002: o extra `llm` traz o Piper (container piper-tts, mesma imagem).
 # O cache do uv fica num volume do BuildKit: acelera rebuilds sem entrar na camada.
 COPY pyproject.toml uv.lock .python-version ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --extra gpu
+    uv sync --frozen --no-dev --extra gpu --extra llm
 
 
 # ─── Estágio 2: runtime ───────────────────────────────────────────────────────
@@ -37,6 +38,8 @@ ENV LD_LIBRARY_PATH=$NVIDIA/cublas/lib:$NVIDIA/cudnn/lib
 COPY --from=builder /srv/.venv /srv/.venv
 COPY app ./app
 COPY catalog.yaml ./
+# E-002: prompt, parâmetros e listas da resposta falada.
+COPY llm ./llm
 
 EXPOSE 9000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=120s \

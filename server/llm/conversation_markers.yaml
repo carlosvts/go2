@@ -1,0 +1,44 @@
+# Marcadores de conversa do filtro de ruído (E-002, condição C4).
+#
+# Uma cláusula rejeitada por low_similarity só vai para o Llama se tiver pelo
+# menos 3 palavras (sem o enchimento do catálogo) e pelo menos UMA destas
+# palavras. A comparação é sem acento (fold), palavra inteira.
+#
+# INFERIDO: ninguém mediu se esta lista separa pedido de ruído.
+# Congelado na etapa 1 da E-002 (criterio-congelado-em). Mudar depois de
+# congelado invalida o experimento.
+
+min_words: 3
+
+markers:
+  - qual
+  - quem
+  - como
+  - onde
+  - quando
+  - porque
+  - que
+  - você
+  - seu
+  - sua
+  - teu
+  - tua
+  - fala
+  - conta
+  - diz
+  - me
+
+# F1: "para" no meio da cláusula de conversa só não barra quando a palavra
+# seguinte é um destes pronomes ("fala para mim", "conta para ele").
+# "a gente" são duas palavras. Decisão do humano em 2026-11-04, depois do eval.
+para_pronouns:
+  - mim
+  - ti
+  - você
+  - vocês
+  - nós
+  - ele
+  - ela
+  - eles
+  - elas
+  - a gente

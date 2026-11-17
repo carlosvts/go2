@@ -10,19 +10,24 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel
 from starlette.datastructures import UploadFile
 
 from app.audio import InvalidAudioError, decode_wav
 from app.catalog import load_catalog
 from app.config import Settings
+from app.conversation import ConversationRules
 from app.dispatch import Dispatcher, Go2, Limits
 from app.go2_client import Go2Client
 from app.interpret.embed import Embedder
 from app.interpret.interpreter import Interpreter, Thresholds
 from app.logging_setup import setup_logging
-from app.service import Meta, Service, UtteranceResponse
+from app.reply.echo import EchoFilter
+from app.reply.engine import Llm, ReplyEngine, Synthesizer
+from app.reply.health import HealthMonitor
+from app.reply.store import ReplyStore
+from app.service import Meta, Replies, Service, UtteranceResponse
 from app.transcribe.base import Transcriber, TranscriptionPool
 
 log = logging.getLogger(__name__)
@@ -95,6 +100,8 @@ def create_app(
     transcriber: Transcriber | None = None,
     embedder: Embedder | None | object = _UNSET,
     go2: Go2 | None = None,
+    llm: Llm | None = None,
+    synthesizer: Synthesizer | None = None,
 ) -> FastAPI:
     """Monta o app. Os parâmetros além de `settings` são para os testes."""
     settings = settings or Settings()
@@ -126,6 +133,12 @@ def create_app(
                 stop_accept=settings.tau_stop_accept,
             ),
         )
+        # E-002 antes do dispatcher: se a voz do Piper ou um YAML falhar, nada
+        # mais foi iniciado e não há o que vazar.
+        replies = None
+        llama = None
+        if settings.llm_enabled or llm is not None:
+            replies, llama = await _build_replies(settings, interpreter, llm, synthesizer)
         dispatcher = Dispatcher(
             client,
             catalog,
@@ -140,7 +153,7 @@ def create_app(
         )
         dispatcher.start()
         pool = TranscriptionPool(stt, settings.stt_workers, settings.short_audio_s)
-        service = Service(settings, catalog, interpreter, pool, dispatcher)
+        service = Service(settings, catalog, interpreter, pool, dispatcher, replies)
         app.state.service = service
         app.state.go2 = client
         stats_task = asyncio.create_task(_log_stats(service))
@@ -153,6 +166,10 @@ def create_app(
                 "catalog_ids": sorted(catalog.ids),
                 "go2_api_url": settings.go2_api_url,
                 "save_utterances": settings.save_utterances,
+                "llm_enabled": replies is not None,
+                "llm_url": settings.llm_url if replies is not None else None,
+                "piper_url": settings.piper_url if replies is not None else None,
+                "llm_healthy": replies.health.healthy if replies is not None else None,
             },
         )
         try:
@@ -161,6 +178,14 @@ def create_app(
             stats_task.cancel()
             with suppress(asyncio.CancelledError):
                 await stats_task
+            if replies is not None:
+                await replies.health.close()
+                await replies.engine.close()
+                close_tts = getattr(replies.engine.tts, "close", None)
+                if close_tts is not None:
+                    close_tts()
+            if llama is not None:
+                await llama.aclose()
             await dispatcher.close()
             pool.close()
             if isinstance(client, Go2Client):
@@ -184,6 +209,27 @@ def create_app(
             raise HTTPException(422, f"`audio` inválido: {error}") from error
         service: Service = request.app.state.service
         return await service.handle(meta, audio, wav)
+
+    @app.get(
+        "/v1/reply/{utterance_id}",
+        response_class=Response,
+        responses={
+            200: {"content": {"audio/wav": {}}, "description": "a resposta falada (WAV)"},
+            204: {"description": "sem resposta (falhou, passou do prazo ou Llama ocupado)"},
+            404: {"description": "utterance_id desconhecido ou expirado"},
+        },
+    )
+    async def reply(utterance_id: str, request: Request) -> Response:
+        """E-002. Long-poll: segura até o WAV ficar pronto ou até o prazo."""
+        service: Service = request.app.state.service
+        if service.replies is None:
+            raise HTTPException(404, "resposta falada desligada")
+        result = await service.replies.engine.store.wait(utterance_id)
+        if not result.found:
+            raise HTTPException(404, "utterance_id desconhecido ou expirado")
+        if result.wav is None:
+            return Response(status_code=204)
+        return Response(content=result.wav, media_type="audio/wav")
 
     @app.post("/v1/cancel", response_model=CancelResponse)
     async def cancel(body: CancelRequest, request: Request) -> CancelResponse:
@@ -213,6 +259,36 @@ def create_app(
         return request.app.state.service.stats.summary()
 
     return app
+
+
+async def _build_replies(
+    settings: Settings,
+    interpreter: Interpreter,
+    llm: Llm | None,
+    synthesizer: Synthesizer | None,
+):
+    """E-002. Devolve (Replies, cliente do llama-server a fechar, ou None)."""
+    llama = None
+    if llm is None:
+        from app.reply.llama import LlamaServer
+
+        llama = llm = LlamaServer(settings.llm_url, settings.llm_dir)
+    if synthesizer is None:
+        from app.reply.tts import PiperClient
+
+        # Piper roda em processo próprio: aqui só o cliente HTTP.
+        synthesizer = PiperClient(settings.piper_url, settings.piper_timeout_s)
+    try:
+        echo = EchoFilter.load(interpreter, settings.llm_dir)
+        rules = ConversationRules.load(settings.llm_dir / "conversation_markers.yaml")
+        store = ReplyStore(settings.reply_deadline_s, settings.reply_ttl_s)
+        health = HealthMonitor(llm, settings.llm_health_interval_s, settings.llm_health_timeout_s)
+        await health.start()  # a última: só ela deixa uma tarefa rodando
+    except BaseException:
+        if llama is not None:
+            await llama.aclose()
+        raise
+    return Replies(rules, ReplyEngine(llm, synthesizer, echo, store), health), llama
 
 
 async def _log_stats(service: Service) -> None:

@@ -23,6 +23,8 @@ dependencies = [
 vosk = ["vosk>=0.3.45"]
 # Bibliotecas CUDA que o Whisper na GPU precisa, para quem não as tem no sistema.
 gpu = ["nvidia-cublas-cu12", "nvidia-cudnn-cu12>=9,<10"]
+# E-002: Piper (TTS na CPU) para a resposta falada. O Llama roda fora, no llama-server.
+llm = ["piper-tts>=1.3"]
 
 [dependency-groups]
 dev = [
