@@ -246,6 +246,23 @@ Sessão de 2026-11-17, api em `24ca9b5` (branch `ws-telemetry-and-lidar`), máqu
 | `h2-andando-novamente` | 20,0 s | 197 | 9,92/s | 49 650 (48 456–50 209) | 0 | robô **andou** 1,20 m pela pose (caminho 1,57 m); como foi movido não foi registrado |
 | `h2-andando` | 0 s | 0 | — | — | — | não gravou: `1013 max_clients` (vagas ocupadas) |
 
+**Taxas e tempos** (`api/scripts/lidar_stats.py`; relatório completo em `estatisticas.md` de cada gravação). Valores das três gravações completas:
+
+| Fonte | Taxa média | Intervalo mediano | Jitter (desvio do intervalo) | Intervalo p99 / máx. |
+|---|---|---|---|---|
+| Mapas de LiDAR, chegada na api | 9,82–9,92 Hz | 99,9–101,3 ms | 65–77 ms | 303–308 / 718–722 ms |
+| `lidar_pose`, relógio do robô | 18,91 Hz | 53,6–54,0 ms | 1,3–1,4 ms | 54,7–56,0 / 58–62 ms |
+| `lidar_pose`, chegada no gravador | 18,90–18,97 Hz | 32,8–45,4 ms | 52–59 ms | 204–210 / 617–719 ms |
+| `lidar_state`, chegada | 4,98–4,99 Hz | 202,7–203,8 ms | 74–91 ms | 406–671 / 541–1026 ms |
+| Sensor (`cloud_frequency` reportado) | 14,68–14,71 Hz | — | desvio 0,19 Hz | — |
+| IMU do sensor (`imu_frequency` reportado) | 249,88 Hz (h1) | — | desvio 0,81 Hz | — |
+
+Achados de tempo:
+- **Entrega em rajadas.** O robô produz a pose com intervalo quase constante (jitter 1,3 ms pelo carimbo), mas na chegada os intervalos vão de 0,02 ms a ~700 ms: o link WebRTC agrupa as mensagens. O mesmo acontece com os mapas de LiDAR (intervalos mínimos de 0,3 ms e lacunas acima de 200 ms em 52–68 por minuto).
+- **Os mapas de LiDAR não têm carimbo do robô** no que a api repassa: o `ts` do frame é a chegada na api, com erro de dezenas a centenas de ms em relação ao instante real. Para SLAM, a pose tem carimbo bom; o mapa não. Se os metadados crus do voxel map trazem um carimbo, não foi verificado (estão fora de escopo nesta spec): `TODO(humano): decidir se vale uma spec para repassá-los`.
+- **Relógio:** robô − gravador entre −3,7 e −1180 ms (mediana −42 a −65 ms), incluindo a latência de rede. O menor valor (~4–10 ms) limita a diferença entre os relógios.
+- **Perda de pacotes da nuvem** reportada pelo sensor: média 2,95–3,04%, máx. 7,18%.
+
 `lidar_metrics` (janelas de 1 s): 59 + 119 + 19 janelas; `active: true` em **todas**; `last_error` sempre `null`; `received` = `decoded` (exceto 1 descarte na fila do decoder em 120 s); `malformed`, `decode_errors`, `dropped_lidar_clients` e `dropped` sempre 0. Clientes durante as gravações: 1 de LiDAR e 1 de telemetria (o gravador).
 
 `lidar_state` (exemplo real, `h1-parado`):
@@ -269,3 +286,4 @@ Por critério:
   Decisões humanas: falha mantém a telemetria aberta, fila 16, limite do LiDAR 2 na sessão, gravador na mesma máquina.
 - 2026-11-17: implementada em `feat/ws-telemetry` (em-implementacao). A1–A16 passam em teste automático (dublês; A15 com carga sintética). A17 e A18 pendentes (H1/H2).
 - 2026-11-17: resultados da primeira sessão de hardware registrados. Respondidas: formato e taxa de `lidar_pose`/`lidar_state`, disco por minuto, relógio. A17 com dados que atendem, aguardando confirmação; A18 não executado.
+- 2026-11-17: estatísticas de taxa e frequência (script `lidar_stats.py`) registradas; entrega em rajadas e mapa sem carimbo do robô.
