@@ -2,9 +2,9 @@
 id: F-004
 titulo: Estado e sensores do robô (/status ampliado e /ws/state)
 tipo: comportamento
-status: proposta
+status: em-implementacao
 servicos: [api]
-verificacao: inferido
+verificacao: testado-software
 verificado-em: null
 depende-de: [F-003]            # reaproveita a fila, o cliente e o laço de stream de app/robot/streams.py
 ---
@@ -100,15 +100,15 @@ Com pelo menos um cliente no `/ws/state`, a api registra em log (INFO), a cada 1
 
 | ID | Critério (observável) | Como verificar | Tipo | Verificação |
 |---|---|---|---|---|
-| A1 | Dados payloads de `LOW_STATE`, `SPORT_MOD_STATE` e `MULTIPLE_STATE` (este como string JSON) com os campos dos exemplos, o `GET /status` devolve cada seção renomeada conforme a tabela; os campos antigos têm os mesmos valores de antes; `battery.percent == battery_percent` e `motion.mode == mode` | teste com fake pub_sub | software | inferido |
-| A2 | Campo ausente, de tipo errado, `bool` no lugar de número, lista de tamanho errado ou `NaN` (ex.: em `imu.rpy`) deixa só aquele campo `null` e o `/status` responde `200`; item ruim de `motors` vira `null` sem zerar a lista; tópico que nunca chegou deixa a seção `null`; `MULTIPLE_STATE` que não é JSON deixa `settings` `null` e é registrado em log | teste, um caso por regra | software | inferido |
-| A3 | Usando a classe **real** `WebRTCDataChannel` da lib:<br>(a) uma fotografia `errors` entregue **durante** o `connect()` aparece no `/status`;<br>(b) `add_error` acrescenta sem duplicar; `rm_error` remove; `rm_error` de par ausente não muda nada;<br>(c) código 300/16 dá `code_hex` `"10"` e `code_text` `"Winding overheating"`; código sem texto dá o fallback;<br>(d) a lista é `null` antes da primeira mensagem e depois da queda;<br>(e) depois de uma reconexão, só mensagens do canal novo alimentam a lista;<br>(f) exceção no código da api não chega à lib | teste com `WebRTCDataChannel` real e conexão fake | software | inferido |
-| A4 | Um cliente de `/ws/state` recebe, na ordem: `connection`, o valor atual de cada seção não nula (com `ts` da chegada original), `errors`. Depois, um frame por seção a cada mensagem. Em `reconnecting` → `connected` recebe `connection`, `errors: null`, `connection` e volta a receber as seções | teste | software | inferido |
-| A5 | Com `GO2_STATE_MAX_HZ=H` e um tópico chegando a 5H com relógio controlado, o cliente recebe no máximo H frames desse tópico por segundo, e o último frame recebido tem o valor da última mensagem, mesmo que o tópico pare. Com `0`, recebe todos. Negativo impede a api de subir | teste com relógio fake; teste de config | software | inferido |
-| A6 | Um cliente que não lê não atrasa outro que lê; o lento fica com no máximo 1 item pendente por tópico de seção. Um `add_error` seguido de `rm_error` chega inteiro ao cliente lento, na ordem | teste | software | inferido |
-| A7 | Com `GO2_STATE_MAX_CLIENTS` clientes, o próximo leva `1013`; com `0`, todos | teste | software | inferido |
-| A8 | Conectar e desconectar clientes do `/ws/state` não assina nem cancela tópico no robô | teste com fake pub_sub | software | inferido |
-| A9 | Com `GO2_STATE_MAX_CLIENTS` clientes que leem e `LOW_STATE`, `SPORT_MOD_STATE` e `MULTIPLE_STATE` chegando a 100 Hz cada (sintético, pior caso), o intervalo entre reenvios de um `move` simulado: (a) p99 do desvio ≤ linha de base + 10% do período; (b) nunca acima de 2× o período (régua do F-001 A8) | teste de carga (`slow`) | software | inferido |
+| A1 | Dados payloads de `LOW_STATE`, `SPORT_MOD_STATE` e `MULTIPLE_STATE` (este como string JSON) com os campos dos exemplos, o `GET /status` devolve cada seção renomeada conforme a tabela; os campos antigos têm os mesmos valores de antes; `battery.percent == battery_percent` e `motion.mode == mode` | teste com fake pub_sub | software | testado-software (2026-11-22 @ dc1043e) |
+| A2 | Campo ausente, de tipo errado, `bool` no lugar de número, lista de tamanho errado ou `NaN` (ex.: em `imu.rpy`) deixa só aquele campo `null` e o `/status` responde `200`; item ruim de `motors` vira `null` sem zerar a lista; tópico que nunca chegou deixa a seção `null`; `MULTIPLE_STATE` que não é JSON deixa `settings` `null` e é registrado em log | teste, um caso por regra | software | testado-software (2026-11-22 @ dc1043e) |
+| A3 | Usando a classe **real** `WebRTCDataChannel` da lib:<br>(a) uma fotografia `errors` entregue **durante** o `connect()` aparece no `/status`;<br>(b) `add_error` acrescenta sem duplicar; `rm_error` remove; `rm_error` de par ausente não muda nada;<br>(c) código 300/16 dá `code_hex` `"10"` e `code_text` `"Winding overheating"`; código sem texto dá o fallback;<br>(d) a lista é `null` antes da primeira mensagem e depois da queda;<br>(e) depois de uma reconexão, só mensagens do canal novo alimentam a lista;<br>(f) exceção no código da api não chega à lib | teste com `WebRTCDataChannel` real e conexão fake | software | testado-software (2026-11-22 @ dc1043e) |
+| A4 | Um cliente de `/ws/state` recebe, na ordem: `connection`, o valor atual de cada seção não nula (com `ts` da chegada original), `errors`. Depois, um frame por seção a cada mensagem. Em `reconnecting` → `connected` recebe `connection`, `errors: null`, `connection` e volta a receber as seções | teste | software | testado-software (2026-11-22 @ dc1043e) |
+| A5 | Com `GO2_STATE_MAX_HZ=H` e um tópico chegando a 5H com relógio controlado, o cliente recebe no máximo H frames desse tópico por segundo, e o último frame recebido tem o valor da última mensagem, mesmo que o tópico pare. Com `0`, recebe todos. Negativo impede a api de subir | teste com relógio fake; teste de config | software | testado-software (2026-11-22 @ dc1043e) |
+| A6 | Um cliente que não lê não atrasa outro que lê; o lento fica com no máximo 1 item pendente por tópico de seção. Um `add_error` seguido de `rm_error` chega inteiro ao cliente lento, na ordem | teste | software | testado-software (2026-11-22 @ dc1043e) |
+| A7 | Com `GO2_STATE_MAX_CLIENTS` clientes, o próximo leva `1013`; com `0`, todos | teste | software | testado-software (2026-11-22 @ dc1043e) |
+| A8 | Conectar e desconectar clientes do `/ws/state` não assina nem cancela tópico no robô | teste com fake pub_sub | software | testado-software (2026-11-22 @ dc1043e) |
+| A9 | Com `GO2_STATE_MAX_CLIENTS` clientes que leem e `LOW_STATE`, `SPORT_MOD_STATE` e `MULTIPLE_STATE` chegando a 100 Hz cada (sintético, pior caso), o intervalo entre reenvios de um `move` simulado: (a) p99 do desvio ≤ linha de base + 10% do período; (b) nunca acima de 2× o período (régua do F-001 A8) | teste de carga (`slow`) | software | testado-software (2026-11-22 @ dc1043e) |
 | A10 | Com o robô real, em até 5 s depois de conectar (número sugerido pelo Claude, sem medida), o `GET /status` mostra `battery`, `imu`, `motion`, `motors` e `settings` não nulos; `battery.percent` bate com o app oficial (±1); `settings.volume` e `settings.brightness` batem com o app | roteiro | hardware-only | inferido |
 | A11 | Com o robô real e um cliente no `/ws/state` por 60 s, nenhum tópico passa de `GO2_STATE_MAX_HZ`. Registrar a taxa de cada tópico de origem (`state_metrics`) | roteiro | hardware-only | inferido |
 | A12 | Com o robô real, registrar o que `errors` mostra logo depois de conectar (`null`, `[]` ou erros) e se bate com o app oficial | roteiro | hardware-only | inferido |
@@ -164,3 +164,4 @@ No roteiro único da rodada: [`specs/checklists/api-completa.md`](../checklists/
   - taxa com envio do retido;
   - `errors` sem descarte;
   - teste de carga (A9) e `state_metrics`.
+- 2026-11-22: implementada (dc1043e); A1–A9 passam em software (fakes e `WebRTCDataChannel` real da lib, sem robô); A10–A12 pendentes no robô.
