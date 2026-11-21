@@ -2,7 +2,18 @@
 
 O que foi feito enquanto você dormia, as decisões que tomei sozinho (com a alternativa descartada) e o que falta. Nada foi testado no robô; nada foi para a `main`; nenhum PR aberto.
 
-<!-- RESUMO -->
+## Resumo
+- Branch **`feat/api-completa`** (inclui a F-003), enviada ao GitHub. Sem PR, sem merge na `main`.
+- Specs F-004 a F-007 escritas, revisadas pelo `spec-reviewer` e implementadas. Todos os critérios de software passam: **796 testes**; ruff e mypy limpos.
+- Rotas novas:
+  - estado: `/status` ampliado e `/ws/state`;
+  - dispositivo: `/device/brightness`, `/device/volume` e `/device/led`;
+  - biblioteca de áudio: `/audio/*`, incluindo `/audio/silence`;
+  - alto-falante: `/speaker/*`.
+- Teste rápido com uvicorn real, sem robô: ok.
+- Roteiro único de hardware: `specs/checklists/api-completa.md` (bloco A com o robô deitado, ~40 min; bloco B andando, ~30 min). A F-003 tem roteiro próprio.
+- README da api reescrito para distribuição (clone parcial + Docker).
+
 
 ## Decisões que tomei sozinho
 
@@ -55,4 +66,23 @@ Cada linha: **decisão** — alternativa descartada — por quê. Marque as que 
 34. Upload lido com `python-multipart` direto, em streaming. Alternativa: o `UploadFile` do Starlette, que lê tudo e grava em disco acima de 1 MiB.
 35. `GO2_AUDIO_MAX_UPLOAD_MB` é em MiB (×1024²) e aceita fração.
 
-<!-- DECISOES-F006 -->
+**F-006 (biblioteca de áudio)**
+36. O payload dos blocos fica em `unitree.py`; o laço de envio (timeout, conexão, pausa), em `audio.py`.
+37. A vaga do envio é reservada antes de ler o corpo: o `409` sai sem ler nada.
+38. Exijo `code == 0` em **todos** os blocos; a lib só usa o último.
+39. Nome repetido: comparação exata, sensível a maiúsculas. O rename não confere repetição.
+40. `/audio/silence` cala o alto-falante primeiro e depois pausa o hub. Sem conexão, o alto-falante para, mas a resposta é `503` por causa do hub. Alternativa: responder `202` quando só o alto-falante parou.
+41. `Go2Robot.disconnect()` encerra um envio em andamento como `failed: disconnected`.
+
+### Integração (minhas)
+42. As exceções 413/415 das F-006 e F-007 foram unificadas.
+43. **Dívida:** ficaram **dois leitores de multipart** (`requests/upload.py` da F-007 e `requests/library_upload.py` da F-006) e dois helpers de teste de áudio. Funcionam, mas devem ser unificados.
+44. `audio_player` vai ao `/ws/state` pelo caminho das seções (com teto de taxa); `speaker`, pelo caminho sem descarte. No aceite, a ordem é seções, `audio_player`, `speaker`, `errors`.
+
+## O que falta
+- **Teste no robô** (você): o roteiro da F-003 e o `specs/checklists/api-completa.md`. Rota cujo api_id não funcionar sai antes do PR.
+- Unificar os dois leitores de multipart (item 43).
+- **Risco** apontado pelo subagente da F-007: não há teto de duração. Um MP3 de 5 MB com bitrate muito baixo vira muito PCM em memória. Sugestão: `GO2_SPEAKER_MAX_DURATION_S`.
+- `docker compose --profile api up --build` não foi testado: não há Docker nesta máquina.
+- Os testes rodaram com um `sounddevice` falso (sem PortAudio aqui).
+
