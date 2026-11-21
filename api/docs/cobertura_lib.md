@@ -109,13 +109,13 @@ Previsto em carlosvts/go2-api#2. HRI: som do robô pode ser captado pelo microfo
 
 | Tópico | Conteúdo | Fonte | Na api |
 |---|---|---|---|
-| `LOW_STATE` (`rt/lf/lowstate`) | Bateria, IMU, motores, temperaturas | lib, ex. | 🟡 `GET /status` (bateria; resto em `?raw=true`) |
-| `SPORT_MOD_STATE` (`rt/sportmodestate`) | Modo, pose, velocidade | lib, ex. | 🟡 `GET /status` (modo; resto em `?raw=true`) |
+| `LOW_STATE` (`rt/lf/lowstate`) | Bateria, IMU, motores, temperaturas | lib, ex. | ✅ `GET /status` seções `battery`, `motors`, `body_temperature_c` e `/ws/state` (F-004; só software testado) |
+| `SPORT_MOD_STATE` (`rt/sportmodestate`) | Modo, pose, velocidade | lib, ex. | ✅ `GET /status` seções `imu`, `motion` e `/ws/state` (F-004; só software testado) |
 | `LF_SPORT_MOD_STATE` (`rt/lf/sportmodestate`) | Versão "low frequency" do anterior | lib | ❌ |
-| `MULTIPLE_STATE` (`rt/multiplestate`) | `bodyHeight`, `brightness`, `footRaiseHeight`, `obstaclesAvoidSwitch`, `speedLevel`, `uwbSwitch`, `volume` | lib, ex. | ❌ (devolveria a leitura de vários `GET` sem request) |
+| `MULTIPLE_STATE` (`rt/multiplestate`) | `bodyHeight`, `brightness`, `footRaiseHeight`, `obstaclesAvoidSwitch`, `speedLevel`, `uwbSwitch`, `volume` | lib, ex. | ✅ `GET /status` seção `settings` e `/ws/state` (F-004; só software testado) |
 | `SELF_TEST` (`rt/selftest`) | Autoteste | lib | ❌ |
 | `SERVICE_STATE` (`rt/servicestate`) | Serviços do robô | lib | ❌ |
-| Erros (`DATA_CHANNEL_TYPE` `errors`/`add_error`/`rm_error`, `app_error_messages`) | Falhas de motor, bateria, ventoinha, radar, superaquecimento | lib | ❌ |
+| Erros (`DATA_CHANNEL_TYPE` `errors`/`add_error`/`rm_error`, `app_error_messages`) | Falhas de motor, bateria, ventoinha, radar, superaquecimento | lib | ✅ `errors` no `/status` e no `/ws/state` (F-004; só software testado) |
 | `WIRELESS_CONTROLLER` (leitura) | Estado do controle remoto | lib | ❌ |
 | `UWB_STATE` / `UWB_REQ` | UWB (seguir a pessoa com o controle) | lib | ❌ |
 | `GAS_SENSOR` / `GAS_SENSOR_REQ` | Sensor de gás (acessório) | lib | ❌ |
@@ -155,13 +155,13 @@ Previsto em carlosvts/go2-api#2. HRI: som do robô pode ser captado pelo microfo
 |---|---|---|
 | Postura, `move`, `stop`, velocidade | 12 comandos | ✅ todos |
 | Gestos de baixo risco | 9 | ✅ todos |
-| Ajuste de corpo e marcha (`Euler`, `BodyHeight`, `FootRaiseHeight`, gaits, `SwitchJoystick`) | ~10 | ❌ |
+| Ajuste de corpo e marcha (`Euler`, `BodyHeight`, `FootRaiseHeight`, gaits, `SwitchJoystick`) | ~10 | ❌ fora por decisão (mal documentados) |
 | Truques (flips, pulos, handstand, `Wallow`, `StandOut`…) | ~16 | ⛔ |
-| Modo de movimento (`MOTION_SWITCHER`) e MCF | 2 + ~20 | ❌ |
+| Modo de movimento (`MOTION_SWITCHER`) e MCF | 2 + ~20 | ⛔ restrito (abre bípede e MCF) |
 | Desvio de obstáculo | 4 api_ids + joystick | 🟡 2 de 4 (os outros 2 não fazem falta: o `move` atual já é filtrado) |
 | Lanterna, LED, volume (VUI) | 5 api_ids | ✅ todos (F-005; só software testado) |
-| Áudio (hub, megafone, track de saída, microfone) | ~15 | ❌ |
+| Áudio (hub, megafone, track de saída, microfone) | ~15 | 🟡 hub e alto-falante (F-006, F-007; só software testado); megafone e microfone fora por decisão |
 | Câmera | stream + foto | 🟡 stream (F-003) |
-| Estado e sensores | ~10 tópicos | 🟡 2 tópicos no `/status` |
+| Estado e sensores | ~10 tópicos | 🟡 `LOW_STATE`, `SPORT_MOD_STATE`, `MULTIPLE_STATE` e erros (F-004); os outros têm conteúdo desconhecido |
 | LiDAR | 4 itens + SLAM | 🟡 3 de 4; SLAM fora |
 | Baixo nível (`LOW_CMD`, `BASH_REQ`) | 2 | ⛔ |
