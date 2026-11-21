@@ -82,6 +82,15 @@ class VideoTrack(Protocol):
         """Espera o próximo quadro; lança erro quando a track termina."""
 
 
+class AudioTrack(Protocol):
+    """Track de áudio de saída (`MediaStreamTrack` do aiortc, kind `audio`)."""
+
+    kind: str
+
+    async def recv(self) -> Any:  # noqa: ANN401
+        """Próximo quadro a enviar (`av.AudioFrame`)."""
+
+
 VideoTrackListener = Callable[[VideoTrack], None]
 """Recebe a track de vídeo de uma conexão, durante o `connect()`."""
 
@@ -123,6 +132,9 @@ class WebRTCConnection(Protocol):
 
     datachannel_message_listener: DataChannelMessageListener | None
     """Chamado com as mensagens de erro do data channel (F-004)."""
+
+    def attach_audio_track(self, track: AudioTrack) -> None:
+        """Põe `track` no transceiver de áudio da conexão, sem renegociar (F-007)."""
 
     async def connect(self) -> None:
         """Abre a conexão."""

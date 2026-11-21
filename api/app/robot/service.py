@@ -19,6 +19,7 @@ from app.robot.link import RobotLink
 from app.robot.movement import MoveController
 from app.robot.ports import ConnectionFactory
 from app.robot.safety import ObstacleAvoidanceReading
+from app.robot.speaker import Speaker
 from app.robot.speed import SpeedReading
 from app.robot.state import RobotStatus, StateCache
 from app.robot.state_stream import StateStream
@@ -50,6 +51,7 @@ class Go2Robot:
         device: DeviceControls,
         errors: ActiveErrors,
         state_stream: StateStream,
+        speaker: Speaker,
     ) -> None:
         """Recebe os colaboradores já montados (ver :meth:`from_settings`)."""
         self._link = link
@@ -62,6 +64,7 @@ class Go2Robot:
         self._device = device
         self._errors = errors
         self._state_stream = state_stream
+        self._speaker = speaker
 
     @classmethod
     def from_settings(
@@ -121,6 +124,7 @@ class Go2Robot:
                 max_clients=settings.state_max_clients,
                 max_hz=settings.state_max_hz,
             ),
+            speaker=Speaker(link),
         )
 
     # ─── Ciclo de vida ─────────────────────────────────────────────────────
@@ -219,6 +223,11 @@ class Go2Robot:
     def state_stream(self) -> StateStream:
         """Stream do estado e dos erros ativos (`/ws/state`, F-004)."""
         return self._state_stream
+
+    @property
+    def speaker(self) -> Speaker:
+        """Alto-falante pela track de áudio WebRTC (`/speaker/*`, F-007)."""
+        return self._speaker
 
     # ─── Estado ────────────────────────────────────────────────────────────
 

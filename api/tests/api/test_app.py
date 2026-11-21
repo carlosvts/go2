@@ -99,6 +99,9 @@ def test_documenta_os_endpoints_no_openapi(settings: Settings) -> None:
         "/device/brightness",
         "/device/volume",
         "/device/led",
+        "/speaker",
+        "/speaker/play",
+        "/speaker/stop",
     }
 
 

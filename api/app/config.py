@@ -139,6 +139,11 @@ class Settings(BaseSettings):
     """Teto de frames por segundo, por cliente e por tópico de seção, no
     `/ws/state`; `0` = sem teto. Sugerido, sem medida (F-004 A11)."""
 
+    # ─── Áudio (/speaker/*, F-007) ─────────────────────────────────────────
+    audio_max_upload_mb: float = Field(default=5.0, gt=0)
+    """Tamanho máximo de um upload de áudio, em MiB. Acima disso, `413` (a
+    leitura para no limite). O mesmo limite vale para a F-006."""
+
     max_vx: float = Field(default=1.0, gt=0)
     """Teto de velocidade frontal aceito em `POST /commands/move`, em m/s."""
 
@@ -147,6 +152,11 @@ class Settings(BaseSettings):
 
     max_vyaw: float = Field(default=2.0, gt=0)
     """Teto de velocidade angular aceito em `POST /commands/move`, em rad/s."""
+
+    @property
+    def audio_max_upload_bytes(self) -> int:
+        """`audio_max_upload_mb` em bytes (MiB × 1024²)."""
+        return int(self.audio_max_upload_mb * 1024 * 1024)
 
     @model_validator(mode="after")
     def _check_target(self) -> Self:

@@ -152,6 +152,12 @@ class FakeConnection:
         ) = None
         # Track entregue ao ouvinte durante o `connect()`, como a lib 2.2.0.
         self.video_track: Any = None
+        # Tracks de áudio postas no transceiver (F-007), em ordem.
+        self.audio_tracks: list[Any] = []
+
+    def attach_audio_track(self, track: Any) -> None:
+        """Registra a track posta no transceiver de áudio."""
+        self.audio_tracks.append(track)
 
     async def connect(self) -> None:
         """Marca como conectada, ou falha se configurada para tal."""

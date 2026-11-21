@@ -25,6 +25,7 @@ from app.routers import (
     movement,
     posture,
     safety,
+    speaker,
     speed,
     state,
     telemetry,
@@ -123,6 +124,7 @@ def create_app(
     app.include_router(speed.router)
     app.include_router(safety.router)
     app.include_router(device.router)
+    app.include_router(speaker.router)
     app.include_router(lidar.router)
     app.include_router(telemetry.router)
     app.include_router(video.router)
