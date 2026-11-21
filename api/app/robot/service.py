@@ -13,6 +13,7 @@ from app.robot.connection import (
     ConnectionState,
 )
 from app.robot.device import DeviceControls
+from app.robot.errors import ActiveErrors
 from app.robot.lidar import LidarStream
 from app.robot.link import RobotLink
 from app.robot.movement import MoveController
@@ -20,6 +21,7 @@ from app.robot.ports import ConnectionFactory
 from app.robot.safety import ObstacleAvoidanceReading
 from app.robot.speed import SpeedReading
 from app.robot.state import RobotStatus, StateCache
+from app.robot.state_stream import StateStream
 from app.robot.streams import TrafficSaving
 from app.robot.unitree import UnitreeConnectionFactory
 from app.robot.video import VideoStream
@@ -46,6 +48,8 @@ class Go2Robot:
         lidar: LidarStream,
         video: VideoStream,
         device: DeviceControls,
+        errors: ActiveErrors,
+        state_stream: StateStream,
     ) -> None:
         """Recebe os colaboradores já montados (ver :meth:`from_settings`)."""
         self._link = link
@@ -56,6 +60,8 @@ class Go2Robot:
         self._lidar = lidar
         self._video = video
         self._device = device
+        self._errors = errors
+        self._state_stream = state_stream
 
     @classmethod
     def from_settings(
@@ -75,11 +81,16 @@ class Go2Robot:
         channel = SportChannel(link, settings.request_timeout_s)
         # O vídeo usa o mesmo data channel do LiDAR (F-003).
         traffic = TrafficSaving(settings.request_timeout_s)
+        # Erros do data channel (F-004): só os da conexão atual; `None` na queda.
+        errors = ActiveErrors()
+        link.subscribe_datachannel_messages(errors.on_message)
+        link.state.subscribe(errors.on_connection)
+        state = StateCache()
         return cls(
             link=link,
             channel=channel,
             obstacle_avoid=ObstacleAvoidChannel(link, settings.request_timeout_s),
-            state=StateCache(),
+            state=state,
             movement=MoveController(channel, settings.move_rate_hz),
             lidar=LidarStream(
                 link,
@@ -102,13 +113,29 @@ class Go2Robot:
                 stall_s=settings.video_stall_s,
             ),
             device=DeviceControls(VuiChannel(link, settings.request_timeout_s)),
+            errors=errors,
+            state_stream=StateStream(
+                link,
+                state,
+                errors,
+                max_clients=settings.state_max_clients,
+                max_hz=settings.state_max_hz,
+            ),
         )
 
     # ─── Ciclo de vida ─────────────────────────────────────────────────────
 
     async def connect(self) -> None:
-        """Abre a conexão e assina os tópicos de estado."""
-        await self._link.connect()
+        """Abre a conexão e assina os tópicos de estado.
+
+        Se a abertura falha, erros que a tentativa tenha mandado durante o
+        `connect()` são esquecidos: a lista volta a `None` (desconhecido).
+        """
+        try:
+            await self._link.connect()
+        except BaseException:
+            self._errors.reset(notify=True)
+            raise
         self._state.attach(self._link.pub_sub)
         # Emoji para localizar a linha rápido no terminal.
         log.info("🐝 Conectado ao Go2.")
@@ -188,12 +215,19 @@ class Go2Robot:
         """Lanterna, LED e volume (`/device/*`, F-005)."""
         return self._device
 
+    @property
+    def state_stream(self) -> StateStream:
+        """Stream do estado e dos erros ativos (`/ws/state`, F-004)."""
+        return self._state_stream
+
     # ─── Estado ────────────────────────────────────────────────────────────
 
     def status(self) -> RobotStatus:
         """Snapshot do cache de estado; nunca fala com o robô."""
         return self._state.snapshot(
-            connected=self.is_connected, connection=self.connection
+            connected=self.is_connected,
+            connection=self.connection,
+            errors=self._errors.current,
         )
 
     @property

@@ -62,7 +62,7 @@ class FakePubSub:
             raise AssertionError(msg)
         return self.response
 
-    def publish_state(self, topic: str, data: dict[str, Any]) -> None:
+    def publish_state(self, topic: str, data: Any) -> None:
         """Simula o robô publicando `data` em `topic`."""
         self.subscriptions[topic]({"type": "msg", "topic": topic, "data": data})
 
@@ -146,6 +146,10 @@ class FakeConnection:
         self.connect_error = connect_error
         self.disconnected = False
         self.video_track_listener: Callable[[Any], None] | None = None
+        # Mensagens de erro do data channel (F-004); a lib real passa pelo gancho.
+        self.datachannel_message_listener: (
+            Callable[[Any, dict[str, Any]], None] | None
+        ) = None
         # Track entregue ao ouvinte durante o `connect()`, como a lib 2.2.0.
         self.video_track: Any = None
 

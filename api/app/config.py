@@ -130,6 +130,14 @@ class Settings(BaseSettings):
     led_max_duration_s: int = Field(default=60, ge=1)
     """Duração máxima de uma cor em `PUT /device/led`. Sugerido, sem medida: o
     limite do robô não é conhecido."""
+    # ─── Estado (/ws/state, F-004) ────────────────────────────────────────
+    state_max_clients: int = Field(default=4, ge=0)
+    """Clientes simultâneos em `/ws/state`. Acima disso o novo leva `1013`;
+    `0` desliga a rota. Sugerido, sem medida (F-004)."""
+
+    state_max_hz: float = Field(default=10.0, ge=0)
+    """Teto de frames por segundo, por cliente e por tópico de seção, no
+    `/ws/state`; `0` = sem teto. Sugerido, sem medida (F-004 A11)."""
 
     max_vx: float = Field(default=1.0, gt=0)
     """Teto de velocidade frontal aceito em `POST /commands/move`, em m/s."""

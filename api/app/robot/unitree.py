@@ -4,6 +4,7 @@ Concentrar os imports da lib aqui (padrão *Anti-Corruption Layer*) deixa o
 resto do projeto livre de detalhes dela: se a lib mudar, só este módulo muda.
 """
 
+import logging
 from collections.abc import Sequence
 from typing import Any, ClassVar
 
@@ -21,9 +22,18 @@ from unitree_webrtc_connect.constants import VUI_COLOR
 from unitree_webrtc_connect.lidar.lidar_decoder_native import (
     LidarDecoder as _NativeLidarDecoder,
 )
+from unitree_webrtc_connect.msgs.error_handler import (
+    get_error_code_text,
+    get_error_source_text,
+    integer_to_hex_string,
+)
 
 from app.config import ConnectionMethod, Settings
-from app.robot.ports import VideoTrackListener, WebRTCConnection
+from app.robot.ports import (
+    DataChannelMessageListener,
+    VideoTrackListener,
+    WebRTCConnection,
+)
 
 __all__ = [
     "DATA_CHANNEL_TYPE",
@@ -35,10 +45,38 @@ __all__ = [
     "UnitreeConnectionFactory",
     "VideoHookedConnection",
     "decode_points",
+    "describe_error",
     "install_raw_lidar_decoder",
 ]
 
+log = logging.getLogger(__name__)
+
 _NATIVE_DECODER = _NativeLidarDecoder()
+
+_ERROR_MESSAGE_TYPES = frozenset(
+    {
+        DATA_CHANNEL_TYPE["ERRORS"],
+        DATA_CHANNEL_TYPE["ADD_ERROR"],
+        DATA_CHANNEL_TYPE["RM_ERROR"],
+    }
+)
+"""Tipos de mensagem do data channel que a lib só imprime (F-004)."""
+
+
+def describe_error(source: int, code: int) -> tuple[str, str, str]:
+    """Textos de um erro do robô, com as funções e a tabela da lib.
+
+    Returns:
+        `(source_text, code_hex, code_text)`. `code_hex` é hex maiúsculo,
+        sem `0x` (16 → `"10"`); sem texto na tabela, os fallbacks da lib:
+        `"{source}"` e `"{source}-{code_hex}"`.
+    """
+    code_hex = str(integer_to_hex_string(code))
+    return (
+        str(get_error_source_text(source)),
+        code_hex,
+        str(get_error_code_text(source, code_hex)),
+    )
 
 
 class RawLidarDecoder:
@@ -88,15 +126,52 @@ def decode_points(
 
 
 class VideoHookedConnection(UnitreeWebRTCConnection):  # type: ignore[misc]
-    """Conexão da lib que entrega a track de vídeo à api (F-003), sem patch.
+    """Conexão da lib com ganchos para a api, sem patch na lib.
 
-    A lib cria `self.video` em `init_webrtc`, já dentro do `connect()`, e
-    chama os callbacks dele no evento `track`, antes de o `connect()`
-    retornar. Esta propriedade intercepta a atribuição e registra o callback
-    nessa hora, a cada conexão.
+    - Vídeo (F-003): a lib cria `self.video` em `init_webrtc`, já dentro do
+      `connect()`, e chama os callbacks dele no evento `track`, antes de o
+      `connect()` retornar. A propriedade `video` intercepta a atribuição e
+      registra o callback nessa hora, a cada conexão.
+    - Erros (F-004): a lib cria `self.datachannel` no mesmo `init_webrtc`. A
+      propriedade `datachannel` embrulha o `handle_response` dessa instância:
+      o original roda e, depois, as mensagens `errors`/`add_error`/`rm_error`
+      vão para :attr:`datachannel_message_listener`. Como o gancho entra na
+      criação do canal, a fotografia de erros que chega logo depois da
+      validação, ainda dentro do `connect()`, não se perde.
     """
 
     video_track_listener: VideoTrackListener | None = None
+    datachannel_message_listener: DataChannelMessageListener | None = None
+
+    @property
+    def datachannel(self) -> Any:  # noqa: ANN401 - `WebRTCDataChannel` da lib
+        """Data channel da lib, criado a cada `connect()`."""
+        return self.__dict__.get("_datachannel")
+
+    @datachannel.setter
+    def datachannel(self, channel: Any) -> None:  # noqa: ANN401
+        self.__dict__["_datachannel"] = channel
+        original = channel.handle_response
+
+        async def handle_response(message: Any) -> None:  # noqa: ANN401
+            try:
+                await original(message)
+            finally:
+                self._deliver_datachannel_message(channel, message)
+
+        channel.handle_response = handle_response
+
+    def _deliver_datachannel_message(self, channel: Any, message: Any) -> None:  # noqa: ANN401
+        """Entrega as mensagens de erro; falha da api fica no log, longe da lib."""
+        listener = self.datachannel_message_listener
+        if listener is None or not isinstance(message, dict):
+            return
+        if message.get("type") not in _ERROR_MESSAGE_TYPES:
+            return
+        try:
+            listener(channel, message)
+        except Exception:
+            log.exception("❌ Falha ao tratar mensagem de erro do data channel.")
 
     @property
     def video(self) -> Any:  # noqa: ANN401 - `WebRTCVideoChannel` da lib

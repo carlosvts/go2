@@ -111,9 +111,31 @@ def test_f005_config_de_dispositivo_fora_da_faixa_nao_constroi(
         Settings.model_validate({"connection_method": "LocalAP", campo: valor})
 
 
+@pytest.mark.parametrize(
+    ("campo", "valor"),
+    [("state_max_hz", -0.1), ("state_max_hz", -1), ("state_max_clients", -1)],
+)
+def test_f004_a5_config_de_estado_negativa_impede_a_api_de_subir(
+    campo: str, valor: float
+) -> None:
+    with pytest.raises(ValidationError):
+        Settings.model_validate({"connection_method": "LocalAP", campo: valor})
+
+
 def test_f005_padroes_de_dispositivo_da_spec() -> None:
     settings = Settings(_env_file=None, connection_method=ConnectionMethod.local_ap)
 
     assert settings.max_volume == 10
     assert settings.max_brightness == 10
     assert settings.led_max_duration_s == 60
+
+
+def test_f004_padroes_de_estado_da_spec() -> None:
+    settings = Settings(_env_file=None, connection_method=ConnectionMethod.local_ap)
+    unlimited = Settings(
+        _env_file=None, connection_method=ConnectionMethod.local_ap, state_max_hz=0
+    )
+
+    assert settings.state_max_clients == 4
+    assert settings.state_max_hz == 10
+    assert unlimited.state_max_hz == 0
