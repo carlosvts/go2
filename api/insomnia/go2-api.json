@@ -1,0 +1,1257 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_source": "go2-api:make_insomnia.py",
+  "resources": [
+    {
+      "_id": "wrk_go2api",
+      "_type": "workspace",
+      "name": "go2-api",
+      "description": "Todas as rotas da go2-api (Unitree Go2). Gerado por api/scripts/make_insomnia.py.",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_go2api_base",
+      "_type": "environment",
+      "parentId": "wrk_go2api",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8000",
+        "ws_url": "ws://localhost:8000",
+        "file_id": "COLE_AQUI_O_ID",
+        "upload_id": "COLE_AQUI_O_UPLOAD_ID"
+      }
+    },
+    {
+      "_id": "fld_01_estado",
+      "_type": "request_group",
+      "parentId": "wrk_go2api",
+      "name": "1. Estado e sensores",
+      "metaSortKey": 0
+    },
+    {
+      "_id": "fld_02_postura",
+      "_type": "request_group",
+      "parentId": "wrk_go2api",
+      "name": "2. Posturas",
+      "metaSortKey": 1
+    },
+    {
+      "_id": "fld_03_gestos",
+      "_type": "request_group",
+      "parentId": "wrk_go2api",
+      "name": "3. Gestos",
+      "metaSortKey": 2
+    },
+    {
+      "_id": "fld_04_movimento",
+      "_type": "request_group",
+      "parentId": "wrk_go2api",
+      "name": "4. Movimento, velocidade e desvio",
+      "metaSortKey": 3
+    },
+    {
+      "_id": "fld_05_device",
+      "_type": "request_group",
+      "parentId": "wrk_go2api",
+      "name": "5. Lanterna, LED e volume",
+      "metaSortKey": 4
+    },
+    {
+      "_id": "fld_06_speaker",
+      "_type": "request_group",
+      "parentId": "wrk_go2api",
+      "name": "6. Alto-falante (tocar na hora)",
+      "metaSortKey": 5
+    },
+    {
+      "_id": "fld_07_audio",
+      "_type": "request_group",
+      "parentId": "wrk_go2api",
+      "name": "7. Biblioteca de áudio do robô",
+      "metaSortKey": 6
+    },
+    {
+      "_id": "fld_08_streams",
+      "_type": "request_group",
+      "parentId": "wrk_go2api",
+      "name": "8. Streams (WebSocket)",
+      "metaSortKey": 7
+    },
+    {
+      "_id": "req_000",
+      "_type": "request",
+      "parentId": "fld_01_estado",
+      "name": "Status",
+      "method": "GET",
+      "url": "{{ _.base_url }}/status",
+      "description": "Conexão, bateria, IMU, motores, configurações e erros (errors: null = desconhecido).",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 0,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_001",
+      "_type": "request",
+      "parentId": "fld_01_estado",
+      "name": "Status com payloads crus",
+      "method": "GET",
+      "url": "{{ _.base_url }}/status",
+      "description": "",
+      "body": {},
+      "headers": [],
+      "parameters": [
+        {
+          "name": "raw",
+          "value": "true"
+        }
+      ],
+      "metaSortKey": 1,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_002",
+      "_type": "request",
+      "parentId": "fld_01_estado",
+      "name": "Capabilities",
+      "method": "GET",
+      "url": "{{ _.base_url }}/capabilities",
+      "description": "Comandos de movimento aceitos; não depende do robô.",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 2,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_003",
+      "_type": "request",
+      "parentId": "fld_02_postura",
+      "name": "Postura: stand_up",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/posture",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cmd\": \"stand_up\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 3,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_004",
+      "_type": "request",
+      "parentId": "fld_02_postura",
+      "name": "Postura: stand_down",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/posture",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cmd\": \"stand_down\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 4,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_005",
+      "_type": "request",
+      "parentId": "fld_02_postura",
+      "name": "Postura: sit",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/posture",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cmd\": \"sit\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 5,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_006",
+      "_type": "request",
+      "parentId": "fld_02_postura",
+      "name": "Postura: rise_sit",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/posture",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cmd\": \"rise_sit\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 6,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_007",
+      "_type": "request",
+      "parentId": "fld_02_postura",
+      "name": "Postura: balance_stand",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/posture",
+      "description": "Necessário antes de qualquer move.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cmd\": \"balance_stand\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 7,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_008",
+      "_type": "request",
+      "parentId": "fld_02_postura",
+      "name": "Postura: recovery_stand",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/posture",
+      "description": "Levanta depois de uma queda.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cmd\": \"recovery_stand\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 8,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_009",
+      "_type": "request",
+      "parentId": "fld_02_postura",
+      "name": "⚠ Postura: damp",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/posture",
+      "description": "⚠ DESLIGA OS MOTORES: o robô cai se estiver de pé.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cmd\": \"damp\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 9,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_010",
+      "_type": "request",
+      "parentId": "fld_03_gestos",
+      "name": "Gesto: hello",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/gesture",
+      "description": "Robô de pé. Gesto enviado não é cancelável.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cmd\": \"hello\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 10,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_011",
+      "_type": "request",
+      "parentId": "fld_03_gestos",
+      "name": "Gesto: stretch",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/gesture",
+      "description": "Robô de pé. Gesto enviado não é cancelável.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cmd\": \"stretch\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 11,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_012",
+      "_type": "request",
+      "parentId": "fld_03_gestos",
+      "name": "Gesto: finger_heart",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/gesture",
+      "description": "Robô de pé. Gesto enviado não é cancelável.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cmd\": \"finger_heart\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 12,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_013",
+      "_type": "request",
+      "parentId": "fld_03_gestos",
+      "name": "Gesto: wiggle_hips",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/gesture",
+      "description": "Robô de pé. Gesto enviado não é cancelável.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cmd\": \"wiggle_hips\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 13,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_014",
+      "_type": "request",
+      "parentId": "fld_03_gestos",
+      "name": "Gesto: content",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/gesture",
+      "description": "Robô de pé. Gesto enviado não é cancelável.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cmd\": \"content\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 14,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_015",
+      "_type": "request",
+      "parentId": "fld_03_gestos",
+      "name": "Gesto: dance1",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/gesture",
+      "description": "Robô de pé. Gesto enviado não é cancelável.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cmd\": \"dance1\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 15,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_016",
+      "_type": "request",
+      "parentId": "fld_03_gestos",
+      "name": "Gesto: dance2",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/gesture",
+      "description": "Robô de pé. Gesto enviado não é cancelável.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cmd\": \"dance2\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 16,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_017",
+      "_type": "request",
+      "parentId": "fld_03_gestos",
+      "name": "Gesto: scrape",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/gesture",
+      "description": "Robô de pé. Gesto enviado não é cancelável.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cmd\": \"scrape\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 17,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_018",
+      "_type": "request",
+      "parentId": "fld_03_gestos",
+      "name": "Gesto: pose",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/gesture",
+      "description": "Robô de pé. Gesto enviado não é cancelável.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cmd\": \"pose\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 18,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_019",
+      "_type": "request",
+      "parentId": "fld_04_movimento",
+      "name": "STOP (parar)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/stop",
+      "description": "Para o move e deixa o robô de pé. Deixe esta aba à mão.",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 19,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_020",
+      "_type": "request",
+      "parentId": "fld_04_movimento",
+      "name": "Move: frente devagar 2 s",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/move",
+      "description": "Antes: postura balance_stand. Área livre.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"vx\": 0.3,\n  \"vy\": 0,\n  \"vyaw\": 0,\n  \"duration_s\": 2\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 20,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_021",
+      "_type": "request",
+      "parentId": "fld_04_movimento",
+      "name": "Move: girar 2 s",
+      "method": "POST",
+      "url": "{{ _.base_url }}/commands/move",
+      "description": "Antes: postura balance_stand.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"vx\": 0,\n  \"vy\": 0,\n  \"vyaw\": 0.5,\n  \"duration_s\": 2\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 21,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_022",
+      "_type": "request",
+      "parentId": "fld_04_movimento",
+      "name": "Velocidade: ler",
+      "method": "GET",
+      "url": "{{ _.base_url }}/commands/speed",
+      "description": "",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 22,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_023",
+      "_type": "request",
+      "parentId": "fld_04_movimento",
+      "name": "Velocidade: definir",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/commands/speed",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"level\": 1\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 23,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_024",
+      "_type": "request",
+      "parentId": "fld_04_movimento",
+      "name": "Desvio de obstáculo: ler",
+      "method": "GET",
+      "url": "{{ _.base_url }}/safety/obstacle-avoidance",
+      "description": "",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 24,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_025",
+      "_type": "request",
+      "parentId": "fld_04_movimento",
+      "name": "Desvio de obstáculo: ligar",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/safety/obstacle-avoidance",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"enabled\": true\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 25,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_026",
+      "_type": "request",
+      "parentId": "fld_04_movimento",
+      "name": "Desvio de obstáculo: desligar",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/safety/obstacle-avoidance",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"enabled\": false\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 26,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_027",
+      "_type": "request",
+      "parentId": "fld_05_device",
+      "name": "Brilho: ler",
+      "method": "GET",
+      "url": "{{ _.base_url }}/device/brightness",
+      "description": "",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 27,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_028",
+      "_type": "request",
+      "parentId": "fld_05_device",
+      "name": "Brilho: definir (1)",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/device/brightness",
+      "description": "0 a 10 (GO2_MAX_BRIGHTNESS). Comece baixo.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"level\": 1\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 28,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_029",
+      "_type": "request",
+      "parentId": "fld_05_device",
+      "name": "Brilho: apagar (0)",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/device/brightness",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"level\": 0\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 29,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_030",
+      "_type": "request",
+      "parentId": "fld_05_device",
+      "name": "Volume: ler",
+      "method": "GET",
+      "url": "{{ _.base_url }}/device/volume",
+      "description": "",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 30,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_031",
+      "_type": "request",
+      "parentId": "fld_05_device",
+      "name": "Volume: definir (2)",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/device/volume",
+      "description": "0 a 10 (GO2_MAX_VOLUME). Comece baixo.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"level\": 2\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 31,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_032",
+      "_type": "request",
+      "parentId": "fld_05_device",
+      "name": "LED: white 5 s",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/device/led",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"color\": \"white\",\n  \"duration_s\": 5\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 32,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_033",
+      "_type": "request",
+      "parentId": "fld_05_device",
+      "name": "LED: red 5 s",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/device/led",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"color\": \"red\",\n  \"duration_s\": 5\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 33,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_034",
+      "_type": "request",
+      "parentId": "fld_05_device",
+      "name": "LED: yellow 5 s",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/device/led",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"color\": \"yellow\",\n  \"duration_s\": 5\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 34,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_035",
+      "_type": "request",
+      "parentId": "fld_05_device",
+      "name": "LED: blue 5 s",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/device/led",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"color\": \"blue\",\n  \"duration_s\": 5\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 35,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_036",
+      "_type": "request",
+      "parentId": "fld_05_device",
+      "name": "LED: green 5 s",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/device/led",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"color\": \"green\",\n  \"duration_s\": 5\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 36,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_037",
+      "_type": "request",
+      "parentId": "fld_05_device",
+      "name": "LED: cyan 5 s",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/device/led",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"color\": \"cyan\",\n  \"duration_s\": 5\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 37,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_038",
+      "_type": "request",
+      "parentId": "fld_05_device",
+      "name": "LED: purple 5 s",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/device/led",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"color\": \"purple\",\n  \"duration_s\": 5\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 38,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_039",
+      "_type": "request",
+      "parentId": "fld_05_device",
+      "name": "LED: vermelho piscando",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/device/led",
+      "description": "flash_cycle_ms de 499 a duration_s × 1000.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"color\": \"red\",\n  \"duration_s\": 5,\n  \"flash_cycle_ms\": 1000\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 39,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_040",
+      "_type": "request",
+      "parentId": "fld_06_speaker",
+      "name": "Tocar arquivo (escolha o WAV/MP3)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/speaker/play",
+      "description": "Até GO2_AUDIO_MAX_UPLOAD_MB e GO2_SPEAKER_MAX_DURATION_S (120 s). Clique no campo file e escolha o arquivo.",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "file",
+            "type": "file",
+            "fileName": ""
+          }
+        ]
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "multipart/form-data"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 40,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_041",
+      "_type": "request",
+      "parentId": "fld_06_speaker",
+      "name": "Parar o alto-falante",
+      "method": "POST",
+      "url": "{{ _.base_url }}/speaker/stop",
+      "description": "",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 41,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_042",
+      "_type": "request",
+      "parentId": "fld_06_speaker",
+      "name": "O que está tocando",
+      "method": "GET",
+      "url": "{{ _.base_url }}/speaker",
+      "description": "",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 42,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_043",
+      "_type": "request",
+      "parentId": "fld_07_audio",
+      "name": "Listar áudios do robô",
+      "method": "GET",
+      "url": "{{ _.base_url }}/audio/files",
+      "description": "Copie um id para a variável file_id do ambiente.",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 43,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_044",
+      "_type": "request",
+      "parentId": "fld_07_audio",
+      "name": "Enviar áudio ao robô (escolha o arquivo)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/audio/files",
+      "description": "Responde 202 com upload_id; copie para a variável upload_id. O envio leva minutos para alguns MB.",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "file",
+            "type": "file",
+            "fileName": ""
+          },
+          {
+            "name": "name",
+            "value": "teste-insomnia"
+          }
+        ]
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "multipart/form-data"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 44,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_045",
+      "_type": "request",
+      "parentId": "fld_07_audio",
+      "name": "Andamento do envio",
+      "method": "GET",
+      "url": "{{ _.base_url }}/audio/uploads/{{ _.upload_id }}",
+      "description": "",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 45,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_046",
+      "_type": "request",
+      "parentId": "fld_07_audio",
+      "name": "Tocar áudio do robô",
+      "method": "POST",
+      "url": "{{ _.base_url }}/audio/files/{{ _.file_id }}/play",
+      "description": "",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 46,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_047",
+      "_type": "request",
+      "parentId": "fld_07_audio",
+      "name": "Pausar",
+      "method": "POST",
+      "url": "{{ _.base_url }}/audio/pause",
+      "description": "",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 47,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_048",
+      "_type": "request",
+      "parentId": "fld_07_audio",
+      "name": "Retomar",
+      "method": "POST",
+      "url": "{{ _.base_url }}/audio/resume",
+      "description": "",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 48,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_049",
+      "_type": "request",
+      "parentId": "fld_07_audio",
+      "name": "Modo de reprodução: ler",
+      "method": "GET",
+      "url": "{{ _.base_url }}/audio/play-mode",
+      "description": "",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 49,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_050",
+      "_type": "request",
+      "parentId": "fld_07_audio",
+      "name": "Modo de reprodução: single_cycle",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/audio/play-mode",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"mode\": \"single_cycle\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 50,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_051",
+      "_type": "request",
+      "parentId": "fld_07_audio",
+      "name": "Modo de reprodução: no_cycle",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/audio/play-mode",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"mode\": \"no_cycle\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 51,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_052",
+      "_type": "request",
+      "parentId": "fld_07_audio",
+      "name": "Modo de reprodução: list_loop",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/audio/play-mode",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"mode\": \"list_loop\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 52,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_053",
+      "_type": "request",
+      "parentId": "fld_07_audio",
+      "name": "Renomear áudio",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/audio/files/{{ _.file_id }}",
+      "description": "",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"renomeado\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 53,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_054",
+      "_type": "request",
+      "parentId": "fld_07_audio",
+      "name": "Apagar áudio",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/audio/files/{{ _.file_id }}",
+      "description": "",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 54,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_055",
+      "_type": "request",
+      "parentId": "fld_07_audio",
+      "name": "Estado do player do robô",
+      "method": "GET",
+      "url": "{{ _.base_url }}/audio/player",
+      "description": "",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 55,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "req_056",
+      "_type": "request",
+      "parentId": "fld_07_audio",
+      "name": "SILENCIAR TUDO",
+      "method": "POST",
+      "url": "{{ _.base_url }}/audio/silence",
+      "description": "Pausa o player do robô e para o alto-falante.",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 56,
+      "settingEncodeUrl": true
+    },
+    {
+      "_id": "ws_000",
+      "_type": "websocket_request",
+      "parentId": "fld_08_streams",
+      "name": "/ws/state",
+      "url": "{{ _.ws_url }}/ws/state",
+      "description": "Estado e sensores em tempo real (JSON). Contrato: specs/contracts/ws-state.md.",
+      "metaSortKey": 0,
+      "headers": [],
+      "parameters": [],
+      "settingEncodeUrl": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "ws_001",
+      "_type": "websocket_request",
+      "parentId": "fld_08_streams",
+      "name": "/ws/lidar",
+      "url": "{{ _.ws_url }}/ws/lidar",
+      "description": "Nuvem de pontos (binário float32). Prefira scripts/lidar_viewer.html.",
+      "metaSortKey": 1,
+      "headers": [],
+      "parameters": [],
+      "settingEncodeUrl": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "ws_002",
+      "_type": "websocket_request",
+      "parentId": "fld_08_streams",
+      "name": "/ws/telemetry",
+      "url": "{{ _.ws_url }}/ws/telemetry",
+      "description": "Métricas, pose e estado do LiDAR (JSON).",
+      "metaSortKey": 2,
+      "headers": [],
+      "parameters": [],
+      "settingEncodeUrl": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "ws_003",
+      "_type": "websocket_request",
+      "parentId": "fld_08_streams",
+      "name": "/ws/video",
+      "url": "{{ _.ws_url }}/ws/video",
+      "description": "Câmera, JPEG por frame binário. Prefira scripts/video_viewer.html. Avise as pessoas antes.",
+      "metaSortKey": 3,
+      "headers": [],
+      "parameters": [],
+      "settingEncodeUrl": true,
+      "settingFollowRedirects": "global"
+    }
+  ]
+}

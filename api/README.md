@@ -84,6 +84,12 @@ api.post(
 api.post("/commands/move", json={"vx": 0.3, "vy": 0, "vyaw": 0, "duration_s": 2})
 ```
 
+### Insomnia
+
+[`insomnia/go2-api.json`](insomnia/go2-api.json) tem **todas as rotas**, organizadas por grupo, com exemplos prontos: cada postura, gesto e cor de LED, os uploads de áudio e os quatro WebSockets. Para importar: arraste o arquivo para o Insomnia (ou *Import* → *From File*). No ambiente *Base Environment*, ajuste `base_url` e `ws_url` para o IP da máquina da api; `file_id` e `upload_id` são preenchidos à mão com o que as respostas devolverem.
+
+A coleção é gerada a partir do próprio app: rota nova → `uv run python scripts/make_insomnia.py` (um teste acusa se esquecer).
+
 ### Sem o robô
 
 Para desenvolver sem o robô:
