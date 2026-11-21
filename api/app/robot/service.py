@@ -12,6 +12,7 @@ from app.robot.connection import (
     ConnectionSnapshot,
     ConnectionState,
 )
+from app.robot.lidar import LidarStream
 from app.robot.link import RobotLink
 from app.robot.movement import MoveController
 from app.robot.ports import ConnectionFactory
@@ -31,7 +32,7 @@ class Go2Robot:
     consumidores HTTP não precisam saber nada de WebRTC.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - colaboradores injetados, todos por nome
         self,
         *,
         link: RobotLink,
@@ -39,6 +40,7 @@ class Go2Robot:
         obstacle_avoid: ObstacleAvoidChannel,
         state: StateCache,
         movement: MoveController,
+        lidar: LidarStream,
     ) -> None:
         """Recebe os colaboradores já montados (ver :meth:`from_settings`)."""
         self._link = link
@@ -46,6 +48,7 @@ class Go2Robot:
         self._obstacle_avoid = obstacle_avoid
         self._state = state
         self._movement = movement
+        self._lidar = lidar
 
     @classmethod
     def from_settings(
@@ -69,6 +72,15 @@ class Go2Robot:
             obstacle_avoid=ObstacleAvoidChannel(link, settings.request_timeout_s),
             state=StateCache(),
             movement=MoveController(channel, settings.move_rate_hz),
+            lidar=LidarStream(
+                link,
+                max_clients=settings.lidar_max_clients,
+                client_queue=settings.lidar_client_queue,
+                decode_queue=settings.lidar_decode_queue,
+                request_timeout_s=settings.request_timeout_s,
+                telemetry_max_clients=settings.telemetry_max_clients,
+                telemetry_queue=settings.telemetry_client_queue,
+            ),
         )
 
     # ─── Ciclo de vida ─────────────────────────────────────────────────────
@@ -139,6 +151,11 @@ class Go2Robot:
     def subscribe_connection(self, listener: ConnectionListener) -> None:
         """Registra `listener` para receber `{"state", "reason"}` a cada transição."""
         self._link.state.subscribe(listener)
+
+    @property
+    def lidar(self) -> LidarStream:
+        """Stream de nuvem de pontos do LiDAR (`/ws/lidar`)."""
+        return self._lidar
 
     # ─── Estado ────────────────────────────────────────────────────────────
 

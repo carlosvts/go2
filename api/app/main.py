@@ -17,7 +17,16 @@ from app.config import Settings
 from app.error_handlers import ErrorHandlers
 from app.robot.ports import ConnectionFactory
 from app.robot.service import Go2Robot
-from app.routers import capabilities, gesture, movement, posture, safety, speed
+from app.routers import (
+    capabilities,
+    gesture,
+    lidar,
+    movement,
+    posture,
+    safety,
+    speed,
+    telemetry,
+)
 from app.routers import status as status_router
 
 log = logging.getLogger(__name__)
@@ -40,11 +49,13 @@ class RobotLifespan:
         """Disponibiliza `app.state.robot` durante a vida da app."""
         robot = Go2Robot.from_settings(self._settings, self._connection_factory)
         app.state.robot = robot
+        robot.lidar.start()
         await self._connect(robot)
         keeper = self._start_keeper(robot)
         try:
             yield
         finally:
+            await robot.lidar.stop()
             if keeper is not None:
                 keeper.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
@@ -104,4 +115,6 @@ def create_app(
     app.include_router(movement.router)
     app.include_router(speed.router)
     app.include_router(safety.router)
+    app.include_router(lidar.router)
+    app.include_router(telemetry.router)
     return app

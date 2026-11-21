@@ -21,10 +21,17 @@ class FakePubSub:
         self.subscriptions: dict[str, StateCallback] = {}
         self.response: dict[str, Any] | None = None
         self.hang_on_request = False
+        self.subscribe_calls: list[str] = []
+        self.unsubscribed: list[str] = []
 
     def subscribe(self, topic: str, callback: StateCallback) -> None:
         """Guarda o callback para o teste poder simular mensagens."""
+        self.subscribe_calls.append(topic)
         self.subscriptions[topic] = callback
+
+    def unsubscribe(self, topic: str) -> None:
+        """Registra o cancelamento; como a lib, não remove o callback."""
+        self.unsubscribed.append(topic)
 
     def publish_without_callback(
         self, topic: str, data: Any = None, msg_type: str | None = None
@@ -73,6 +80,20 @@ class FakeDataChannel:
         """Cria o canal com um `FakePubSub`."""
         self.data_channel_opened = True
         self.pub_sub = FakePubSub()
+        self.decoder: Any = None
+        self.traffic_saving_calls: list[bool] = []
+        # `True`/`False`: resposta; exceção: lançada; "hang": nunca responde.
+        self.traffic_saving_result: bool | Exception | str = True
+
+    async def disableTrafficSaving(self, switch: bool) -> bool:  # noqa: N802
+        """Imita a lib: registra o pedido e devolve o resultado configurado."""
+        self.traffic_saving_calls.append(switch)
+        result = self.traffic_saving_result
+        if result == "hang":
+            await asyncio.Event().wait()
+        if isinstance(result, Exception):
+            raise result
+        return bool(result)
 
 
 class FakePeerConnection:

@@ -2,6 +2,7 @@
 
 import time
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
@@ -74,7 +75,11 @@ def test_create_app_le_o_ambiente_quando_nao_recebe_settings(
     assert app.state.settings.robot_ip == "192.168.1.50"
 
 
-def test_create_app_sem_configuracao_valida_falha_ao_construir() -> None:
+def test_create_app_sem_configuracao_valida_falha_ao_construir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Fora de api/: o `.env` do desenvolvedor (robô configurado) não vale aqui.
+    monkeypatch.chdir(tmp_path)
     with pytest.raises(ValueError, match="GO2_ROBOT_IP"):
         create_app()
 

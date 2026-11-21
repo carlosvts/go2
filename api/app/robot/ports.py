@@ -15,8 +15,14 @@ StateCallback = Callable[[dict[str, Any]], None]
 class PubSub(Protocol):
     """Canal publish/subscribe do data channel."""
 
+    subscriptions: dict[str, StateCallback]
+    """Callback por tópico. A lib guarda um só; `unsubscribe` não o remove."""
+
     def subscribe(self, topic: str, callback: StateCallback) -> None:
         """Registra `callback` para as mensagens de `topic`."""
+
+    def unsubscribe(self, topic: str) -> None:
+        """Pede ao robô para parar de mandar `topic` (o callback fica)."""
 
     def publish_without_callback(
         self, topic: str, data: object = None, msg_type: str | None = None
@@ -39,6 +45,12 @@ class DataChannel(Protocol):
     @property
     def pub_sub(self) -> PubSub:
         """Canal publish/subscribe deste data channel."""
+
+    decoder: Any
+    """Decoder de LiDAR que a lib chama ao receber o voxel map."""
+
+    async def disableTrafficSaving(self, switch: bool) -> bool:  # noqa: N802
+        """Liga (`True`) ou desfaz o envio sem economia de tráfego; sem timeout."""
 
 
 class PeerConnection(Protocol):

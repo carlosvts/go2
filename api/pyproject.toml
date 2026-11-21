@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.141.1",
+    "numpy>=2.5.3",
     "pydantic-settings>=2.15.0",
     "unitree-webrtc-connect==2.2.0",
     "uvicorn[standard]>=0.53.0",
@@ -14,6 +15,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "httpx2>=2.13",
+    "lz4>=4.4.5",
     "mypy>=1.18",
     "pre-commit>=4.3",
     "pytest>=9.1.1",
@@ -36,6 +38,9 @@ pythonpath = ["."]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = "--strict-markers --strict-config -ra"
+markers = [
+    "slow: teste de carga de alguns segundos (ex.: F-001 A8)",
+]
 filterwarnings = ["error"]
 
 # ─── cobertura ─────────────────────────────────────────────────────────────
@@ -62,6 +67,11 @@ enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 module = "unitree_webrtc_connect.*"
 # A lib não publica tipos (py.typed); toda a superfície dela passa por
 # `app/robot/unitree.py`, então o `Any` fica confinado a esse módulo.
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "lz4.*"
+# Só os testes usam lz4 direto (para montar payloads sintéticos); sem stubs.
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

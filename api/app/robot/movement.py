@@ -50,10 +50,15 @@ class MoveController:
         """Reenvia `Move` até o fim da janela e então para explicitamente."""
         deadline = time.monotonic() + move.duration_s
         parameter = move.parameter
+        last = time.monotonic()
         try:
             while time.monotonic() < deadline:
                 await asyncio.sleep(self._interval_s)
                 self._channel.send("Move", parameter)
+                now = time.monotonic()
+                # Instrumento do F-001 (A14): intervalo real entre reenvios.
+                log.debug("Move reenviado; intervalo %.1f ms.", (now - last) * 1000)
+                last = now
         except RobotUnavailableError:
             log.warning("❌ Conexão caiu durante o movimento — loop encerrado.")
             return
