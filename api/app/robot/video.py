@@ -21,14 +21,16 @@ import json
 import logging
 import math
 import struct
+import threading
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from enum import StrEnum
+from fractions import Fraction
 from typing import Any
 
-import cv2
+import av
 
 from app.robot.connection import ConnectionState
 from app.robot.link import RobotLink
@@ -72,18 +74,69 @@ class VideoClient(FrameClient):
     """Saída de um cliente do `/ws/video` (ver :class:`FrameClient`)."""
 
 
+def jpeg_qscale(quality: int) -> int:
+    """Qualidade 1–100 → `qscale` do MJPEG do FFmpeg (31 = pior, 2 = melhor).
+
+    Linear: 100 → 2, 1 → 31. Não é a mesma escala do libjpeg; serve para
+    escolher no `.env` entre arquivo menor e imagem melhor.
+    """
+    return max(2, min(31, round(2 + (100 - quality) * 29 / 99)))
+
+
+_encoders = threading.local()
+"""Codificadores MJPEG por thread (o worker é um só), por tamanho e qualidade."""
+
+
+def _encoder(width: int, height: int, qscale: int) -> av.VideoCodecContext:
+    cache: dict[tuple[int, int, int], av.VideoCodecContext] = getattr(
+        _encoders, "cache", {}
+    )
+    _encoders.cache = cache
+    key = (width, height, qscale)
+    if key not in cache:
+        context = av.CodecContext.create("mjpeg", "w")
+        assert isinstance(context, av.VideoCodecContext)  # noqa: S101 - codec de vídeo
+        context.width = width
+        context.height = height
+        context.pix_fmt = "yuvj420p"
+        context.time_base = Fraction(1, 90000)
+        context.options = {"qmin": str(qscale), "qmax": str(qscale)}
+        cache[key] = context
+    return cache[key]
+
+
+def _to_av_frame(frame: VideoFrame) -> av.VideoFrame:
+    """O quadro como `av.VideoFrame` (o do aiortc já é; dublês passam pelo RGB)."""
+    if isinstance(frame, av.VideoFrame):
+        return frame
+    rgb = frame.to_ndarray(format="rgb24")
+    return av.VideoFrame.from_ndarray(rgb, format="rgb24")
+
+
 def encode_frame(frame: VideoFrame, seq: int, ts: float, quality: int) -> bytes:
-    """Converte o quadro, codifica em JPEG e monta o frame v1. Fora do loop.
+    """Converte o quadro, codifica em JPEG (PyAV, MJPEG) e monta o frame v1.
+
+    Fora do loop. Usa o FFmpeg que já vem dentro do PyAV: sem OpenCV nem
+    bibliotecas de sistema.
 
     Raises:
-        ValueError: se o OpenCV não conseguir codificar.
+        ValueError: se o quadro não converter ou o codificador não devolver
+            uma imagem.
     """
-    image = frame.to_ndarray(format="bgr24")
-    ok, jpeg = cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, quality])
-    if not ok:
-        msg = "cv2.imencode falhou"
+    source = _to_av_frame(frame)
+    encoder = _encoder(source.width, source.height, jpeg_qscale(quality))
+    picture = source.reformat(format="yuvj420p")
+    # JPEG não tem tempo; o codificador reaproveitado recusa pts repetido.
+    picture.pts = None
+    try:
+        packets = encoder.encode(picture)
+    except av.FFmpegError as exc:
+        msg = f"MJPEG falhou: {exc}"
+        raise ValueError(msg) from exc
+    body = b"".join(bytes(packet) for packet in packets)
+    if not body.startswith(b"\xff\xd8"):
+        msg = "MJPEG não devolveu um JPEG"
         raise ValueError(msg)
-    body = jpeg.tobytes()
     media_time = frame.time
     header = VIDEO_HEADER.pack(
         FRAME_VERSION,
@@ -91,8 +144,8 @@ def encode_frame(frame: VideoFrame, seq: int, ts: float, quality: int) -> bytes:
         HEADER_LEN,
         seq & 0xFFFFFFFF,
         ts,
-        frame.width,
-        frame.height,
+        source.width,
+        source.height,
         len(body),
         math.nan if media_time is None else float(media_time),
     )

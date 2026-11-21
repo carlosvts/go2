@@ -15,14 +15,14 @@ diz em que fila cada quadro foi descartado.
 
 import argparse
 import asyncio
+import io
 import json
 import math
 import struct
 import time
 from dataclasses import dataclass, field
 
-import cv2
-import numpy as np
+import av
 import websockets
 
 HEADER = struct.Struct("<BBHIdHHId")
@@ -64,9 +64,13 @@ def parse_frame(frame: bytes) -> VideoHeader:
 
 def jpeg_decodes(frame: bytes, header: VideoHeader) -> bool:
     """O JPEG decodifica na resolução do cabeçalho."""
-    body = np.frombuffer(frame, np.uint8, offset=header.header_len)
-    image = cv2.imdecode(body, cv2.IMREAD_COLOR)
-    return image is not None and image.shape[:2] == (header.height, header.width)
+    body = frame[header.header_len :]
+    try:
+        with av.open(io.BytesIO(body), mode="r", format="mjpeg") as container:
+            image = next(container.decode(video=0))
+    except (av.FFmpegError, StopIteration):
+        return False
+    return (image.height, image.width) == (header.height, header.width)
 
 
 @dataclass

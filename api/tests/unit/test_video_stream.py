@@ -7,10 +7,10 @@ import threading
 from collections.abc import AsyncIterator, Callable
 from typing import Any
 
-import cv2
 import numpy as np
 import pytest
 
+from app.robot import video as video_module
 from app.robot.connection import ConnectionState
 from app.robot.link import RobotLink
 from app.robot.streams import FrameClient, TrafficSaving
@@ -26,6 +26,7 @@ from tests.video_frames import (
     RED_SQUARE,
     BrokenFrame,
     SpyFrame,
+    decode_jpeg,
     sample_image,
     video_frame,
 )
@@ -166,10 +167,8 @@ def test_a1_frame_v1_com_jpeg_fiel_a_imagem() -> None:
     assert jpeg_len == len(frame) - HEADER_LEN
     assert media_time == pytest.approx(2.5)
 
-    decoded = cv2.imdecode(np.frombuffer(frame, np.uint8, offset=HEADER_LEN), 1)
-    assert decoded is not None
-    assert decoded.shape == (720, 1280, 3)
-    rgb = cv2.cvtColor(decoded, cv2.COLOR_BGR2RGB)
+    rgb = decode_jpeg(frame[HEADER_LEN:])
+    assert rgb.shape == (720, 1280, 3)
     mse = float(np.mean((rgb.astype(np.float64) - image.astype(np.float64)) ** 2))
     assert 10 * math.log10(255**2 / mse) >= 30.0
     y0, y1, x0, x1 = RED_SQUARE
@@ -193,13 +192,13 @@ async def test_a2_conversao_e_jpeg_fora_do_loop(
     loop_thread = threading.get_ident()
     convert_threads: list[int] = []
     encode_threads: list[int] = []
-    original = cv2.imencode
+    original = video_module._encoder
 
     def spy(*args: Any, **kwargs: Any) -> Any:
         encode_threads.append(threading.get_ident())
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(cv2, "imencode", spy)
+    monkeypatch.setattr(video_module, "_encoder", spy)
     client = await _active(stream)
     for _ in range(3):
         track.put(SpyFrame(video_frame(), convert_threads))

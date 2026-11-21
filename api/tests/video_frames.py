@@ -4,6 +4,7 @@ Gerados pelo teste, não vistos no robô: servem para conferir formato,
 cores e o caminho dos dados, não a câmera.
 """
 
+import io
 import threading
 from fractions import Fraction
 from typing import Any
@@ -75,3 +76,11 @@ class BrokenFrame:
         """Sempre falha."""
         msg = "quadro corrompido"
         raise ValueError(msg)
+
+
+def decode_jpeg(jpeg: bytes) -> NDArray[np.uint8]:
+    """Decodifica um JPEG para RGB `(altura, largura, 3)` com o PyAV."""
+    with av.open(io.BytesIO(jpeg), mode="r", format="mjpeg") as container:
+        frame = next(container.decode(video=0))
+        image = frame.to_ndarray(format="rgb24")
+    return np.asarray(image, dtype=np.uint8)

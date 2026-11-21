@@ -1,5 +1,7 @@
 """Testes de `Settings`: o objeto se recusa a existir inválido."""
 
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -15,7 +17,10 @@ def test_local_sta_sem_ip_nem_serial_nao_constroi() -> None:
     ("campo", "valor"),
     [("robot_ip", "192.168.1.50"), ("robot_serial_number", "B42D0000")],
 )
-def test_local_sta_aceita_ip_ou_serial(campo: str, valor: str) -> None:
+def test_local_sta_aceita_ip_ou_serial(
+    campo: str, valor: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)  # sem o `.env` de quem roda os testes
     settings = Settings.model_validate({campo: valor})
 
     assert settings.connection_method is ConnectionMethod.local_sta

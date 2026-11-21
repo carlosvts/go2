@@ -58,7 +58,7 @@ Little-endian, cabeçalho de 32 bytes, seguido do JPEG.
 
 - Resolução: a do quadro recebido, sem redimensionar. O dossiê diz 1280×720; não foi visto no robô.
 - Qualidade do JPEG: `GO2_VIDEO_JPEG_QUALITY` (inteiro 1–100; fora disso a api não sobe).
-- Codificador: `cv2.imencode` (OpenCV já vem como dependência da lib; passa a ser declarado direto no `pyproject` da api). Proposta do Claude: solta o GIL durante a codificação. Só afeta a máquina da api, não a TV Box.
+- Codificador: **PyAV** (codec `mjpeg` do FFmpeg que vem dentro do PyAV), sem OpenCV nem bibliotecas de sistema. `GO2_VIDEO_JPEG_QUALITY` (1–100) vira o `qscale` do MJPEG de forma linear (100 → 2, 1 → 31); não é a mesma escala do libjpeg. Até 2026-11-22 era `cv2.imencode`, escolha do Claude que quebrou a imagem Docker (o `opencv-python` exige `libxcb`/`libGL`); trocado a pedido do humano.
 
 ### Teto de taxa
 - `GO2_VIDEO_MAX_FPS` (número ≥ 0; negativo: a api não sobe). A api admite um quadro quando passou pelo menos `1 / GO2_VIDEO_MAX_FPS` segundos desde o último admitido, por **relógio monotônico** (`ts` fica só no cabeçalho). Os outros quadros são lidos da track e descartados sem codificar e sem `seq`.
@@ -148,7 +148,7 @@ O formato do frame, os tópicos de texto e os códigos de fechamento vão para `
 
 | ID | Critério (observável) | Como verificar | Tipo | Verificação |
 |---|---|---|---|---|
-| A1 | Dado um cliente e uma track fake que entrega um `av.VideoFrame` 1280×720 com um gradiente suave e um quadrado vermelho puro (RGB 255,0,0) em posição conhecida, então o cliente recebe um frame com `version=1`, `header_len=32`, `width=1280`, `height=720`, `jpeg_len` igual ao tamanho do corpo e `media_time` igual ao `frame.time` (ou `NaN` sem ele). O JPEG decodifica (`cv2.imdecode`) em 1280×720, com PSNR ≥ 30 dB contra a imagem original na qualidade padrão, e o centro do quadrado decodifica vermelho: R ≥ 200, G e B ≤ 60 | `tests/api/test_ws_video.py` | software | testado-software (2026-11-21 @ 548f89b) |
+| A1 | Dado um cliente e uma track fake que entrega um `av.VideoFrame` 1280×720 com um gradiente suave e um quadrado vermelho puro (RGB 255,0,0) em posição conhecida, então o cliente recebe um frame com `version=1`, `header_len=32`, `width=1280`, `height=720`, `jpeg_len` igual ao tamanho do corpo e `media_time` igual ao `frame.time` (ou `NaN` sem ele). O JPEG decodifica (PyAV, `mjpeg`) em 1280×720, com PSNR ≥ 30 dB contra a imagem original na qualidade padrão, e o centro do quadrado decodifica vermelho: R ≥ 200, G e B ≤ 60 | `tests/api/test_ws_video.py` | software | testado-software (2026-11-21 @ 548f89b) |
 | A2 | `to_ndarray` e a codificação JPEG nunca rodam na thread do event loop. Rodam no máximo uma vez por quadro admitido e exatamente uma vez por quadro que sai da fila do codificador, sempre na mesma thread de worker | teste: funções instrumentadas registrando `threading.get_ident()` | software | testado-software (2026-11-21 @ 548f89b) |
 | A3 | Um fake de conexão dispara o evento `track` **durante** o `connect()` e chama os callbacks em sequência com `await`, como a lib 2.2.0. A cada `connect()`, o callback da api retorna sem bloquear e a api passa a ler a track dessa conexão. Depois de 3 reconexões, há exatamente um leitor ativo, o da track mais nova | teste com fake de conexão | software | testado-software (2026-11-21 @ 548f89b) |
 | A4 | Dados 0 clientes e robô `connected`: o 1º cliente dispara `switchVideoChannel(True)` uma vez; o 2º não dispara nada; quando ambos saem, `switchVideoChannel(False)` é chamado uma vez. Um quadro que estava no worker nesse momento termina e não é enviado, e nenhum quadro é admitido depois | teste com fake e worker controlado | software | testado-software (2026-11-21 @ 548f89b) |
@@ -221,7 +221,7 @@ Pedido do humano (2026-11-21): quando existir a rota de device para a cor da lan
 - Que a track chega a cada conexão mesmo com a câmera desligada (o transceiver é negociado no `connect`). Lido no código.
 - Se o vídeo de fato precisa de `disableTrafficSaving(True)`. A api chama de qualquer forma, pelo refcount comum (decisão humana); não se verificou se sem ele os quadros chegam.
 - Que `frame.time` vem preenchido nos quadros do Go2.
-- Que `cv2.imencode` solta o GIL na versão instalada.
+- Quanto da codificação MJPEG do PyAV solta o GIL (o A14 passou: p99 1,13 ms com vídeo contra 1,93 ms de base, 1 339 JPEGs em 3 s nesta máquina).
 - Custo de CPU da decodificação H.264 (thread do aiortc), do RTP/SRTP no loop e da codificação JPEG na máquina da api. `TODO(humano): medir` (H1, `top`).
 - Tamanho do JPEG por quadro na qualidade padrão (provavelmente < 1 MiB a 1280×720, inferido).
 - Atraso câmera → visualizador. `TODO(humano): medir` (H1.7).
@@ -293,3 +293,4 @@ Igual ao H2 do F-001 (`specs/features/F-001-ws-lidar.md`), trocando os clientes 
 - 2026-11-21: propostas aceitas pelo humano (privacidade com rota ligada e regra de uso, ordem H1 → padrões → H2, `STALL_S` 3 s, estados `video`). Sem pendências bloqueantes; pronta para `implement-spec`.
 - 2026-11-21: implementada em `feat/ws-video` (`548f89b`, em-implementacao). Os critérios `software` (A1–A14 e A12b) passam em teste automático com dublês: track e data channel falsos, e a classe real `WebRTCVideoChannel` da lib no A3. Nada disso prova comportamento no robô. A14 (carga, máquina de desenvolvimento): p99 do desvio do `move` 1,1 ms com vídeo contra 1,9 ms de base, máx. 34,5 ms para período de 33,3 ms, ~1 370 JPEGs 1280×720 sintéticos em 3 s para 2 clientes. A15–A18 pendentes (H1/H2).
 - 2026-11-21: roteiro executável criado em `specs/checklists/F-003.md` (H1 com o robô parado, decisão dos padrões, H2 com `move`/`stop`).
+- 2026-11-22: JPEG com o PyAV (MJPEG) no lugar do OpenCV, que quebrava a imagem Docker. O `opencv-python` (dependência declarada pela lib, mas nunca importada) saiu da instalação por um override no `pyproject`. A1, A2 e A14 passam de novo (`PENDENTE`).

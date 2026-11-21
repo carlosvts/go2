@@ -178,7 +178,7 @@ outro consumidor desses tópicos (por exemplo, o hub de WebSocket) precisa
 
 `uv sync` compila o `pyaudio`, que precisa dos headers do PortAudio
 (`portaudio-devel` no Fedora, `portaudio19-dev` no Debian/Ubuntu). A lib também
-depende de `sounddevice`, `opencv-python`, `pydub` e `wasmtime`.
+depende de `sounddevice`, `opencv-python`, `pydub` e `wasmtime`. A api **não instala o `opencv-python`** (override em `pyproject.toml`): a lib não o importa, e ele exige bibliotecas gráficas que a imagem Docker não tem.
 
 ---
 

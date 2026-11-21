@@ -52,8 +52,9 @@ Little-endian, cabeçalho de 32 bytes, seguido do JPEG.
 Tamanho: `header_len + jpeg_len`.
 
 ```python
-import cv2, numpy as np
-image = cv2.imdecode(np.frombuffer(frame, np.uint8, offset=32), cv2.IMREAD_COLOR)
+import io, av   # PyAV; com OpenCV: cv2.imdecode(np.frombuffer(frame, np.uint8, offset=32), 1)
+with av.open(io.BytesIO(frame[32:]), format="mjpeg") as c:
+    image = next(c.decode(video=0)).to_ndarray(format="rgb24")
 ```
 
 ```js
