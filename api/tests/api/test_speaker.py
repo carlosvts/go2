@@ -139,9 +139,12 @@ def test_capabilities_do_not_list_speaker(client: TestClient) -> None:
 
 @pytest.fixture(scope="module")
 def max_size_mp3(tmp_path_factory: pytest.TempPathFactory) -> bytes:
-    """MP3 logo abaixo de 5 MiB (o padrão de `GO2_AUDIO_MAX_UPLOAD_MB`)."""
+    """MP3 logo abaixo de 5 MiB (o padrão de `GO2_AUDIO_MAX_UPLOAD_MB`).
+
+    119 s: abaixo do teto de duração padrão (120 s, A14).
+    """
     path: Path = tmp_path_factory.mktemp("audio") / "max.mp3"
-    data = make_mp3(seconds=128, bit_rate=320_000)
+    data = make_mp3(seconds=119, bit_rate=320_000)
     path.write_bytes(data)
     return data
 
@@ -157,11 +160,11 @@ def test_stop_responds_fast_during_max_size_decode(
     threads: list[int] = []
     real = speaker_module.decode_audio
 
-    def spy(data: bytes, name: str) -> AudioClip:
+    def spy(data: bytes, name: str, **kwargs: Any) -> AudioClip:
         threads.append(threading.get_ident())
         started.set()
         try:
-            return real(data, name)
+            return real(data, name, **kwargs)
         finally:
             finished.set()
 
@@ -185,3 +188,28 @@ def test_stop_responds_fast_during_max_size_decode(
     assert results == [202]
     loop_thread = client.portal.call(threading.get_ident)  # type: ignore[union-attr]
     assert threads[0] != loop_thread
+
+
+@pytest.mark.parametrize(
+    ("name", "make"), [("a.wav", make_wav), ("b.mp3", make_mp3)], ids=["wav", "mp3"]
+)
+def test_a14_audio_acima_do_teto_de_duracao_e_413(
+    settings: Settings, factory: FakeConnectionFactory, name: str, make: Any
+) -> None:
+    """A14: acima de `GO2_SPEAKER_MAX_DURATION_S` → 413 e nada toca."""
+    app = create_app(
+        settings.model_copy(update={"speaker_max_duration_s": 1.0}),
+        connection_factory=factory,
+    )
+    with TestClient(app) as client:
+        response = _play(client, make(seconds=2.0), name)
+        accepted = _play(client, make(seconds=0.5), name)
+
+    assert response.status_code == 413
+    assert "GO2_SPEAKER_MAX_DURATION_S" in response.json()["detail"]
+    assert accepted.status_code == 202
+    assert len(factory.connection.audio_tracks) == 1
+
+
+def test_padrao_do_teto_de_duracao_e_dois_minutos() -> None:
+    assert Settings.model_fields["speaker_max_duration_s"].default == 120.0

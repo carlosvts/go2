@@ -171,7 +171,7 @@ class Go2Robot:
                 max_clients=settings.state_max_clients,
                 max_hz=settings.state_max_hz,
             ),
-            speaker=Speaker(link),
+            speaker=Speaker(link, max_duration_s=settings.speaker_max_duration_s),
             audio=AudioHub(
                 AudioHubChannel(link, settings.request_timeout_s),
                 link,

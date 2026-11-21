@@ -7,6 +7,7 @@ entrega o PCM. Nada disso foi visto no robô (F-007 A10).
 """
 
 import asyncio
+import functools
 import io
 import logging
 import time
@@ -22,7 +23,11 @@ import numpy as np
 from aiortc import MediaStreamTrack
 from numpy.typing import NDArray
 
-from app.exceptions import RobotUnavailableError, UnsupportedAudioError
+from app.exceptions import (
+    PayloadTooLargeError,
+    RobotUnavailableError,
+    UnsupportedAudioError,
+)
 from app.robot.connection import ConnectionState
 from app.robot.link import NOT_CONNECTED_MESSAGE, RobotLink
 
@@ -64,28 +69,55 @@ def _sniff(data: bytes) -> str | None:
     return None
 
 
-def decode_audio(data: bytes, name: str) -> AudioClip:
+def too_long_message(max_duration_s: float) -> str:
+    """Mensagem do `413` por duração."""
+    return (
+        f"❌ Áudio acima de {max_duration_s:g} s (GO2_SPEAKER_MAX_DURATION_S): "
+        "corte o arquivo ou use a biblioteca do robô (`/audio/files`)."
+    )
+
+
+def decode_audio(
+    data: bytes, name: str, *, max_duration_s: float | None = None
+) -> AudioClip:
     """Decodifica WAV ou MP3 inteiro para PCM 48 kHz estéreo s16 (PyAV).
 
-    Pesa na CPU: chame fora do event loop.
+    Pesa na CPU: chame fora do event loop. Com `max_duration_s`, recusa o
+    arquivo pela duração do cabeçalho, quando ele informa, e de qualquer forma
+    para de decodificar assim que as amostras passam do teto: um MP3 pequeno
+    de bitrate baixo não vira centenas de MB de PCM em memória.
 
     Raises:
         UnsupportedAudioError: formato não reconhecido pelo conteúdo, arquivo
             que não decodifica ou sem amostras.
+        PayloadTooLargeError: áudio mais longo que `max_duration_s`.
     """
     fmt = _sniff(data)
     if fmt is None:
         msg = "❌ O arquivo não é WAV nem MP3."
         raise UnsupportedAudioError(msg)
+    max_samples = None if max_duration_s is None else max_duration_s * SAMPLE_RATE
     chunks: list[NDArray[Any]] = []
+    samples = 0
     try:
         with av.open(io.BytesIO(data), mode="r", format=fmt) as container:
+            declared = container.duration
+            if (
+                max_duration_s is not None
+                and declared is not None
+                and declared / av.time_base > max_duration_s
+            ):
+                raise PayloadTooLargeError(too_long_message(max_duration_s))
             stream = container.streams.audio[0]
             resampler = av.AudioResampler(
                 format="s16", layout="stereo", rate=SAMPLE_RATE
             )
             for frame in container.decode(stream):
-                chunks.extend(out.to_ndarray() for out in resampler.resample(frame))
+                for out in resampler.resample(frame):
+                    chunks.append(out.to_ndarray())
+                    samples += out.samples
+                if max_samples is not None and samples > max_samples:
+                    raise PayloadTooLargeError(too_long_message(max_duration_s or 0))
             chunks.extend(out.to_ndarray() for out in resampler.resample(None))
     except (av.FFmpegError, IndexError, ValueError, OSError) as exc:
         msg = f"❌ Não foi possível decodificar o {fmt.upper()}: {exc}"
@@ -229,9 +261,11 @@ SpeakerListener = Callable[[dict[str, Any]], None]
 Decoder = Callable[[bytes, str], AudioClip]
 
 
-def _default_decoder(data: bytes, name: str) -> AudioClip:
+def _default_decoder(
+    data: bytes, name: str, max_duration_s: float | None = None
+) -> AudioClip:
     # Busca no módulo a cada chamada: os testes trocam `decode_audio`.
-    return decode_audio(data, name)
+    return decode_audio(data, name, max_duration_s=max_duration_s)
 
 
 def _utc_now() -> datetime:
@@ -251,13 +285,25 @@ class Speaker:
         self,
         link: RobotLink,
         *,
-        decoder: Decoder = _default_decoder,
+        max_duration_s: float | None = None,
+        decoder: Decoder | None = None,
         track_factory: Callable[[], SpeakerTrack] = SpeakerTrack,
         clock: Callable[[], datetime] = _utc_now,
     ) -> None:
-        """Recebe o link; os demais existem para testes."""
+        """Recebe o link e o teto de duração; os demais existem para testes.
+
+        Args:
+            link: Conexão com o robô.
+            max_duration_s: Teto de duração do áudio (`GO2_SPEAKER_MAX_DURATION_S`);
+                `None` = sem teto. Só vale para o decodificador padrão.
+            decoder: Substitui o decodificador (testes).
+            track_factory: Cria a track persistente (testes).
+            clock: Relógio do `started_at` (testes).
+        """
         self._link = link
-        self._decoder = decoder
+        self._decoder: Decoder = decoder or functools.partial(
+            _default_decoder, max_duration_s=max_duration_s
+        )
         self._track_factory = track_factory
         self._clock = clock
         self._generation = 0
@@ -291,6 +337,7 @@ class Speaker:
             RobotUnavailableError: sem conexão, antes ou depois de decodificar
                 (inclusive se a conexão mudou no meio).
             UnsupportedAudioError: não é WAV/MP3 ou não decodifica.
+            PayloadTooLargeError: mais longo que `GO2_SPEAKER_MAX_DURATION_S`.
         """
         self._link.ensure_connected()
         self._generation += 1

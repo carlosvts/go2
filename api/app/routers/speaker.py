@@ -11,7 +11,7 @@ from fastapi import APIRouter, Request, status
 
 from app.dependencies import RobotDep, SettingsDep
 from app.exceptions import RobotUnavailableError
-from app.requests.upload import read_file_field
+from app.requests.upload import read_multipart
 from app.responses.speaker import (
     PlaybackResponse,
     SpeakerResponse,
@@ -68,11 +68,10 @@ async def play(
     """
     if not robot.is_connected:
         raise RobotUnavailableError(NOT_CONNECTED_MESSAGE)
-    upload = await read_file_field(
+    upload = await read_multipart(
         request.headers.get("content-type"),
         request.headers.get("content-length"),
         request.stream(),
-        field="file",
         max_bytes=settings.audio_max_upload_bytes,
     )
     playback = await robot.speaker.play(upload.data, upload.filename or "audio")

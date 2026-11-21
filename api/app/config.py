@@ -146,6 +146,11 @@ class Settings(BaseSettings):
     vai ao robô na F-006 (um MP3 pequeno pode virar um WAV grande). Sugerido,
     sem medida: 5 MiB de WAV estéreo 44,1 kHz são ~30 s e ≥ 3 min de envio."""
 
+    speaker_max_duration_s: float = Field(default=120.0, gt=0)
+    """Duração máxima de um áudio em `POST /speaker/play`, em segundos (~uma
+    música). Acima disso, `413`. O arquivo inteiro é decodificado em memória
+    (48 kHz estéreo: ~11 MiB por minuto), então o teto protege a api."""
+
     @property
     def audio_max_upload_bytes(self) -> int:
         """:attr:`audio_max_upload_mb` em bytes (1 MiB = 1 048 576)."""

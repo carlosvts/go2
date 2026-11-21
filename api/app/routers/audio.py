@@ -13,7 +13,7 @@ from fastapi import APIRouter, Request, status
 
 from app.dependencies import RobotDep
 from app.requests.audio import AudioRenameRequest, PlayModeRequest
-from app.requests.library_upload import StreamingUpload
+from app.requests.upload import read_multipart
 from app.responses.audio import (
     AudioAccepted,
     AudioFileResponse,
@@ -103,8 +103,15 @@ async def upload_file(request: Request, robot: RobotDep) -> UploadAccepted:
     hub = robot.audio
 
     async def read() -> UploadSource:
-        return await StreamingUpload.read(
-            request.headers, request.stream(), hub.max_upload_bytes
+        upload = await read_multipart(
+            request.headers.get("content-type"),
+            request.headers.get("content-length"),
+            request.stream(),
+            max_bytes=hub.max_upload_bytes,
+            text_fields=("name",),
+        )
+        return UploadSource(
+            data=upload.data, filename=upload.filename, name=upload.fields.get("name")
         )
 
     record = await hub.upload(read)

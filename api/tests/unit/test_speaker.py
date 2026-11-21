@@ -5,10 +5,15 @@ import threading
 import time
 from typing import TYPE_CHECKING, Any
 
+import av
 import numpy as np
 import pytest
 
-from app.exceptions import RobotUnavailableError, UnsupportedAudioError
+from app.exceptions import (
+    PayloadTooLargeError,
+    RobotUnavailableError,
+    UnsupportedAudioError,
+)
 from app.robot.link import RobotLink
 from app.robot.speaker import (
     FRAME_SAMPLES,
@@ -359,3 +364,36 @@ async def test_failing_listener_does_not_break_others(link: RobotLink) -> None:
     speaker.subscribe(recorder)
     await speaker.play(make_wav(), "a.wav")
     assert seen == ["playing"]
+
+
+def test_a14_decodificacao_para_no_teto_mesmo_sem_duracao_no_cabecalho(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A14: sem a duração no cabeçalho, a contagem de amostras para a leitura."""
+    original_open = av.open
+
+    def open_without_duration(*args: Any, **kwargs: Any) -> Any:
+        container = original_open(*args, **kwargs)
+
+        class _NoDuration:
+            def __init__(self, inner: Any) -> None:
+                self._inner = inner
+                self.duration = None
+
+            def __getattr__(self, attr: str) -> Any:
+                return getattr(self._inner, attr)
+
+            def __enter__(self) -> Any:
+                self._inner.__enter__()
+                return self
+
+            def __exit__(self, *exc: Any) -> Any:
+                return self._inner.__exit__(*exc)
+
+        return _NoDuration(container)
+
+    monkeypatch.setattr(av, "open", open_without_duration)
+    with pytest.raises(PayloadTooLargeError):
+        decode_audio(make_wav(seconds=3.0), "longo.wav", max_duration_s=1.0)
+    clip = decode_audio(make_wav(seconds=0.5), "curto.wav", max_duration_s=1.0)
+    assert clip.duration_s == pytest.approx(0.5, abs=0.05)

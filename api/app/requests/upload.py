@@ -1,28 +1,39 @@
-"""Leitura de um arquivo de `multipart/form-data` em streaming, com teto.
+"""Leitura de `multipart/form-data` em streaming, com teto (F-006, F-007).
 
-O `UploadFile` do Starlette lê o corpo inteiro e passa de 1 MiB para arquivo
-temporário em disco antes do handler. Aqui o corpo é lido aos pedaços, o
-arquivo fica só em memória, e a leitura para assim que passa do teto (F-007).
+O `UploadFile` do Starlette lê o corpo inteiro antes da rota e passa de 1 MiB
+para arquivo temporário em disco. Aqui o corpo é lido aos pedaços, o arquivo
+fica só em memória, e a leitura para assim que ele passa do teto: o resto do
+corpo não é lido.
+
+Usado por `POST /audio/files` (arquivo + `name` opcional) e por
+`POST /speaker/play` (só o arquivo).
 """
 
-from collections.abc import AsyncIterator
-from dataclasses import dataclass
+from collections.abc import AsyncIterator, Iterable
+from dataclasses import dataclass, field
 
-from python_multipart.exceptions import MultipartParseError
+from python_multipart.exceptions import FormParserError
 from python_multipart.multipart import MultipartParser, parse_options_header
 
 from app.exceptions import InvalidCommandError, PayloadTooLargeError
 
-# Folga para os cabeçalhos do multipart no teste do `Content-Length`.
+FILE_FIELD = "file"
+MAX_TEXT_FIELD_BYTES = 4096
+"""Teto de cada campo de texto (o `name` válido tem até 64 caracteres)."""
+
 _ENVELOPE_SLACK_BYTES = 64 * 1024
+"""Folga para os cabeçalhos do multipart na recusa pelo `Content-Length`."""
 
 
 @dataclass(frozen=True)
-class UploadedFile:
-    """Conteúdo e nome de um arquivo enviado."""
+class MultipartUpload:
+    """O arquivo enviado e os campos de texto pedidos que vieram."""
 
-    filename: str
     data: bytes
+    filename: str | None
+    """`filename` do `Content-Disposition`, ou `None` se não veio."""
+    fields: dict[str, str] = field(default_factory=dict)
+    """Só os campos pedidos em `text_fields` que vieram no corpo."""
 
 
 def too_large_message(max_bytes: int) -> str:
@@ -31,23 +42,27 @@ def too_large_message(max_bytes: int) -> str:
     return f"❌ Arquivo acima de {mib:g} MiB (GO2_AUDIO_MAX_UPLOAD_MB)."
 
 
-class _FilePartCollector:
-    """Callbacks do `python_multipart`: guarda só o campo `field`."""
+class _Collector:
+    """Callbacks do `python_multipart`: guarda o arquivo e os campos pedidos."""
 
-    def __init__(self, field: str, max_bytes: int) -> None:
-        self._field = field
+    def __init__(
+        self, file_field: str, text_fields: frozenset[str], max_bytes: int
+    ) -> None:
+        self._file_field = file_field
+        self._text_fields = text_fields
         self._max_bytes = max_bytes
         self._header_name = b""
         self._header_value = b""
         self._disposition = b""
-        self._in_target = False
-        self._buffer = bytearray()
-        self.found: UploadedFile | None = None
-        self._filename = ""
+        self._target: str | None = None
+        self.file = bytearray()
+        self.filename: str | None = None
+        self.has_file = False
+        self.texts: dict[str, bytearray] = {}
 
     def on_part_begin(self) -> None:
         self._disposition = b""
-        self._in_target = False
+        self._target = None
 
     def on_header_field(self, data: bytes, start: int, end: int) -> None:
         self._header_name += data[start:end]
@@ -64,72 +79,86 @@ class _FilePartCollector:
     def on_headers_finished(self) -> None:
         _, options = parse_options_header(self._disposition)
         name = options.get(b"name", b"").decode("utf-8", "replace")
-        self._in_target = self.found is None and name == self._field
-        if self._in_target:
-            raw = options.get(b"filename", b"")
-            self._filename = raw.decode("utf-8", "replace")
-            self._buffer = bytearray()
+        if name == self._file_field and not self.has_file:
+            self.has_file = True
+            raw = options.get(b"filename")
+            self.filename = raw.decode("utf-8", "replace") if raw is not None else None
+            self._target = self._file_field
+        elif name in self._text_fields and name not in self.texts:
+            self.texts[name] = bytearray()
+            self._target = name
 
     def on_part_data(self, data: bytes, start: int, end: int) -> None:
-        if not self._in_target:
+        if self._target is None:
             return
-        self._buffer += data[start:end]
-        if len(self._buffer) > self._max_bytes:
-            raise PayloadTooLargeError(too_large_message(self._max_bytes))
+        piece = data[start:end]
+        if self._target == self._file_field:
+            if len(self.file) + len(piece) > self._max_bytes:
+                raise PayloadTooLargeError(too_large_message(self._max_bytes))
+            self.file += piece
+            return
+        text = self.texts[self._target]
+        if len(text) + len(piece) > MAX_TEXT_FIELD_BYTES:
+            msg = f"❌ O campo `{self._target}` é grande demais."
+            raise InvalidCommandError(msg)
+        text += piece
 
     def on_part_end(self) -> None:
-        if self._in_target:
-            self.found = UploadedFile(self._filename, bytes(self._buffer))
-            self._in_target = False
+        self._target = None
+
+    def callbacks(self) -> dict[str, object]:
+        return {
+            "on_part_begin": self.on_part_begin,
+            "on_header_field": self.on_header_field,
+            "on_header_value": self.on_header_value,
+            "on_header_end": self.on_header_end,
+            "on_headers_finished": self.on_headers_finished,
+            "on_part_data": self.on_part_data,
+            "on_part_end": self.on_part_end,
+        }
 
 
-async def read_file_field(
+async def read_multipart(  # noqa: PLR0913 - tudo por nome, sem objeto extra
     content_type: str | None,
     content_length: str | None,
     stream: AsyncIterator[bytes],
     *,
-    field: str,
     max_bytes: int,
-) -> UploadedFile:
-    """Lê o arquivo do campo `field`, parando ao passar de `max_bytes`.
+    file_field: str = FILE_FIELD,
+    text_fields: Iterable[str] = (),
+) -> MultipartUpload:
+    """Lê o arquivo de `file_field` e os campos `text_fields`, com teto.
 
     Raises:
-        PayloadTooLargeError: o arquivo (ou o `Content-Length`) passa do teto.
-        InvalidCommandError: não é `multipart/form-data` ou falta o campo
-            (vira `422`).
+        PayloadTooLargeError: o arquivo, ou o `Content-Length` (com folga
+            para os cabeçalhos), passa de `max_bytes`; o resto do corpo não é
+            lido.
+        InvalidCommandError: não é `multipart/form-data`, está malformado,
+            falta o arquivo ou um campo de texto passa de
+            :data:`MAX_TEXT_FIELD_BYTES` (vira `422`).
     """
     kind, params = parse_options_header(content_type)
     boundary = params.get(b"boundary")
     if kind != b"multipart/form-data" or not boundary:
-        msg = f"❌ Envie o arquivo em multipart/form-data, no campo {field!r}."
+        msg = f"❌ Envie multipart/form-data com o arquivo no campo `{file_field}`."
         raise InvalidCommandError(msg)
-    collector = _FilePartCollector(field, max_bytes)
     if (
         content_length is not None
         and content_length.isdigit()
         and int(content_length) > max_bytes + _ENVELOPE_SLACK_BYTES
     ):
         raise PayloadTooLargeError(too_large_message(max_bytes))
-    parser = MultipartParser(
-        boundary,
-        {
-            "on_part_begin": collector.on_part_begin,
-            "on_part_data": collector.on_part_data,
-            "on_part_end": collector.on_part_end,
-            "on_header_field": collector.on_header_field,
-            "on_header_value": collector.on_header_value,
-            "on_header_end": collector.on_header_end,
-            "on_headers_finished": collector.on_headers_finished,
-        },
-    )
+    collector = _Collector(file_field, frozenset(text_fields), max_bytes)
+    parser = MultipartParser(boundary, collector.callbacks())  # type: ignore[arg-type]
     try:
         async for chunk in stream:
             parser.write(chunk)
         parser.finalize()
-    except MultipartParseError as exc:
-        msg = f"❌ multipart/form-data inválido: {exc}"
+    except FormParserError as exc:
+        msg = "❌ multipart/form-data malformado."
         raise InvalidCommandError(msg) from exc
-    if collector.found is None:
-        msg = f"❌ Falta o arquivo no campo {field!r}."
+    if not collector.has_file:
+        msg = f"❌ Falta o arquivo no campo `{file_field}`."
         raise InvalidCommandError(msg)
-    return collector.found
+    fields = {k: v.decode("utf-8", "replace") for k, v in collector.texts.items()}
+    return MultipartUpload(bytes(collector.file), collector.filename, fields)
