@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 from typing import Any, Self
 
 from app.config import Settings
@@ -28,6 +29,9 @@ from app.robot.unitree import UnitreeConnectionFactory
 from app.robot.video import VideoStream
 
 log = logging.getLogger(__name__)
+
+SPEAKER_TOPIC = "speaker"
+"""Tópico do alto-falante (F-007) no `/ws/state`."""
 
 
 class Go2Robot:
@@ -65,6 +69,21 @@ class Go2Robot:
         self._errors = errors
         self._state_stream = state_stream
         self._speaker = speaker
+        self._wire_state_stream()
+
+    def _wire_state_stream(self) -> None:
+        """Liga o alto-falante (F-007) ao `/ws/state` (F-004), tópico `speaker`.
+
+        Mudança de estado vai pelo caminho sem descarte; no aceite, o cliente
+        recebe o estado atual.
+        """
+        speaker, stream = self._speaker, self._state_stream
+        speaker.subscribe(
+            lambda snapshot: stream.publish_event(SPEAKER_TOPIC, snapshot)
+        )
+        stream.add_snapshot_provider(
+            lambda: [(SPEAKER_TOPIC, time.time(), speaker.snapshot.as_dict())]
+        )
 
     @classmethod
     def from_settings(

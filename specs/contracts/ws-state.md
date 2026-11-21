@@ -32,6 +32,7 @@ Só texto, JSON estrito (sem `NaN`/`Infinity`), no envelope:
 | `body_temperature_c` | `rt/lf/lowstate` | número ou `null` |
 | `settings` | `rt/multiplestate` | seção `settings` (`null` se o `data` não for JSON) |
 | `errors` | data channel (`errors`/`add_error`/`rm_error`) | lista dos erros ativos, ou `null` |
+| `speaker` | alto-falante da api (F-007) | o mesmo corpo do `GET /speaker`: `{"state": "idle" \| "playing", "playback_id", "name", "started_at", "duration_s"}` |
 
 Campo ilegível vira `null` sozinho (ausente, tipo errado, não finito, lista de tamanho errado). `settings.obstacle_avoidance` é informativo: a fonte de verdade é `/safety/obstacle-avoidance`.
 
@@ -51,7 +52,7 @@ Cada item:
 
 ## Sequência
 
-1. **Ao aceitar:** `connection`; depois o valor atual de cada seção não nula, nesta ordem: `battery`, `imu`, `motion`, `motors`, `body_temperature_c`, `settings`; depois `errors` (pode ser `null`).
+1. **Ao aceitar:** `connection`; depois o valor atual de cada seção não nula, nesta ordem: `battery`, `imu`, `motion`, `motors`, `body_temperature_c`, `settings`; depois `speaker` (estado atual do alto-falante); depois `errors` (pode ser `null`).
 2. **A cada mensagem do robô:** um frame por seção que ela alimenta (`rt/lf/lowstate` → `battery`, `motors`, `body_temperature_c`; `rt/sportmodestate` → `imu`, `motion`; `rt/multiplestate` → `settings`).
 3. **A cada mudança da lista de erros:** `errors`.
 4. **Na queda** (cada transição para fora de `connected`): `connection` e `errors: null`. As seções mantêm o último valor no `/status` (com a idade em `*_age_s`) e não são reenviadas.
@@ -61,7 +62,7 @@ Cada item:
 ## Taxa e filas
 
 - **Seções:** por cliente e por tópico, no máximo `GO2_STATE_MAX_HZ` frames por segundo (padrão 10; `0` = sem teto). Acima disso, o frame retido é o mais recente e sai quando a janela fecha, mesmo que o tópico pare de chegar. Cliente lento: um item pendente por tópico de seção; o mais recente substitui o pendente.
-- **`connection` e `errors`:** caminho próprio, **sem descarte e sem teto**, na ordem em que aconteceram.
+- **`connection`, `errors` e `speaker`:** caminho próprio, **sem descarte e sem teto**, na ordem em que aconteceram (no aceite, o `speaker` segue a ordem acima).
 - A ordem relativa entre todos os frames é a de entrada na fila do cliente.
 - Um cliente lento não atrasa os outros nem o robô.
 
@@ -78,4 +79,4 @@ Com pelo menos um cliente, a cada 1 s, linha INFO `state_metrics {json}`: `windo
 
 ## Tópicos futuros
 
-Specs posteriores (F-006, F-007) podem acrescentar tópicos neste stream, no mesmo envelope. Um cliente deve ignorar `topic` desconhecido.
+Specs posteriores podem acrescentar tópicos neste stream, no mesmo envelope (a F-006 acrescenta `audio_player`). Um cliente deve ignorar `topic` desconhecido.
