@@ -6,7 +6,13 @@ import time
 from typing import Any, Self
 
 from app.config import Settings
-from app.robot.channel import ObstacleAvoidChannel, SportChannel, VuiChannel
+from app.robot.audio import AudioHub
+from app.robot.channel import (
+    AudioHubChannel,
+    ObstacleAvoidChannel,
+    SportChannel,
+    VuiChannel,
+)
 from app.robot.commands import MoveCommand, SportCommand
 from app.robot.connection import (
     ConnectionListener,
@@ -32,6 +38,8 @@ log = logging.getLogger(__name__)
 
 SPEAKER_TOPIC = "speaker"
 """Tópico do alto-falante (F-007) no `/ws/state`."""
+AUDIO_PLAYER_TOPIC = "audio_player"
+"""Tópico do player do robô (F-006) no `/ws/state`."""
 
 
 class Go2Robot:
@@ -56,6 +64,7 @@ class Go2Robot:
         errors: ActiveErrors,
         state_stream: StateStream,
         speaker: Speaker,
+        audio: AudioHub,
     ) -> None:
         """Recebe os colaboradores já montados (ver :meth:`from_settings`)."""
         self._link = link
@@ -69,21 +78,40 @@ class Go2Robot:
         self._errors = errors
         self._state_stream = state_stream
         self._speaker = speaker
-        self._wire_state_stream()
+        self._audio = audio
+        self._wire_audio()
 
-    def _wire_state_stream(self) -> None:
-        """Liga o alto-falante (F-007) ao `/ws/state` (F-004), tópico `speaker`.
+    def _wire_audio(self) -> None:
+        """Liga o áudio (F-006, F-007) ao `/ws/state` (F-004) e ao `silence`.
 
-        Mudança de estado vai pelo caminho sem descarte; no aceite, o cliente
-        recebe o estado atual.
+        - `speaker`: mudança de estado pelo caminho sem descarte; no aceite, o
+          estado atual.
+        - `audio_player`: o `data` cru do player do robô, pelo caminho das
+          seções (com o teto `GO2_STATE_MAX_HZ`); no aceite, o último valor.
+        - `POST /audio/silence` também para o alto-falante.
         """
-        speaker, stream = self._speaker, self._state_stream
+        speaker, stream, audio = self._speaker, self._state_stream, self._audio
         speaker.subscribe(
             lambda snapshot: stream.publish_event(SPEAKER_TOPIC, snapshot)
         )
-        stream.add_snapshot_provider(
-            lambda: [(SPEAKER_TOPIC, time.time(), speaker.snapshot.as_dict())]
+        audio.subscribe_player_state(
+            lambda data: stream.publish_section(AUDIO_PLAYER_TOPIC, data)
         )
+
+        def snapshot() -> list[tuple[str, float, Any]]:
+            now = time.time()
+            current = [(SPEAKER_TOPIC, now, speaker.snapshot.as_dict())]
+            player = audio.player()
+            if player.data is not None and player.age_s is not None:
+                current.insert(0, (AUDIO_PLAYER_TOPIC, now - player.age_s, player.data))
+            return current
+
+        stream.add_snapshot_provider(snapshot)
+
+        async def stop_speaker() -> None:
+            await speaker.stop()
+
+        audio.set_speaker_stopper(stop_speaker)
 
     @classmethod
     def from_settings(
@@ -144,6 +172,11 @@ class Go2Robot:
                 max_hz=settings.state_max_hz,
             ),
             speaker=Speaker(link),
+            audio=AudioHub(
+                AudioHubChannel(link, settings.request_timeout_s),
+                link,
+                max_upload_bytes=settings.audio_max_upload_bytes,
+            ),
         )
 
     # ─── Ciclo de vida ─────────────────────────────────────────────────────
@@ -160,12 +193,14 @@ class Go2Robot:
             self._errors.reset(notify=True)
             raise
         self._state.attach(self._link.pub_sub)
+        self._audio.attach(self._link.pub_sub)
         # Emoji para localizar a linha rápido no terminal.
         log.info("🐝 Conectado ao Go2.")
 
     async def disconnect(self) -> None:
-        """Cancela o movimento em curso e encerra a conexão."""
+        """Cancela o movimento e o envio de áudio em curso e encerra a conexão."""
         await self._movement.cancel()
+        await self._audio.cancel_upload()
         await self._link.disconnect()
 
     async def keep_connected(self, interval_s: float) -> None:
@@ -247,6 +282,11 @@ class Go2Robot:
     def speaker(self) -> Speaker:
         """Alto-falante pela track de áudio WebRTC (`/speaker/*`, F-007)."""
         return self._speaker
+
+    @property
+    def audio(self) -> AudioHub:
+        """Biblioteca de áudio do robô (`/audio/*`, F-006)."""
+        return self._audio
 
     # ─── Estado ────────────────────────────────────────────────────────────
 

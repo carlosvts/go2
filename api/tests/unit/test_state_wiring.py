@@ -35,3 +35,33 @@ async def test_speaker_no_aceite_e_a_cada_mudanca(
     finally:
         await robot.speaker.stop()
         await robot.disconnect()
+
+
+async def test_audio_player_no_ws_state_e_silence_cala_o_alto_falante(
+    settings: Settings, factory: FakeConnectionFactory
+) -> None:
+    robot = Go2Robot.from_settings(settings, factory)
+    await robot.connect()
+    try:
+        factory.pub_sub.response = {
+            "data": {"header": {"status": {"code": 0}}, "data": "{}"}
+        }
+        client = robot.state_stream.add_client()
+        assert client is not None
+        client.drain()
+
+        factory.pub_sub.publish_state("rt/audiohub/player/state", {"state": "play"})
+        players = [t for t in _topics(client) if t["topic"] == "audio_player"]
+        assert [t["data"] for t in players] == [{"state": "play"}]
+
+        await robot.speaker.play(make_wav(seconds=2), "a.wav")
+        assert robot.speaker.snapshot.as_dict()["state"] == "playing"
+        await robot.audio.silence()
+        assert robot.speaker.snapshot.as_dict()["state"] == "idle"
+
+        late = robot.state_stream.add_client()
+        assert late is not None
+        assert "audio_player" in [t["topic"] for t in _topics(late)]
+    finally:
+        await robot.speaker.stop()
+        await robot.disconnect()

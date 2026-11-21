@@ -84,15 +84,15 @@ Implementado na F-005 (carlosvts/go2-api#3), sem teste no robô. É a rota de qu
 
 | Item | O que faz | Fonte | Na api |
 |---|---|---|---|
-| `WebRTCAudioHub.get_audio_list` (`AUDIO_API` 1001) | Lista os áudios guardados no robô | lib, ex. | ❌ |
-| `play_by_uuid` 1002, `pause` 1003, `resume` 1004 | Toca / pausa / retoma um áudio guardado | lib, ex. | ❌ |
-| `SELECT_PREV/NEXT_START_PLAY` 1005/1006 | Anterior / próximo (só constante, sem método) | lib | ❌ |
-| `set_play_mode` 1007 / `get_play_mode` 1010 | Modo de reprodução | lib | ❌ |
-| `rename_record` 1008 / `delete_record` 1009 | Renomeia / apaga um áudio guardado | lib | ❌ |
-| `upload_audio_file` 2001 | Envia MP3/WAV ao robô (em pedaços, pelo data channel) | lib, ex. | ❌ |
-| `enter_megaphone` 4001 / `upload_megaphone` 4003 / `exit_megaphone` 4002 | Modo megafone: toca um arquivo direto | lib | ❌ |
+| `WebRTCAudioHub.get_audio_list` (`AUDIO_API` 1001) | Lista os áudios guardados no robô | lib, ex. | ✅ `GET /audio/files` (F-006) |
+| `play_by_uuid` 1002, `pause` 1003, `resume` 1004 | Toca / pausa / retoma um áudio guardado | lib, ex. | ✅ `POST /audio/files/{id}/play`, `/audio/pause`, `/audio/resume`; `POST /audio/silence` = pause + alto-falante (F-006) |
+| `SELECT_PREV/NEXT_START_PLAY` 1005/1006 | Anterior / próximo (só constante, sem método) | lib | ❌ (fora do escopo da F-006) |
+| `set_play_mode` 1007 / `get_play_mode` 1010 | Modo de reprodução | lib | ✅ `PUT/GET /audio/play-mode` (F-006) |
+| `rename_record` 1008 / `delete_record` 1009 | Renomeia / apaga um áudio guardado | lib | ✅ `PATCH/DELETE /audio/files/{id}` (F-006) |
+| `upload_audio_file` 2001 | Envia MP3/WAV ao robô (em pedaços, pelo data channel) | lib, ex. | ✅ `POST /audio/files` + `GET /audio/uploads/{id}` (F-006; protocolo copiado em `unitree.py`, com timeout por bloco; PyAV no lugar do pydub) |
+| `enter_megaphone` 4001 / `upload_megaphone` 4003 / `exit_megaphone` 4002 | Modo megafone: toca um arquivo direto | lib | ❌ (fora do escopo da F-006) |
 | Corpus interno 3001–3004, 5001–5003 | Falas prontas do robô (desvio, modo companhia, corpus longo); só constantes | lib | ❌ |
-| `AUDIO_HUB_PLAY_STATE` (`rt/audiohub/player/state`) | Estado do player (tópico) | lib | ❌ |
+| `AUDIO_HUB_PLAY_STATE` (`rt/audiohub/player/state`) | Estado do player (tópico) | lib | ✅ `GET /audio/player`, cru (F-006); `/ws/state` na F-004 |
 | Track de áudio de saída (`pc.addTrack(MediaPlayer(...))`) | Toca MP3 ou rádio pela conexão WebRTC, ao vivo | ex. | ✅ software, só WAV/MP3 enviados (`/speaker/*`, F-007): track própria persistente no transceiver da lib, sem `MediaPlayer` nem URL; falta teste no robô |
 | Microfone do robô (`switchAudioChannel` + track de áudio) | Recebe o áudio do robô (48 kHz) | lib, ex. | ❌ |
 

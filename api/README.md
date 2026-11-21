@@ -78,7 +78,9 @@ import httpx
 
 api = httpx.Client(base_url="http://localhost:8000")
 print(api.get("/status").json()["battery"])
-api.post("/commands/posture", json={"cmd": "balance_stand"})  # necessário antes de andar
+api.post(
+    "/commands/posture", json={"cmd": "balance_stand"}
+)  # necessário antes de andar
 api.post("/commands/move", json={"vx": 0.3, "vy": 0, "vyaw": 0, "duration_s": 2})
 ```
 

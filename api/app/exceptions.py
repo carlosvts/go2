@@ -50,3 +50,18 @@ class PayloadTooLargeError(Go2Error):
 
 class UnsupportedAudioError(Go2Error):
     """O arquivo não é WAV nem MP3 (pelo conteúdo) ou não decodifica; vira `415`."""
+
+
+class NotFoundError(Go2Error):
+    """O recurso pedido não existe na api (ex.: `upload_id` esquecido). Vira `404`."""
+
+
+class ConflictError(Go2Error):
+    """O pedido conflita com o estado atual (envio em andamento, nome repetido).
+
+    Vira `409`.
+    """
+
+
+UnsupportedMediaError = UnsupportedAudioError
+"""Nome usado pela F-006; mesma exceção da F-007 (`415`)."""

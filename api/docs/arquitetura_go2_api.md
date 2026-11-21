@@ -116,9 +116,12 @@ Convenções que valem para todo o REST (`README.md`): comandos respondem `202` 
 | `SPORT_CMD_MCF` (`TrotRun`, `StaticWalk`, …) | — | fora do v1 | Exige trocar o robô para o modo MCF (`motion_switcher`, não mapeado; dossiê 12.2/12.3). |
 
 ### 4.3 Dispositivo (áudio, LED, volume)
+
+As rotas `/audio/*` seguem as mesmas convenções das `/device/*` (abaixo da tabela). Contrato: `specs/features/F-006-audio-biblioteca.md` e o OpenAPI.
+
 | Na lib | Endpoint | Status | Nota |
 |---|---|---|---|
-| `WebRTCAudioHub` (lista, upload, play, pause, resume, delete, megafone) | `/audio/*` | 🔜 carlosvts/go2-api#2 | Classe pronta, mas sem timeout, upload por caminho de arquivo e megafone em 3 chamadas (ver `lib_unitree_webrtc_connect.md` §7). Substitui o `CMD_PLAY_AUDIO` do modo chat. |
+| `AUDIO_API` em `rt/api/audiohub/request` (lista 1001, play 1002, pause 1003, resume 1004, modo 1007/1010, rename 1008, delete 1009, upload 2001) + tópico `AUDIO_HUB_PLAY_STATE` | `GET/POST /audio/files` · `GET /audio/uploads/{id}` · `PATCH/DELETE /audio/files/{id}` · `POST /audio/files/{id}/play` · `POST /audio/pause` · `POST /audio/resume` · `GET/PUT /audio/play-mode` · `POST /audio/silence` · `GET /audio/player` | ✅ software (F-006; falta teste no robô) carlosvts/go2-api#2 | Não usa a classe `WebRTCAudioHub` (sem timeout, upload por caminho de arquivo, pydub): o canal próprio (`AudioHubChannel`) põe timeout em cada chamada e o protocolo de `upload_audio_file` foi copiado em `unitree.py` (blocos base64 de 4096 caracteres, 0,1 s entre eles, timeout por bloco). Envio assíncrono (`202` + estado), um por vez, MP3 → WAV com PyAV numa thread, limite `GO2_AUDIO_MAX_UPLOAD_MB` no arquivo e no WAV. `silence` também para o alto-falante (F-007). Megafone fora. Formato da lista e do modo vem do exemplo (`inferido`). |
 | Track de áudio de saída (exemplo `play_mp3.py`: `pc.addTrack(MediaPlayer)`) | `POST /speaker/play` (multipart `file`) · `POST /speaker/stop` · `GET /speaker` | ✅ software (F-007; falta teste no robô) | Toca WAV/MP3 na hora, sem guardar no robô. Ver nota abaixo da tabela. |
 | `RTC_TOPIC["VUI"]` 1005/1006 (brilho da lanterna) | `PUT /device/brightness` `{"level"}` · `GET /device/brightness` | ✅ software (F-005; falta teste no robô) carlosvts/go2-api#3 | `level` inteiro estrito, 0 a `GO2_MAX_BRIGHTNESS` (≤ 10). O `GET` lê `json.loads(data.data)["brightness"]`. |
 | `RTC_TOPIC["VUI"]` 1003/1004 (volume) | `PUT /device/volume` `{"level"}` · `GET /device/volume` | ✅ software (F-005; falta teste no robô) | `level` inteiro estrito, 0 a `GO2_MAX_VOLUME` (≤ 10). O `GET` lê `json.loads(data.data)["volume"]`. |

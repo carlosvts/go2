@@ -9,8 +9,10 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.exceptions import (
+    ConflictError,
     Go2Error,
     InvalidCommandError,
+    NotFoundError,
     PayloadTooLargeError,
     RobotRejectedError,
     RobotTimeoutError,
@@ -32,6 +34,8 @@ class ErrorHandlers:
         RobotUnavailableError: HTTPStatus.SERVICE_UNAVAILABLE,
         RobotTimeoutError: HTTPStatus.GATEWAY_TIMEOUT,
         RobotRejectedError: HTTPStatus.BAD_GATEWAY,
+        NotFoundError: HTTPStatus.NOT_FOUND,
+        ConflictError: HTTPStatus.CONFLICT,
         PayloadTooLargeError: HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
         UnsupportedAudioError: HTTPStatus.UNSUPPORTED_MEDIA_TYPE,
     }

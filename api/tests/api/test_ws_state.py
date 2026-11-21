@@ -43,7 +43,7 @@ def test_a4_ordem_ao_aceitar_e_depois_da_queda(
     _call(client, pub_sub.publish_state, RTC_TOPIC["LOW_STATE"], low_state())
 
     with client.websocket_connect("/ws/state") as ws:
-        accepted = _receive(ws, 5)
+        accepted = _receive(ws, 6)
         _call(client, factory.connection.pc.emit_state, "failed")
         dropped = _receive(ws, 2)
         _call(client, factory.connection.pc.emit_state, "connected")
@@ -58,6 +58,7 @@ def test_a4_ordem_ao_aceitar_e_depois_da_queda(
         "battery",
         "motors",
         "body_temperature_c",
+        "speaker",  # F-007: estado atual do alto-falante
         "errors",
     ]
     assert accepted[0]["data"] == {"state": "connected"}
@@ -75,12 +76,12 @@ def test_a4_ordem_ao_aceitar_e_depois_da_queda(
 
 def test_robo_fora_do_ar_mantem_o_cliente(offline_client: TestClient) -> None:
     with offline_client.websocket_connect("/ws/state") as ws:
-        frames = _receive(ws, 2)
+        frames = _receive(ws, 3)
 
-    assert [(f["topic"], f["data"]) for f in frames] == [
-        ("connection", {"state": "disconnected"}),
-        ("errors", None),
-    ]
+    assert [f["topic"] for f in frames] == ["connection", "speaker", "errors"]
+    assert frames[0]["data"] == {"state": "disconnected"}
+    assert frames[1]["data"]["state"] == "idle"
+    assert frames[2]["data"] is None
 
 
 def test_a7_quinto_cliente_leva_1013_com_o_limite_padrao(client: TestClient) -> None:
