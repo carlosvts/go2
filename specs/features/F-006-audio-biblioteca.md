@@ -2,9 +2,9 @@
 id: F-006
 titulo: Biblioteca de áudio do robô (/audio/*)
 tipo: comportamento
-status: proposta
+status: em-implementacao
 servicos: [api]
-verificacao: inferido
+verificacao: testado-software
 verificado-em: null
 depende-de: [F-004, F-005]     # tópico audio_player no /ws/state (F-004); volume em /device/volume (F-005)
 ---
@@ -89,14 +89,14 @@ Não muda (decisão do humano): as rotas ficam no OpenAPI e no README da api.
 
 | ID | Critério (observável) | Como verificar | Tipo | Verificação |
 |---|---|---|---|---|
-| A1 | Cada rota publica no tópico do hub o api_id e o `parameter` (string JSON) da tabela | teste com fake pub_sub | software | inferido |
-| A2 | `GET /audio/files` transforma `data.data` em `[{"id", "name", "extra"}]`; resposta malformada → `502`; códigos 502/503/504 como na F-005 | teste | software | inferido |
-| A3 | Envio de um WAV gerado no teste: `202`; concatenando o `block_content` de todos os blocos e decodificando de base64, sai exatamente o arquivo; o `file_md5`, o `total_block_number` e os índices (1 a N, em ordem) estão certos e cada bloco tem ≤ 4096 caracteres; o estado termina `done` com o `file_id` novo da lista | teste com fake pub_sub | software | inferido |
-| A4 | Envio de um MP3 gerado no teste: o que vai ao robô é WAV PCM 16 bits, 44,1 kHz, com os canais do original e a mesma duração (±50 ms) | teste | software | inferido |
-| A5 | Arquivo acima do limite → `413` sem ler o resto; MP3 abaixo do limite cujo WAV passa do limite → `413`; arquivo que não é WAV/MP3 ou corrompido → `415`; nome inválido → `422`; nome que já existe → `409`; segundo envio durante um em andamento → `409`. Nada é publicado no hub nesses casos (fora a consulta da lista) | teste, um caso por regra | software | inferido |
-| A6 | Bloco sem resposta em `GO2_REQUEST_TIMEOUT_S` → `failed`; conexão que cai e volta entre os blocos k e k+1 → `failed: disconnected`, sem publicar o bloco k+1 em nenhuma conexão | teste | software | inferido |
-| A7 | Durante um envio e durante a conversão de um MP3 do tamanho máximo, `POST /commands/stop` responde e é publicado em menos de 100 ms (teste de software, mesma máquina) | teste | software | inferido |
-| A8 | `PUT /audio/play-mode` com modo fora dos três → `422`; `POST /audio/silence` publica o `PAUSE` e para o alto-falante (F-007) | teste | software | inferido |
+| A1 | Cada rota publica no tópico do hub o api_id e o `parameter` (string JSON) da tabela | teste com fake pub_sub | software | testado-software (2026-11-22 @ 29ad0cb) |
+| A2 | `GET /audio/files` transforma `data.data` em `[{"id", "name", "extra"}]`; resposta malformada → `502`; códigos 502/503/504 como na F-005 | teste | software | testado-software (2026-11-22 @ 29ad0cb) |
+| A3 | Envio de um WAV gerado no teste: `202`; concatenando o `block_content` de todos os blocos e decodificando de base64, sai exatamente o arquivo; o `file_md5`, o `total_block_number` e os índices (1 a N, em ordem) estão certos e cada bloco tem ≤ 4096 caracteres; o estado termina `done` com o `file_id` novo da lista | teste com fake pub_sub | software | testado-software (2026-11-22 @ 29ad0cb) |
+| A4 | Envio de um MP3 gerado no teste: o que vai ao robô é WAV PCM 16 bits, 44,1 kHz, com os canais do original e a mesma duração (±50 ms) | teste | software | testado-software (2026-11-22 @ 29ad0cb) |
+| A5 | Arquivo acima do limite → `413` sem ler o resto; MP3 abaixo do limite cujo WAV passa do limite → `413`; arquivo que não é WAV/MP3 ou corrompido → `415`; nome inválido → `422`; nome que já existe → `409`; segundo envio durante um em andamento → `409`. Nada é publicado no hub nesses casos (fora a consulta da lista) | teste, um caso por regra | software | testado-software (2026-11-22 @ 29ad0cb) |
+| A6 | Bloco sem resposta em `GO2_REQUEST_TIMEOUT_S` → `failed`; conexão que cai e volta entre os blocos k e k+1 → `failed: disconnected`, sem publicar o bloco k+1 em nenhuma conexão | teste | software | testado-software (2026-11-22 @ 29ad0cb) |
+| A7 | Durante um envio e durante a conversão de um MP3 do tamanho máximo, `POST /commands/stop` responde e é publicado em menos de 100 ms (teste de software, mesma máquina) | teste | software | testado-software (2026-11-22 @ 29ad0cb) |
+| A8 | `PUT /audio/play-mode` com modo fora dos três → `422`; `POST /audio/silence` publica o `PAUSE` e para o alto-falante (F-007) | teste | software | testado-software (2026-11-22 @ 29ad0cb) |
 | A9 | Com o robô real: enviar um WAV curto e um MP3 curto; os dois aparecem em `GET /audio/files`, tocam com `play`, pausam e retomam; renomear e apagar funcionam; `POST /audio/silence` cala o robô. Registrar o tempo de envio e o tamanho de cada um | roteiro | hardware-only | inferido |
 | A10 | Com o robô real: `PUT /audio/play-mode` com cada modo e `GET` devolve o mesmo. Registrar o que cada modo faz e o que o `GET /audio/player` mostra parado, tocando e pausado | roteiro | hardware-only | inferido |
 | A11 | Com o robô real, durante um envio de um WAV de ~1 MB (tamanho do que vai ao robô), o tempo entre `POST /commands/stop` e o robô parar, num `move`, tem mediana no máximo 0,2 s acima da mediana da linha de base sem envio, e nenhuma repetição passa 0,4 s acima dela. Régua do F-001 A13, com o mesmo protocolo: 10 repetições, api recém-reiniciada na linha de base, `balance_stand` antes | roteiro | hardware-only | inferido |
@@ -174,3 +174,4 @@ No roteiro único da rodada: [`specs/checklists/api-completa.md`](../checklists/
   - conversão em thread;
   - `202`;
   - dependências explícitas.
+- 2026-11-22: implementada em software (`29ad0cb`); A1–A8 `testado-software` com fake pub_sub (não prova o robô). Pendentes: A9–A12 (hardware-only) e a ligação do `audio_player` ao `/ws/state` (F-004) e do `silence` ao `/speaker/stop` (F-007), feitas por ganchos (`AudioHub.subscribe_player_state`, `AudioHub.set_speaker_stopper`). `specs/contracts/ws-state.md` não foi tocado nesta rodada. Decisões tomadas na implementação, a confirmar: 1 MB = 1 MiB; `name` vazio no formulário = ausente; corpo sem `file` ou que não é multipart → `422`; a vaga do envio é reservada antes de ler o corpo (o `409` de concorrência sai sem ler nada); `UNIQUE_ID` e `CUSTOM_NAME` só em texto (outro tipo → `502`); `GET_PLAY_MODE` lido de `json.loads(data.data)["play_mode"]` (`inferido`); `silence` para o alto-falante antes do `PAUSE` e tenta os dois mesmo se um falhar; pausa de 0,1 s só entre blocos (a lib também dorme depois do último); `disconnect()` da api encerra o envio como `failed: disconnected`; `file_id` com mais de um id novo fica o de mesmo nome.
