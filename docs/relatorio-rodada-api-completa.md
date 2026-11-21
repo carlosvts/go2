@@ -83,6 +83,6 @@ Cada linha: **decisão** — alternativa descartada — por quê. Marque as que 
 - **Teste no robô** (você): o roteiro da F-003 e o `specs/checklists/api-completa.md`. Rota cujo api_id não funcionar sai antes do PR.
 - Unificar os dois leitores de multipart (item 43).
 - **Risco** apontado pelo subagente da F-007: não há teto de duração. Um MP3 de 5 MB com bitrate muito baixo vira muito PCM em memória. Sugestão: `GO2_SPEAKER_MAX_DURATION_S`.
-- `docker compose --profile api up --build` não foi testado: não há Docker nesta máquina.
+- ~~Build do Docker não testado~~ **Testado pelo humano em 2026-11-22** (WSL + Docker Desktop, sem robô): a imagem constrói, a api sobe, o healthcheck responde `200` e o desligamento é limpo. O primeiro build quebrou por causa do OpenCV (`libxcb`); o JPEG do vídeo passou a usar o PyAV e o `opencv-python` saiu da instalação (`133a8f1`). Com o robô, o Docker no WSL ainda não foi testado (rede `host` e multicast).
 - Os testes rodaram com um `sounddevice` falso (sem PortAudio aqui).
 
