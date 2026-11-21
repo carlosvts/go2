@@ -4,7 +4,7 @@ titulo: Tocar áudio no alto-falante sem guardar no robô (/speaker/*)
 tipo: comportamento
 status: em-implementacao
 servicos: [api]
-verificacao: inferido
+verificacao: testado-software
 verificado-em: null
 depende-de: [F-004, F-005]     # tópico speaker no /ws/state (F-004); volume em /device/volume (F-005)
 ---
@@ -71,7 +71,7 @@ Não muda (decisão do humano): as rotas ficam no OpenAPI e no README da api.
 |---|---|---|---|---|
 | A1 | `POST /speaker/play` com um WAV gerado no teste → `202`; a track persistente passa a entregar os quadros do arquivo (comparados com o PCM decodificado), e `GET /speaker` mostra `playing`, com nome e duração | teste com conexão fake | software | testado-software (2026-11-22 @ c9db60f) |
 | A2 | O mesmo com um MP3 gerado no teste | teste | software | testado-software (2026-11-22 @ c9db60f) |
-| A3 | Ociosa, a track entrega silêncio no ritmo de 20 ms (±5 ms em média por 1 s, relógio real); ao acabar o arquivo, volta ao silêncio, o estado vai a `idle` e o `/ws/state` envia `speaker` | teste | software | parcial: silêncio a 20 ms, volta ao silêncio e `idle` e aviso pelo gancho `Speaker.subscribe` testado-software (2026-11-22 @ c9db60f); o envio pelo `/ws/state` falta (gancho ainda não ligado à F-004) |
+| A3 | Ociosa, a track entrega silêncio no ritmo de 20 ms (±5 ms em média por 1 s, relógio real); ao acabar o arquivo, volta ao silêncio, o estado vai a `idle` e o `/ws/state` envia `speaker` | teste | software | testado-software (2026-11-22 @ 9519ac5): ritmo, silêncio e `idle` em c9db60f; tópico `speaker` no `/ws/state` em 9519ac5 (`tests/unit/test_state_wiring.py`) |
 | A4 | Um segundo `play` substitui o primeiro na track; `stop` volta ao silêncio e ao `idle`; `stop` sem nada tocando → `202` | teste | software | testado-software (2026-11-22 @ c9db60f) |
 | A5 | Com a decodificação de um `play` segurada por um evento do teste, um `stop` enviado nesse meio-tempo faz o `play` terminar sem tocar (`idle`); entre dois `play` com a decodificação segurada, toca o último aceito | teste com evento controlado | software | testado-software (2026-11-22 @ c9db60f) |
 | A6 | Com um par `RTCPeerConnection` real do aiortc em loopback, no processo do teste, com transceiver de áudio `sendrecv` como a lib: tocar um arquivo curto, esperar acabar, tocar outro. Chegam pacotes RTP de áudio do outro lado durante os dois | teste de integração | software | testado-software (2026-11-22 @ c9db60f) |
@@ -151,3 +151,4 @@ No roteiro único da rodada: [`specs/checklists/api-completa.md`](../checklists/
   - `GO2_AUDIO_MAX_UPLOAD_MB` em MiB (× 1024²), `float`;
   - `name` = nome do arquivo no multipart (ou `audio`), sem sanitizar;
   - sem teto de duração: um MP3 de 5 MiB em bitrate muito baixo pode virar centenas de MB de PCM (risco anotado, não tratado: a spec não pede).
+- 2026-11-22: gancho ligado ao `/ws/state` na integração (`9519ac5`); A3 completo. Todos os critérios `software` passam (`verificacao: testado-software`); A10–A13 pendentes no robô.
