@@ -85,6 +85,12 @@ class VideoTrack(Protocol):
 VideoTrackListener = Callable[[VideoTrack], None]
 """Recebe a track de vídeo de uma conexão, durante o `connect()`."""
 
+DataChannelMessageListener = Callable[[object, dict[str, Any]], None]
+"""Recebe `(data channel, mensagem)` de cada `errors`/`add_error`/`rm_error`.
+
+Pode ser chamado durante o `connect()`, antes de ele retornar (F-004).
+"""
+
 
 class PeerConnection(Protocol):
     """`RTCPeerConnection` do aiortc, um `EventEmitter` do pyee."""
@@ -114,6 +120,9 @@ class WebRTCConnection(Protocol):
 
     video_track_listener: VideoTrackListener | None
     """Chamado com a track de vídeo durante o `connect()` (F-003)."""
+
+    datachannel_message_listener: DataChannelMessageListener | None
+    """Chamado com as mensagens de erro do data channel (F-004)."""
 
     async def connect(self) -> None:
         """Abre a conexão."""

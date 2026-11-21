@@ -1,6 +1,154 @@
 {
   "components": {
     "schemas": {
+      "ActiveErrorItem": {
+        "description": "Erro ativo, do data channel (`[timestamp, source, code]`).",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "integer"
+          },
+          "code_hex": {
+            "description": "Hex maiúsculo, sem `0x` (16 → `\"10\"`).",
+            "title": "Code Hex",
+            "type": "string"
+          },
+          "code_text": {
+            "description": "Texto da lib, ou `\"{source}-{code_hex}\"`.",
+            "title": "Code Text",
+            "type": "string"
+          },
+          "robot_ts": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Timestamp cru do robô.",
+            "title": "Robot Ts"
+          },
+          "seen_at": {
+            "description": "Unix (s) da api quando o erro entrou.",
+            "title": "Seen At",
+            "type": "number"
+          },
+          "source": {
+            "title": "Source",
+            "type": "integer"
+          },
+          "source_text": {
+            "description": "Texto da lib, ou `\"{source}\"`.",
+            "title": "Source Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "source_text",
+          "code",
+          "code_hex",
+          "code_text",
+          "robot_ts",
+          "seen_at"
+        ],
+        "title": "ActiveErrorItem",
+        "type": "object"
+      },
+      "BatterySection": {
+        "description": "Bateria, de `rt/lf/lowstate`.",
+        "properties": {
+          "current_ma": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `bms_state.current` (mA).",
+            "title": "Current Ma"
+          },
+          "cycles": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `bms_state.cycle`.",
+            "title": "Cycles"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Carga em %. Mesma extração de `battery_percent`.",
+            "title": "Percent"
+          },
+          "temperatures_c": {
+            "$ref": "#/components/schemas/BatteryTemperatures"
+          },
+          "voltage_v": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `power_v` (V).",
+            "title": "Voltage V"
+          }
+        },
+        "title": "BatterySection",
+        "type": "object"
+      },
+      "BatteryTemperatures": {
+        "description": "Temperaturas do BMS, em °C (`inferido`).",
+        "properties": {
+          "bq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `bms_state.bq_ntc`.",
+            "title": "Bq"
+          },
+          "mcu": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `bms_state.mcu_ntc`.",
+            "title": "Mcu"
+          }
+        },
+        "title": "BatteryTemperatures",
+        "type": "object"
+      },
       "CapabilitiesResponse": {
         "description": "Lista dos comandos disponíveis e a versão dela.",
         "properties": {
@@ -138,6 +286,273 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "ImuSection": {
+        "description": "IMU, de `rt/sportmodestate` → `imu_state` (radianos, m/s², °C).",
+        "properties": {
+          "accelerometer": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "3 valores.",
+            "title": "Accelerometer"
+          },
+          "gyroscope": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "3 valores.",
+            "title": "Gyroscope"
+          },
+          "quaternion": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "4 valores.",
+            "title": "Quaternion"
+          },
+          "rpy": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "3 valores.",
+            "title": "Rpy"
+          },
+          "temperature": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature"
+          }
+        },
+        "title": "ImuSection",
+        "type": "object"
+      },
+      "MotionSection": {
+        "description": "Movimento, de `rt/sportmodestate` (metros, m/s, rad/s).",
+        "properties": {
+          "body_height": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Height"
+          },
+          "foot_force": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Tamanho livre.",
+            "title": "Foot Force"
+          },
+          "foot_raise_height": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foot Raise Height"
+          },
+          "gait_type": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gait Type"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Mesma extração de `mode`.",
+            "title": "Mode"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "3 valores.",
+            "title": "Position"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress"
+          },
+          "range_obstacle": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Tamanho livre. Pelo nome, distância ao obstáculo por direção (não confirmado).",
+            "title": "Range Obstacle"
+          },
+          "velocity": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "3 valores.",
+            "title": "Velocity"
+          },
+          "yaw_speed": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yaw Speed"
+          }
+        },
+        "title": "MotionSection",
+        "type": "object"
+      },
+      "MotorItem": {
+        "description": "Um motor, na ordem de `motor_state`.",
+        "properties": {
+          "lost": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lost"
+          },
+          "q": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Posição (rad).",
+            "title": "Q"
+          },
+          "temperature_c": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `temperature`.",
+            "title": "Temperature C"
+          }
+        },
+        "title": "MotorItem",
+        "type": "object"
+      },
       "MoveRequest": {
         "description": "Velocidades no referencial do robô.\n\nEste modelo valida só o que independe da configuração (tipos, números\nfinitos, duração positiva). Os tetos configuráveis (`GO2_MAX_VX`,\n`GO2_MAX_VY`, `GO2_MAX_VYAW` e `GO2_MOVE_MAX_DURATION_S`) são aplicados\npor :meth:`to_command`, cujo resultado se recusa a existir fora deles.",
         "properties": {
@@ -240,6 +655,104 @@
         "title": "PostureRequest",
         "type": "object"
       },
+      "SettingsSection": {
+        "description": "Configurações, de `rt/multiplestate` (string JSON decodificada).",
+        "properties": {
+          "body_height": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `bodyHeight`.",
+            "title": "Body Height"
+          },
+          "brightness": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brightness"
+          },
+          "foot_raise_height": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `footRaiseHeight`.",
+            "title": "Foot Raise Height"
+          },
+          "obstacle_avoidance": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `obstaclesAvoidSwitch` (0/1 viram bool). Só informativo: a fonte de verdade é `/safety/obstacle-avoidance`.",
+            "title": "Obstacle Avoidance"
+          },
+          "speed_level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `speedLevel`.",
+            "title": "Speed Level"
+          },
+          "uwb": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `uwbSwitch`.",
+            "title": "Uwb"
+          },
+          "volume": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume"
+          }
+        },
+        "title": "SettingsSection",
+        "type": "object"
+      },
       "SpeedLevelRequest": {
         "description": "Nível de velocidade a aplicar no robô.",
         "properties": {
@@ -284,6 +797,17 @@
       "StatusResponse": {
         "description": "Snapshot do estado do robô, lido do cache.",
         "properties": {
+          "battery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BatterySection"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`null` se `rt/lf/lowstate` não chegou nesta execução. Na queda, mantém o último valor (veja a idade e `connected`)."
+          },
           "battery_percent": {
             "anyOf": [
               {
@@ -296,10 +820,51 @@
             "description": "Carga em %, do cache de `rt/lf/lowstate`. `null` se ainda não chegou estado ou se o campo não foi reconhecido.",
             "title": "Battery Percent"
           },
+          "body_temperature_c": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `temperature_ntc1` de `rt/lf/lowstate`.",
+            "title": "Body Temperature C"
+          },
           "connected": {
             "description": "Há conexão WebRTC viva e canal de dados validado. É o que decide se os comandos são aceitos ou levam `503`.",
             "title": "Connected",
             "type": "boolean"
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ActiveErrorItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Erros ativos do data channel. `null` = **desconhecido** (nenhuma mensagem nesta conexão, ou a conexão caiu), nunca \"sem erros\". `[]` só depois de uma fotografia vazia ou de um `rm_error` que esvaziou a lista.",
+            "title": "Errors"
+          },
+          "imu": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImuSection"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`null` se `rt/sportmodestate` não chegou."
           },
           "low_state_age_s": {
             "anyOf": [
@@ -325,6 +890,51 @@
             "description": "Modo atual, do cache de `rt/sportmodestate`.",
             "title": "Mode"
           },
+          "motion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MotionSection"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`null` se `rt/sportmodestate` não chegou."
+          },
+          "motors": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MotorItem"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Um item por motor; item malformado vira `null`.",
+            "title": "Motors"
+          },
+          "multiple_state_age_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Há quantos segundos chegou o último `rt/multiplestate`.",
+            "title": "Multiple State Age S"
+          },
           "raw": {
             "anyOf": [
               {
@@ -335,8 +945,19 @@
                 "type": "null"
               }
             ],
-            "description": "Payloads crus em cache. Presente para permitir fixar a extração de `battery_percent`/`mode` na validação com o robô ligado.",
+            "description": "Payloads crus em cache (`multiple_state` já decodificado). Presente para permitir fixar a extração na validação com o robô ligado.",
             "title": "Raw"
+          },
+          "settings": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SettingsSection"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`null` se `rt/multiplestate` não chegou ou não é JSON."
           },
           "since": {
             "description": "Momento (UTC) da última transição de `state`.",

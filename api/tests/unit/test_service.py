@@ -29,6 +29,7 @@ async def test_connect_assina_os_topicos_de_estado(
     assert set(pub_sub.subscriptions) == {
         RTC_TOPIC["SPORT_MOD_STATE"],
         RTC_TOPIC["LOW_STATE"],
+        RTC_TOPIC["MULTIPLE_STATE"],  # F-004
     }
 
 

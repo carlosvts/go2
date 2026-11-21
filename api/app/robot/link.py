@@ -1,13 +1,16 @@
 """Ciclo de vida da conexão WebRTC com o robô."""
 
 import contextlib
+import functools
 import logging
+from typing import Any
 
 from app.exceptions import RobotUnavailableError
 from app.robot.connection import ConnectionState, ConnectionStateTracker
 from app.robot.ports import (
     ConnectionFactory,
     DataChannel,
+    DataChannelMessageListener,
     PeerConnection,
     PubSub,
     VideoTrack,
@@ -38,7 +41,9 @@ class RobotLink:
         self._factory = factory
         self._state = state or ConnectionStateTracker()
         self._connection: WebRTCConnection | None = None
+        self._connecting: WebRTCConnection | None = None
         self._track_listeners: list[VideoTrackListener] = []
+        self._datachannel_listeners: list[DataChannelMessageListener] = []
 
     def subscribe_video_track(self, listener: VideoTrackListener) -> None:
         """Registra `listener` para receber a track de vídeo de cada conexão.
@@ -55,6 +60,27 @@ class RobotLink:
             except Exception:
                 log.exception("❌ Falha num ouvinte da track de vídeo.")
 
+    def subscribe_datachannel_messages(
+        self, listener: DataChannelMessageListener
+    ) -> None:
+        """Registra `listener` para as mensagens de erro do data channel (F-004).
+
+        Só chegam as da conexão atual ou da que está abrindo (inclusive durante
+        o `connect()`); as de uma conexão antiga são descartadas.
+        """
+        self._datachannel_listeners.append(listener)
+
+    def _emit_datachannel_message(
+        self, connection: WebRTCConnection, channel: object, message: dict[str, Any]
+    ) -> None:
+        if connection is not self._connection and connection is not self._connecting:
+            return
+        for listener in self._datachannel_listeners:
+            try:
+                listener(channel, message)
+            except Exception:
+                log.exception("❌ Falha num ouvinte do data channel.")
+
     async def connect(self) -> None:
         """Cria e abre a conexão; só a guarda se a abertura der certo.
 
@@ -64,6 +90,10 @@ class RobotLink:
         """
         connection = self._factory()
         connection.video_track_listener = self._emit_video_track
+        connection.datachannel_message_listener = functools.partial(
+            self._emit_datachannel_message, connection
+        )
+        self._connecting = connection
         try:
             await connection.connect()
         except BaseException:
@@ -71,6 +101,8 @@ class RobotLink:
             with contextlib.suppress(Exception):
                 await connection.disconnect()
             raise
+        finally:
+            self._connecting = None
         self._connection = connection
         peer = connection.pc
         # O pyee aceita vários ouvintes por evento: o da lib, que atualiza

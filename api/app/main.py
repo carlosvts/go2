@@ -25,6 +25,7 @@ from app.routers import (
     posture,
     safety,
     speed,
+    state,
     telemetry,
     video,
 )
@@ -52,11 +53,13 @@ class RobotLifespan:
         app.state.robot = robot
         robot.lidar.start()
         robot.video.start()
+        robot.state_stream.start()
         await self._connect(robot)
         keeper = self._start_keeper(robot)
         try:
             yield
         finally:
+            await robot.state_stream.stop()
             await robot.video.stop()
             await robot.lidar.stop()
             if keeper is not None:
@@ -121,4 +124,5 @@ def create_app(
     app.include_router(lidar.router)
     app.include_router(telemetry.router)
     app.include_router(video.router)
+    app.include_router(state.router)
     return app

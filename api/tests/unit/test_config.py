@@ -92,3 +92,25 @@ def test_padroes_de_video_da_spec() -> None:
     assert settings.video_max_fps == 0
     assert settings.video_jpeg_quality == 80
     assert settings.video_stall_s == 3
+
+
+@pytest.mark.parametrize(
+    ("campo", "valor"),
+    [("state_max_hz", -0.1), ("state_max_hz", -1), ("state_max_clients", -1)],
+)
+def test_f004_a5_config_de_estado_negativa_impede_a_api_de_subir(
+    campo: str, valor: float
+) -> None:
+    with pytest.raises(ValidationError):
+        Settings.model_validate({"connection_method": "LocalAP", campo: valor})
+
+
+def test_f004_padroes_de_estado_da_spec() -> None:
+    settings = Settings(_env_file=None, connection_method=ConnectionMethod.local_ap)
+    unlimited = Settings(
+        _env_file=None, connection_method=ConnectionMethod.local_ap, state_max_hz=0
+    )
+
+    assert settings.state_max_clients == 4
+    assert settings.state_max_hz == 10
+    assert unlimited.state_max_hz == 0
