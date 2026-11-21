@@ -23,7 +23,7 @@ from unitree_webrtc_connect.lidar.lidar_decoder_native import (
 )
 
 from app.config import ConnectionMethod, Settings
-from app.robot.ports import VideoTrackListener, WebRTCConnection
+from app.robot.ports import AudioTrack, VideoTrackListener, WebRTCConnection
 
 __all__ = [
     "DATA_CHANNEL_TYPE",
@@ -34,6 +34,7 @@ __all__ = [
     "RawLidarDecoder",
     "UnitreeConnectionFactory",
     "VideoHookedConnection",
+    "attach_audio_track",
     "decode_points",
     "install_raw_lidar_decoder",
 ]
@@ -113,6 +114,30 @@ class VideoHookedConnection(UnitreeWebRTCConnection):  # type: ignore[misc]
         listener = self.video_track_listener
         if listener is not None:
             listener(track)
+
+    def attach_audio_track(self, track: AudioTrack) -> None:
+        """Põe `track` no transceiver de áudio que a lib negociou (F-007)."""
+        attach_audio_track(self.pc, track)
+
+
+def attach_audio_track(pc: Any, track: AudioTrack) -> None:  # noqa: ANN401
+    """Troca a track do sender do transceiver de áudio de `pc`, sem renegociar.
+
+    A lib cria um transceiver `audio` `sendrecv` em `init_webrtc`
+    (`WebRTCAudioChannel`). O sender dele já roda o laço de envio, que espera
+    em silêncio enquanto não há track; `replaceTrack` só troca a fonte. Esse
+    laço termina de vez se a track lançar `MediaStreamError`, por isso a track
+    da api nunca termina (aiortc 1.15.0, `rtcrtpsender.py`).
+
+    Raises:
+        RuntimeError: se `pc` não tem transceiver de áudio.
+    """
+    for transceiver in pc.getTransceivers():
+        if transceiver.kind == "audio":
+            transceiver.sender.replaceTrack(track)
+            return
+    msg = "❌ A conexão não tem transceiver de áudio."
+    raise RuntimeError(msg)
 
 
 class UnitreeConnectionFactory:

@@ -18,6 +18,7 @@ from app.robot.link import RobotLink
 from app.robot.movement import MoveController
 from app.robot.ports import ConnectionFactory
 from app.robot.safety import ObstacleAvoidanceReading
+from app.robot.speaker import Speaker
 from app.robot.speed import SpeedReading
 from app.robot.state import RobotStatus, StateCache
 from app.robot.streams import TrafficSaving
@@ -46,6 +47,7 @@ class Go2Robot:
         lidar: LidarStream,
         video: VideoStream,
         device: DeviceControls,
+        speaker: Speaker,
     ) -> None:
         """Recebe os colaboradores já montados (ver :meth:`from_settings`)."""
         self._link = link
@@ -56,6 +58,7 @@ class Go2Robot:
         self._lidar = lidar
         self._video = video
         self._device = device
+        self._speaker = speaker
 
     @classmethod
     def from_settings(
@@ -102,6 +105,7 @@ class Go2Robot:
                 stall_s=settings.video_stall_s,
             ),
             device=DeviceControls(VuiChannel(link, settings.request_timeout_s)),
+            speaker=Speaker(link),
         )
 
     # ─── Ciclo de vida ─────────────────────────────────────────────────────
@@ -187,6 +191,11 @@ class Go2Robot:
     def device(self) -> DeviceControls:
         """Lanterna, LED e volume (`/device/*`, F-005)."""
         return self._device
+
+    @property
+    def speaker(self) -> Speaker:
+        """Alto-falante pela track de áudio WebRTC (`/speaker/*`, F-007)."""
+        return self._speaker
 
     # ─── Estado ────────────────────────────────────────────────────────────
 

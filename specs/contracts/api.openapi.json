@@ -322,6 +322,32 @@
         "title": "ObstacleAvoidanceResponse",
         "type": "object"
       },
+      "PlaybackResponse": {
+        "description": "`play` aceito (`202`): a api começou a enviar, não prova que o robô tocou.",
+        "properties": {
+          "duration_s": {
+            "description": "Amostras decodificadas ÷ taxa.",
+            "title": "Duration S",
+            "type": "number"
+          },
+          "name": {
+            "description": "Nome do arquivo enviado.",
+            "title": "Name",
+            "type": "string"
+          },
+          "playback_id": {
+            "title": "Playback Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "playback_id",
+          "name",
+          "duration_s"
+        ],
+        "title": "PlaybackResponse",
+        "type": "object"
+      },
       "Posture": {
         "description": "Posturas aceitas, como aparecem no corpo da request.\n\nGestos ficam em :class:`~app.requests.gesture.GestureRequest`; os\n\"tricks\" (`front_flip`, ...) ainda não existem — grupo 4.2 da\n`docs/arquitetura_go2_api.md`.",
         "enum": [
@@ -347,6 +373,87 @@
           "cmd"
         ],
         "title": "PostureRequest",
+        "type": "object"
+      },
+      "SpeakerResponse": {
+        "description": "O que o alto-falante está fazendo. `playing` = a api está enviando.",
+        "properties": {
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "playback_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Playback Id"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Início do envio (UTC).",
+            "title": "Started At"
+          },
+          "state": {
+            "enum": [
+              "idle",
+              "playing"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "playback_id",
+          "name",
+          "started_at",
+          "duration_s"
+        ],
+        "title": "SpeakerResponse",
+        "type": "object"
+      },
+      "SpeakerStopResponse": {
+        "description": "`stop` aceito (`202`), também quando nada tocava.",
+        "properties": {
+          "state": {
+            "const": "idle",
+            "default": "idle",
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "title": "SpeakerStopResponse",
         "type": "object"
       },
       "SpeedLevelRequest": {
@@ -1029,6 +1136,104 @@
         "summary": "Liga ou desliga o desvio de obstáculo",
         "tags": [
           "safety"
+        ]
+      }
+    },
+    "/speaker": {
+      "get": {
+        "description": "`playing` quer dizer que a api está enviando o áudio.",
+        "operationId": "get_speaker_speaker_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpeakerResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "O que está tocando",
+        "tags": [
+          "speaker"
+        ]
+      }
+    },
+    "/speaker/play": {
+      "post": {
+        "description": "Lê o upload (até o teto), decodifica numa thread e começa a enviar.\n\nUm `play` ou `stop` que chegue durante a decodificação vence: este\nresponde `202` mas não toca.",
+        "operationId": "play_speaker_play_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "description": "WAV ou MP3.",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaybackResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "413": {
+            "description": "Arquivo acima de `GO2_AUDIO_MAX_UPLOAD_MB`."
+          },
+          "415": {
+            "description": "Não é WAV nem MP3 (pelo conteúdo) ou não decodifica."
+          },
+          "422": {
+            "description": "Sem `multipart/form-data` ou sem o campo `file`."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          }
+        },
+        "summary": "Toca um WAV ou MP3 no alto-falante, substituindo o atual",
+        "tags": [
+          "speaker"
+        ]
+      }
+    },
+    "/speaker/stop": {
+      "post": {
+        "description": "Volta ao silêncio e cancela `play` em decodificação; vale sem conexão.",
+        "operationId": "stop_speaker_stop_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpeakerStopResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Cala o alto-falante",
+        "tags": [
+          "speaker"
         ]
       }
     },

@@ -6,6 +6,7 @@ import logging
 from app.exceptions import RobotUnavailableError
 from app.robot.connection import ConnectionState, ConnectionStateTracker
 from app.robot.ports import (
+    AudioTrack,
     ConnectionFactory,
     DataChannel,
     PeerConnection,
@@ -142,6 +143,30 @@ class RobotLink:
         if self._connection is None:
             return None
         return self._connection.datachannel
+
+    @property
+    def connection_key(self) -> object | None:
+        """Identidade opaca da conexão atual (`None` sem conexão).
+
+        Muda a cada `connect()`: compare por identidade (`is`) para saber se
+        algo instalado numa conexão ainda vale (F-007).
+        """
+        return self._connection
+
+    def attach_audio_track(self, track: AudioTrack) -> object:
+        """Põe `track` no transceiver de áudio da conexão viva.
+
+        Returns:
+            A :attr:`connection_key` da conexão em que a track ficou.
+
+        Raises:
+            RobotUnavailableError: se não há conexão viva com o robô.
+        """
+        connection = self._connection
+        if connection is None or not self.is_connected:
+            raise RobotUnavailableError(NOT_CONNECTED_MESSAGE)
+        connection.attach_audio_track(track)
+        return connection
 
     def ensure_connected(self) -> PubSub:
         """Devolve o canal pub/sub, exigindo conexão viva.

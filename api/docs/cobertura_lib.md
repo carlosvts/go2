@@ -93,7 +93,7 @@ Implementado na F-005 (carlosvts/go2-api#3), sem teste no robô. É a rota de qu
 | `enter_megaphone` 4001 / `upload_megaphone` 4003 / `exit_megaphone` 4002 | Modo megafone: toca um arquivo direto | lib | ❌ |
 | Corpus interno 3001–3004, 5001–5003 | Falas prontas do robô (desvio, modo companhia, corpus longo); só constantes | lib | ❌ |
 | `AUDIO_HUB_PLAY_STATE` (`rt/audiohub/player/state`) | Estado do player (tópico) | lib | ❌ |
-| Track de áudio de saída (`pc.addTrack(MediaPlayer(...))`) | Toca MP3 ou rádio pela conexão WebRTC, ao vivo | ex. | ❌ |
+| Track de áudio de saída (`pc.addTrack(MediaPlayer(...))`) | Toca MP3 ou rádio pela conexão WebRTC, ao vivo | ex. | ✅ software, só WAV/MP3 enviados (`/speaker/*`, F-007): track própria persistente no transceiver da lib, sem `MediaPlayer` nem URL; falta teste no robô |
 | Microfone do robô (`switchAudioChannel` + track de áudio) | Recebe o áudio do robô (48 kHz) | lib, ex. | ❌ |
 
 Previsto em carlosvts/go2-api#2. HRI: som do robô pode ser captado pelo microfone da TV Box e virar comando (eco).

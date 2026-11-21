@@ -39,3 +39,14 @@ class InvalidCommandError(Go2Error, ValueError):
     :class:`app.robot.commands.MoveCommand`), de modo que um comando inválido
     simplesmente não chega a existir.
     """
+
+
+class PayloadTooLargeError(Go2Error):
+    """O upload passou de `GO2_AUDIO_MAX_UPLOAD_MB`; vira `413`.
+
+    A leitura é interrompida no limite: o resto do corpo não é lido.
+    """
+
+
+class UnsupportedAudioError(Go2Error):
+    """O arquivo não é WAV nem MP3 (pelo conteúdo) ou não decodifica; vira `415`."""

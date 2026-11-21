@@ -77,10 +77,15 @@ A API sobe sem tentar conectar. O `GET /status` responde `200` com `connected: f
 | `PUT /device/volume`     | `{"level": 5}`                       | Volume do alto-falante, 0 a `GO2_MAX_VOLUME` (≤ 10). Responde `202` `{"level"}` depois de o robô aceitar.                                                                         |
 | `GET /device/volume`     | —                                    | Lê o volume guardado no robô: `{"level"}`.                                                                                                                                        |
 | `PUT /device/led`        | `{"color": "red", "duration_s": 5, "flash_cycle_ms": 1000}` | Cor do LED (`white`, `red`, `yellow`, `blue`, `green`, `cyan`, `purple`) por `duration_s` (1 a `GO2_LED_MAX_DURATION_S`); `flash_cycle_ms` (opcional, 499 a `duration_s × 1000`) faz piscar. Sem leitura da cor. |
+| `POST /speaker/play`     | multipart, campo `file` (WAV ou MP3) | Toca o arquivo no alto-falante na hora, sem guardar no robô; substitui o que estiver tocando. `202` `{"playback_id", "name", "duration_s"}`. Acima de `GO2_AUDIO_MAX_UPLOAD_MB` → `413`; formato inválido → `415`. |
+| `POST /speaker/stop`     | —                                    | Cala o alto-falante. `202` `{"state": "idle"}`, também quando nada tocava.                                                                                                       |
+| `GET /speaker`           | —                                    | `{"state", "playback_id", "name", "started_at", "duration_s"}`; `state` é `idle` ou `playing` (= a api está enviando o áudio).                                                   |
 
 Os comandos respondem `202` quando são enviados, sem esperar o robô terminar. Com o robô desconectado, respondem `503`. Comando desconhecido ou corpo inválido responde `422` e nada é enviado ao robô.
 
 As rotas `/device/*` (F-005) são diferentes: esperam a resposta do robô e só respondem `202` quando ele **aceita** o pedido (não quer dizer que alguém viu a luz). Se o robô recusa ou responde algo ilegível, `502`; sem resposta em `GO2_REQUEST_TIMEOUT_S`, `504`. Em `502` e `504` o pedido pode ter sido aplicado: confira com o `GET`. Os api_ids vêm de um exemplo da lib e ainda não foram testados no robô. Essas rotas não entram no `/capabilities`.
+
+As rotas `/speaker/*` (F-007) mandam o áudio pela conexão WebRTC, sem gravar nada no robô; o `202` quer dizer que a api começou a enviar, não que o robô reproduziu (ainda não testado no robô). Não se sabe ainda se o `PUT /device/volume` vale para esse áudio (F-007 A11). Também não entram no `/capabilities`.
 
 Se a conexão com o robô cair, a API reconecta sozinha em segundo plano ([ficha](docs/essencial/rodar-com-docker.md)).
 
