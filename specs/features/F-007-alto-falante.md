@@ -2,7 +2,7 @@
 id: F-007
 titulo: Tocar áudio no alto-falante sem guardar no robô (/speaker/*)
 tipo: comportamento
-status: proposta
+status: em-implementacao
 servicos: [api]
 verificacao: inferido
 verificado-em: null
@@ -69,15 +69,15 @@ Não muda (decisão do humano): as rotas ficam no OpenAPI e no README da api.
 
 | ID | Critério (observável) | Como verificar | Tipo | Verificação |
 |---|---|---|---|---|
-| A1 | `POST /speaker/play` com um WAV gerado no teste → `202`; a track persistente passa a entregar os quadros do arquivo (comparados com o PCM decodificado), e `GET /speaker` mostra `playing`, com nome e duração | teste com conexão fake | software | inferido |
-| A2 | O mesmo com um MP3 gerado no teste | teste | software | inferido |
-| A3 | Ociosa, a track entrega silêncio no ritmo de 20 ms (±5 ms em média por 1 s, relógio real); ao acabar o arquivo, volta ao silêncio, o estado vai a `idle` e o `/ws/state` envia `speaker` | teste | software | inferido |
-| A4 | Um segundo `play` substitui o primeiro na track; `stop` volta ao silêncio e ao `idle`; `stop` sem nada tocando → `202` | teste | software | inferido |
-| A5 | Com a decodificação de um `play` segurada por um evento do teste, um `stop` enviado nesse meio-tempo faz o `play` terminar sem tocar (`idle`); entre dois `play` com a decodificação segurada, toca o último aceito | teste com evento controlado | software | inferido |
-| A6 | Com um par `RTCPeerConnection` real do aiortc em loopback, no processo do teste, com transceiver de áudio `sendrecv` como a lib: tocar um arquivo curto, esperar acabar, tocar outro. Chegam pacotes RTP de áudio do outro lado durante os dois | teste de integração | software | inferido |
-| A7 | A conexão caindo durante a reprodução → `idle`; depois da reconexão, nada toca e o próximo `play` põe a track na conexão nova | teste | software | inferido |
-| A8 | Arquivo acima do limite → `413`; formato inválido → `415`; sem conexão → `503`; nesses casos a track não muda | teste | software | inferido |
-| A9 | A decodificação de um MP3 do tamanho máximo não roda na thread do event loop, e `POST /commands/stop` responde durante ela em menos de 100 ms | teste | software | inferido |
+| A1 | `POST /speaker/play` com um WAV gerado no teste → `202`; a track persistente passa a entregar os quadros do arquivo (comparados com o PCM decodificado), e `GET /speaker` mostra `playing`, com nome e duração | teste com conexão fake | software | testado-software (2026-11-22 @ c9db60f) |
+| A2 | O mesmo com um MP3 gerado no teste | teste | software | testado-software (2026-11-22 @ c9db60f) |
+| A3 | Ociosa, a track entrega silêncio no ritmo de 20 ms (±5 ms em média por 1 s, relógio real); ao acabar o arquivo, volta ao silêncio, o estado vai a `idle` e o `/ws/state` envia `speaker` | teste | software | parcial: silêncio a 20 ms, volta ao silêncio e `idle` e aviso pelo gancho `Speaker.subscribe` testado-software (2026-11-22 @ c9db60f); o envio pelo `/ws/state` falta (gancho ainda não ligado à F-004) |
+| A4 | Um segundo `play` substitui o primeiro na track; `stop` volta ao silêncio e ao `idle`; `stop` sem nada tocando → `202` | teste | software | testado-software (2026-11-22 @ c9db60f) |
+| A5 | Com a decodificação de um `play` segurada por um evento do teste, um `stop` enviado nesse meio-tempo faz o `play` terminar sem tocar (`idle`); entre dois `play` com a decodificação segurada, toca o último aceito | teste com evento controlado | software | testado-software (2026-11-22 @ c9db60f) |
+| A6 | Com um par `RTCPeerConnection` real do aiortc em loopback, no processo do teste, com transceiver de áudio `sendrecv` como a lib: tocar um arquivo curto, esperar acabar, tocar outro. Chegam pacotes RTP de áudio do outro lado durante os dois | teste de integração | software | testado-software (2026-11-22 @ c9db60f) |
+| A7 | A conexão caindo durante a reprodução → `idle`; depois da reconexão, nada toca e o próximo `play` põe a track na conexão nova | teste | software | testado-software (2026-11-22 @ c9db60f) |
+| A8 | Arquivo acima do limite → `413`; formato inválido → `415`; sem conexão → `503`; nesses casos a track não muda | teste | software | testado-software (2026-11-22 @ c9db60f) |
+| A9 | A decodificação de um MP3 do tamanho máximo não roda na thread do event loop, e `POST /commands/stop` responde durante ela em menos de 100 ms | teste | software | testado-software (2026-11-22 @ c9db60f) |
 | A10 | Com o robô real: um WAV e um MP3 tocam no alto-falante do Go2; `stop` corta o som; um `play` durante outro troca o som. Registrar o atraso do `play` ao som e a qualidade | roteiro | hardware-only | inferido |
 | A11 | Com o robô real, `PUT /device/volume` (F-005) muda o volume do que a F-007 toca. Registrar se muda | roteiro | hardware-only | inferido |
 | A12 | Com o robô real, durante a reprodução de um áudio de ~30 s, o tempo entre `POST /commands/stop` e o robô parar, num `move`, tem mediana no máximo 0,2 s acima da mediana da linha de base sem áudio, e nenhuma repetição passa 0,4 s acima dela. Régua e protocolo do F-001 A13 | roteiro | hardware-only | inferido |
@@ -141,3 +141,13 @@ No roteiro único da rodada: [`specs/checklists/api-completa.md`](../checklists/
   - decodificação em thread;
   - `202`;
   - dependências explícitas.
+- 2026-11-22: implementada (`em-implementacao`, branch `feat/alto-falante`, c9db60f). A1, A2, A4–A9 `testado-software`; A3 parcial (o tópico `speaker` no `/ws/state` depende da F-004: gancho `Speaker.subscribe` pronto, não ligado); `verificacao` segue `inferido`. Decisões do Claude nesta rodada:
+  - uma `SpeakerTrack` nova por conexão (não a mesma instância reaproveitada): o aiortc chama `track.stop()` quando o sender da conexão velha termina;
+  - a track entra por `sender.replaceTrack` no transceiver `audio` achado em `pc.getTransceivers()` (`attach_audio_track` em `unitree.py`), não por `pc.addTrack`, para nunca criar transceiver novo que exigiria renegociar;
+  - um `play` vencido por outro `play` ou `stop` durante a decodificação responde `202` (foi aceito e logo substituído) e não toca;
+  - o número de ordem é dado na chegada: um `play` mais novo cancela o que decodifica mesmo que ele próprio termine em `415`;
+  - conexão que mudou durante a decodificação → `503` (não toca na conexão nova);
+  - ordem das validações: `503` antes de ler o corpo, depois `413` (também pelo `Content-Length`, com folga de 64 KiB), `415` na decodificação; sem campo `file` ou sem multipart → `422`;
+  - `GO2_AUDIO_MAX_UPLOAD_MB` em MiB (× 1024²), `float`;
+  - `name` = nome do arquivo no multipart (ou `audio`), sem sanitizar;
+  - sem teto de duração: um MP3 de 5 MiB em bitrate muito baixo pode virar centenas de MB de PCM (risco anotado, não tratado: a spec não pede).
