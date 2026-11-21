@@ -153,6 +153,12 @@ outro consumidor desses tópicos (por exemplo, o hub de WebSocket) precisa
   `exit_megaphone`.
 - api_ids em `AUDIO_API` (`constants.py:353-384`).
 
+**Como a api lida com isso (F-006, F-007):** a api não usa a classe. O canal próprio (`AudioHubChannel`) põe timeout em cada chamada, e o protocolo de `upload_audio_file` foi copiado em `unitree.py` (`AudioUploadBlocks`) com timeout por bloco. O MP3 é convertido com o PyAV, sem `ffmpeg`. O megafone ficou fora.
+
+**Áudio de saída ao vivo** (`WebRTCAudioChannel`): a lib negocia um transceiver de áudio `sendrecv` a cada conexão. No aiortc 1.15.0, o laço de envio do sender (`RTCRtpSender._run_rtp`) termina de vez quando a track lança `MediaStreamError`, ou seja, no fim de um arquivo. Por isso o `/speaker/*` usa uma track própria que nunca termina (`SpeakerTrack`).
+
+**Erros do robô:** as mensagens `errors`, `add_error` e `rm_error` são tratadas em `WebRTCDataChannel.handle_response`, que só as imprime (`msgs/error_handler.py`). A api instala um gancho nesse método a cada `connect()` (F-004).
+
 ## 8. Constantes que importam
 
 - `SPORT_CMD` (`constants.py:122-172`) e `SPORT_CMD_MCF` (`:174-222`) têm

@@ -14,7 +14,7 @@ Em qualquer teste físico, combine antes **quem** dispara o `damp` e por qual me
 
 ## Truques (flips, handstand)
 
-Têm risco real de queda e dano. Ainda não foram implementados (carlosvts/go2-api#1). Quando forem, vão exigir `"confirm": true` e só devem ser testados em área livre e com piso macio.
+Têm risco real de queda e dano. Estão fora da api de propósito, restritos pelo `AGENTS.md` (carlosvts/go2-api#1). Quando forem, vão exigir `"confirm": true` e só devem ser testados em área livre e com piso macio.
 
 ## Pegadinha
 

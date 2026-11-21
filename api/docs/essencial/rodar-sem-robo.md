@@ -29,9 +29,9 @@ uv run pytest
 
 Os testes usam `FakeConnection`/`FakePubSub` (`tests/conftest.py`), que registram o que **teria** sido enviado ao robô.
 
-## Em breve
+## Explorar as rotas
 
-O `FakeHub` (carlosvts/go2-api#10) vai gerar dados falsos para os WebSockets, e o `scripts/ws_client.py` (carlosvts/go2-api#11) vai permitir olhá-los.
+A coleção do Insomnia (`api/insomnia/go2-api.json`) tem todas as rotas, com exemplos. Sem o robô, os streams aceitam a conexão e mandam `connection: disconnected` (e, no `/ws/state`, o estado do alto-falante). Os clientes de diagnóstico em `scripts/` (`ws_state_client.py`, `ws_video_client.py`, `ws_lidar_client.py`) servem para olhá-los.
 
 ## Pegadinha
 

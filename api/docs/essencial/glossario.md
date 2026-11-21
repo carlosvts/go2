@@ -19,7 +19,10 @@
 | **Firmware** | O software de fábrica que roda dentro do robô. A versão dele muda o que o robô aceita. |
 | **Handshake** | "Aperto de mão": a troca inicial de mensagens que abre a conexão. |
 | **HTTP** | Protocolo de pedido e resposta da web (é o que o navegador e o `curl` usam). |
-| **Hub (TopicHub)** | Distribuidor interno (planejado, carlosvts/go2-api#9) que leva os dados do robô a vários clientes WebSocket. |
+| **Stream (WebSocket)** | Rota que fica aberta mandando dados do robô continuamente: `/ws/lidar`, `/ws/telemetry`, `/ws/video`, `/ws/state`. Cada cliente tem fila própria; cheia, descarta o mais antigo. |
+| **VUI** | Serviço do robô de luz e som (`rt/api/vui/request`): brilho da lanterna, cor do LED, volume. |
+| **Multipart** | Formato de envio de arquivo por HTTP (`multipart/form-data`), usado no upload de áudio. |
+| **PCM / WAV / MP3** | Áudio cru (amostras) / arquivo com áudio cru / arquivo com áudio comprimido. |
 | **Hz** | Hertz: vezes por segundo. 30 Hz = 30 envios por segundo. |
 | **ICE** | Mecanismo do WebRTC que descobre um caminho de rede entre os dois lados. |
 | **IMU** | *Inertial Measurement Unit*: sensor de orientação e aceleração (inclinação, giro). |

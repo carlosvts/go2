@@ -19,10 +19,11 @@ Fichas curtas, uma ideia cada, no máximo uma tela. Para o detalhe, cada ficha a
 - [Parar o robô: `stop` vs. `damp`](parar-o-robo.md): um para, o outro derruba.
 - [De pé não basta: `balance_stand` vs. `stand_up`](balance-stand-vs-stand-up.md): requisito para andar.
 - [Como o `move` funciona](como-o-move-funciona.md): reenvio contínuo, limites e substituição.
-- [O que significam 202, 503 e 504](semantica-202-503-504.md): "aceito" não é "executado".
+- [O que significam 202, 503, 504 e os outros códigos](semantica-202-503-504.md): "aceito" não é "executado".
+- [Áudio no robô: biblioteca vs. alto-falante](audio-no-robo.md): tocar na hora ou guardar, limites e como calar.
 
 ## Desenvolvimento
-- [Rodar e testar sem o robô](rodar-sem-robo.md)
+- [Rodar e testar sem o robô](rodar-sem-robo.md): inclui a coleção do Insomnia.
 - [Rodar com Docker](rodar-com-docker.md): subir, health, reconexão e checklist de teste.
 - [O que é um LiDAR](o-que-e-lidar.md)
 - [LiDAR: malha vs. pontos](lidar-malha-vs-pontos.md): trocar o decoder.
