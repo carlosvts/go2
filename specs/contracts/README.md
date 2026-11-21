@@ -9,8 +9,9 @@ Contratos HTTP entre os serviços. Cada arquivo é **commitado** e **conferido c
 | `catalog.schema.json` (planejado) | server | server (validará o `catalog.yaml` gerado) |
 | `ws-lidar.md` | api | `api/scripts/ws_lidar_client.py` e `api/scripts/record_lidar.py` (visualização, gravação); o server ainda não |
 | `ws-telemetry.md` | api | `api/scripts/record_lidar.py` e o visualizador; o server ainda não |
+| `ws-video.md` | api | `api/scripts/video_viewer.html`, `api/scripts/ws_video_client.py` e `api/scripts/record_video.py`; o server ainda não |
 
-`ws-lidar.md` e `ws-telemetry.md` descrevem frames de WebSocket, que o OpenAPI não cobre: **o CI não os confere**. A conferência é a revisão humana e os testes de `api/tests/unit/test_lidar_frame.py`, `api/tests/unit/test_lidar_telemetry.py`, `api/tests/api/test_ws_lidar.py` e `api/tests/api/test_ws_telemetry.py` (F-001, F-002).
+`ws-lidar.md`, `ws-telemetry.md` e `ws-video.md` descrevem frames de WebSocket, que o OpenAPI não cobre: **o CI não os confere**. A conferência é a revisão humana e os testes de `api/tests/unit/test_lidar_frame.py`, `api/tests/unit/test_lidar_telemetry.py`, `api/tests/api/test_ws_lidar.py`, `api/tests/api/test_ws_telemetry.py`, `api/tests/unit/test_video_stream.py` e `api/tests/api/test_ws_video.py` (F-001, F-002, F-003).
 
 O tvbox não expõe HTTP, então não tem contrato próprio: só consome os dois acima.
 

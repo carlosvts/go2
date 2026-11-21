@@ -52,6 +52,39 @@ class DataChannel(Protocol):
     async def disableTrafficSaving(self, switch: bool) -> bool:  # noqa: N802
         """Liga (`True`) ou desfaz o envio sem economia de tráfego; sem timeout."""
 
+    def switchVideoChannel(self, switch: bool) -> None:  # noqa: N802
+        """Liga ou desliga a câmera (`"on"`/`"off"` no data channel), sem resposta."""
+
+
+class VideoFrame(Protocol):
+    """Quadro decodificado pelo aiortc (`av.VideoFrame`)."""
+
+    @property
+    def width(self) -> int:
+        """Largura em pixels."""
+
+    @property
+    def height(self) -> int:
+        """Altura em pixels."""
+
+    @property
+    def time(self) -> float | None:
+        """Tempo na track (relógio RTP do robô), ou `None`."""
+
+    def to_ndarray(self, **kwargs: Any) -> Any:  # noqa: ANN401
+        """Converte para array numpy (pesa na CPU: fora do event loop)."""
+
+
+class VideoTrack(Protocol):
+    """Track de vídeo recebida (`RemoteStreamTrack` do aiortc)."""
+
+    async def recv(self) -> Any:  # noqa: ANN401
+        """Espera o próximo quadro; lança erro quando a track termina."""
+
+
+VideoTrackListener = Callable[[VideoTrack], None]
+"""Recebe a track de vídeo de uma conexão, durante o `connect()`."""
+
 
 class PeerConnection(Protocol):
     """`RTCPeerConnection` do aiortc, um `EventEmitter` do pyee."""
@@ -78,6 +111,9 @@ class WebRTCConnection(Protocol):
     @property
     def pc(self) -> PeerConnection:
         """Peer WebRTC; só existe depois de `connect()`."""
+
+    video_track_listener: VideoTrackListener | None
+    """Chamado com a track de vídeo durante o `connect()` (F-003)."""
 
     async def connect(self) -> None:
         """Abre a conexão."""

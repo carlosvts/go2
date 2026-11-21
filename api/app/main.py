@@ -26,6 +26,7 @@ from app.routers import (
     safety,
     speed,
     telemetry,
+    video,
 )
 from app.routers import status as status_router
 
@@ -50,11 +51,13 @@ class RobotLifespan:
         robot = Go2Robot.from_settings(self._settings, self._connection_factory)
         app.state.robot = robot
         robot.lidar.start()
+        robot.video.start()
         await self._connect(robot)
         keeper = self._start_keeper(robot)
         try:
             yield
         finally:
+            await robot.video.stop()
             await robot.lidar.stop()
             if keeper is not None:
                 keeper.cancel()
@@ -117,4 +120,5 @@ def create_app(
     app.include_router(safety.router)
     app.include_router(lidar.router)
     app.include_router(telemetry.router)
+    app.include_router(video.router)
     return app

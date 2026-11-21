@@ -23,7 +23,6 @@ import json
 import logging
 import struct
 import time
-from collections import deque
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -36,6 +35,7 @@ from app.robot.clients import ClientMessage
 from app.robot.connection import ConnectionState
 from app.robot.link import RobotLink
 from app.robot.ports import DataChannel
+from app.robot.streams import DropOldestQueue, FrameClient, TrafficSaving
 from app.robot.telemetry import (
     METRICS_TOPIC,
     LidarMetrics,
@@ -76,6 +76,8 @@ HEADER_LEN = FRAME_HEADER.size
 CLOSE_UNAVAILABLE = (1011, "lidar_unavailable")
 CLOSE_SHUTDOWN = (1001, "shutdown")
 ACTIVATION_FAILED = "activation_failed"
+TRAFFIC_HOLDER = "lidar"
+"""Dono do LiDAR/telemetria no refcount comum de `disableTrafficSaving`."""
 
 PointDecoder = Callable[[bytes, int, Sequence[float], float], NDArray[np.float64]]
 """`(payload, src_size, origin, resolution) -> pontos (N, 3)`."""
@@ -152,102 +154,8 @@ def _parse(
     )
 
 
-class _DropOldestQueue[T]:
-    """Fila limitada para um consumidor: cheia, descarta o item mais antigo."""
-
-    def __init__(self, maxsize: int) -> None:
-        self._items: deque[T] = deque(maxlen=maxsize)
-        self._ready = asyncio.Event()
-
-    def put(self, item: T) -> bool:
-        """Enfileira; devolve `True` se descartou um item para caber."""
-        dropped = len(self._items) == self._items.maxlen
-        self._items.append(item)
-        self._ready.set()
-        return dropped
-
-    async def get(self) -> T:
-        while not self._items:
-            self._ready.clear()
-            await self._ready.wait()
-        return self._items.popleft()
-
-    def clear(self) -> None:
-        self._items.clear()
-
-    def __len__(self) -> int:
-        return len(self._items)
-
-
-class LidarClient:
-    """Saída de um cliente do `/ws/lidar`.
-
-    Prioridade: frames de texto (estado da conexão, nunca descartados) >
-    fechamento > frames binários (fila curta, descarta o mais antigo).
-    """
-
-    def __init__(self, queue_size: int) -> None:
-        """Cria a saída com a fila de frames binários de `queue_size`."""
-        self._frames: deque[bytes] = deque(maxlen=queue_size)
-        self._texts: deque[str] = deque()
-        self._close: tuple[int, str] | None = None
-        self._gone = False
-        self._ready = asyncio.Event()
-
-    @property
-    def is_closed(self) -> bool:
-        """A api decidiu fechar este cliente."""
-        return self._close is not None
-
-    def push_frame(self, frame: bytes) -> bool:
-        """Enfileira um frame binário; devolve `True` se descartou um antigo."""
-        if self._close is not None:
-            return False
-        dropped = len(self._frames) == self._frames.maxlen
-        self._frames.append(frame)
-        self._ready.set()
-        return dropped
-
-    def push_text(self, text: str) -> None:
-        """Enfileira um frame de texto; nunca é descartado."""
-        self._texts.append(text)
-        self._ready.set()
-
-    def close(self, code: int, reason: str) -> None:
-        """Pede o fechamento depois dos textos pendentes."""
-        self._close = (code, reason)
-        self._frames.clear()
-        self._ready.set()
-
-    def mark_gone(self) -> None:
-        """O cliente desconectou por conta própria."""
-        self._gone = True
-        self._ready.set()
-
-    def pending_texts(self) -> list[str]:
-        """Retira e devolve os textos pendentes (uso em testes e diagnóstico)."""
-        texts = list(self._texts)
-        self._texts.clear()
-        return texts
-
-    def pending_frame_count(self) -> int:
-        """Quantos frames binários esperam envio."""
-        return len(self._frames)
-
-    async def next(self) -> ClientMessage:
-        """Espera a próxima mensagem a enviar ao cliente."""
-        while True:
-            if self._gone:
-                return ClientMessage("gone")
-            if self._texts:
-                return ClientMessage("text", self._texts.popleft())
-            if self._close is not None:
-                code, reason = self._close
-                return ClientMessage("close", code=code, reason=reason)
-            if self._frames:
-                return ClientMessage("bytes", self._frames.popleft())
-            self._ready.clear()
-            await self._ready.wait()
+class LidarClient(FrameClient):
+    """Saída de um cliente do `/ws/lidar` (ver :class:`FrameClient`)."""
 
 
 class LidarStream:
@@ -267,6 +175,7 @@ class LidarStream:
         decoder: PointDecoder = decode_points,
         clock: Callable[[], float] = time.time,
         monotonic: Callable[[], float] = time.monotonic,
+        traffic: TrafficSaving | None = None,
     ) -> None:
         """Recebe a conexão e os limites; ouve as transições da conexão.
 
@@ -283,11 +192,13 @@ class LidarStream:
             decoder: Voxel map → pontos.
             clock: Relógio de parede (`ts` dos frames).
             monotonic: Relógio monotônico (intervalos e janela).
+            traffic: Refcount de `disableTrafficSaving` comum aos streams
+                (F-003); o padrão é um só deste stream.
         """
         self._link = link
         self._max_clients = max_clients
         self._client_queue = client_queue
-        self._request_timeout_s = request_timeout_s
+        self._traffic = traffic or TrafficSaving(request_timeout_s)
         self._telemetry_max_clients = telemetry_max_clients
         self._telemetry_queue = telemetry_queue
         self._metrics_interval_s = metrics_interval_s
@@ -296,7 +207,7 @@ class LidarStream:
         self._monotonic = monotonic
         self._clients: list[LidarClient] = []
         self._telemetry: list[TelemetryClient] = []
-        self._input: _DropOldestQueue[RawLidarMessage] = _DropOldestQueue(decode_queue)
+        self._input: DropOldestQueue[RawLidarMessage] = DropOldestQueue(decode_queue)
         self._seq = 0
         self._active_channel: DataChannel | None = None
         self._extras_channel: DataChannel | None = None
@@ -413,6 +324,8 @@ class LidarStream:
             self._active_channel = None
             self._extras_channel = None
             self._input.clear()
+            self._traffic.forget(TRAFFIC_HOLDER)
+            self._traffic.on_disconnect()
         self._metrics.reset_interval()
         self._schedule_sync()
 
@@ -454,7 +367,7 @@ class LidarStream:
 
     async def _activate(self, channel: DataChannel) -> None:
         install_raw_lidar_decoder(channel)
-        ok = await self._traffic_saving(channel, switch=True)
+        ok = await self._traffic.acquire(TRAFFIC_HOLDER, channel)
         if not ok:
             log.error("❌ LiDAR indisponível: disableTrafficSaving falhou.")
             self._failed = True
@@ -464,6 +377,7 @@ class LidarStream:
             self._clients.clear()
             return
         if channel is not self._link.datachannel or not self._robot_ready():
+            self._traffic.forget(TRAFFIC_HOLDER)
             return  # a conexão mudou durante a espera; o laço reavalia
         channel.pub_sub.subscribe(LIDAR_TOPIC, self._on_message)
         self._active_channel = channel
@@ -475,8 +389,7 @@ class LidarStream:
         self._input.clear()
         self._metrics.reset_interval()
         self._unsubscribe(channel, LIDAR_TOPIC)
-        if not await self._traffic_saving(channel, switch=False):
-            log.warning("❌ Falha ao desfazer disableTrafficSaving (sem cliente).")
+        await self._traffic.release(TRAFFIC_HOLDER, channel)
         log.info("LiDAR desativado.")
 
     def _subscribe_extras(self, channel: DataChannel) -> None:
@@ -494,17 +407,6 @@ class LidarStream:
         channel.pub_sub.unsubscribe(topic)
         # A lib não remove o callback no unsubscribe (pegadinha #2).
         channel.pub_sub.subscriptions.pop(topic, None)
-
-    async def _traffic_saving(self, channel: DataChannel, *, switch: bool) -> bool:
-        try:
-            return bool(
-                await asyncio.wait_for(
-                    channel.disableTrafficSaving(switch), self._request_timeout_s
-                )
-            )
-        except Exception:
-            log.exception("❌ disableTrafficSaving(%s) falhou.", switch)
-            return False
 
     # ─── Dados ─────────────────────────────────────────────────────────────
 

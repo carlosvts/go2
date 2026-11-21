@@ -1,6 +1,7 @@
 """Ciclo de vida da conexão WebRTC com o robô."""
 
 import contextlib
+import logging
 
 from app.exceptions import RobotUnavailableError
 from app.robot.connection import ConnectionState, ConnectionStateTracker
@@ -9,8 +10,12 @@ from app.robot.ports import (
     DataChannel,
     PeerConnection,
     PubSub,
+    VideoTrack,
+    VideoTrackListener,
     WebRTCConnection,
 )
+
+log = logging.getLogger(__name__)
 
 NOT_CONNECTED_MESSAGE = "❌ Sem conexão com o robô."
 
@@ -33,6 +38,22 @@ class RobotLink:
         self._factory = factory
         self._state = state or ConnectionStateTracker()
         self._connection: WebRTCConnection | None = None
+        self._track_listeners: list[VideoTrackListener] = []
+
+    def subscribe_video_track(self, listener: VideoTrackListener) -> None:
+        """Registra `listener` para receber a track de vídeo de cada conexão.
+
+        A lib entrega a track durante o `connect()`, antes de ele retornar
+        (F-003): o ouvinte precisa estar registrado antes de conectar.
+        """
+        self._track_listeners.append(listener)
+
+    def _emit_video_track(self, track: VideoTrack) -> None:
+        for listener in self._track_listeners:
+            try:
+                listener(track)
+            except Exception:
+                log.exception("❌ Falha num ouvinte da track de vídeo.")
 
     async def connect(self) -> None:
         """Cria e abre a conexão; só a guarda se a abertura der certo.
@@ -42,6 +63,7 @@ class RobotLink:
         deixaria um peer aberto para trás.
         """
         connection = self._factory()
+        connection.video_track_listener = self._emit_video_track
         try:
             await connection.connect()
         except BaseException:

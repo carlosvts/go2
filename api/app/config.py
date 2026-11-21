@@ -97,6 +97,27 @@ class Settings(BaseSettings):
     """Itens à espera por tópico, por cliente de telemetria; cheia, descarta o
     mais antigo do tópico. Não medido."""
 
+    # ─── Vídeo (/ws/video, F-003) ─────────────────────────────────────────
+    video_max_clients: int = Field(default=2, ge=0)
+    """Clientes simultâneos em `/ws/video`. Acima disso o novo leva `1013`;
+    `0` desliga a rota."""
+
+    video_client_queue: int = Field(default=1, ge=1)
+    """Frames JPEG à espera por cliente; cheia, descarta o mais antigo."""
+
+    video_encode_queue: int = Field(default=1, ge=1)
+    """Quadros à espera do codificador JPEG; cheia, descarta o mais antigo."""
+
+    video_max_fps: float = Field(default=0.0, ge=0)
+    """Teto de quadros admitidos por segundo; `0` = sem teto. Padrão a decidir
+    depois de medir a taxa da câmera (F-003 H1)."""
+
+    video_jpeg_quality: int = Field(default=80, ge=1, le=100)
+    """Qualidade do JPEG. Sugerido, sem medida (F-003 H1)."""
+
+    video_stall_s: float = Field(default=3.0, gt=0)
+    """Segundos sem quadro, com a câmera ligada, até o estado `stalled`."""
+
     max_vx: float = Field(default=1.0, gt=0)
     """Teto de velocidade frontal aceito em `POST /commands/move`, em m/s."""
 

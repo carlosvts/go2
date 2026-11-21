@@ -62,3 +62,33 @@ def test_settings_e_imutavel() -> None:
 
     with pytest.raises(ValidationError):
         settings.max_vx = 9.0  # type: ignore[misc]
+
+
+@pytest.mark.parametrize(
+    ("campo", "valor"),
+    [
+        ("video_max_fps", -1),
+        ("video_jpeg_quality", 0),
+        ("video_jpeg_quality", 101),
+        ("video_stall_s", 0),
+        ("video_max_clients", -1),
+        ("video_client_queue", 0),
+        ("video_encode_queue", 0),
+    ],
+)
+def test_a7_config_de_video_fora_da_faixa_nao_constroi(
+    campo: str, valor: float
+) -> None:
+    with pytest.raises(ValidationError):
+        Settings.model_validate({"connection_method": "LocalAP", campo: valor})
+
+
+def test_padroes_de_video_da_spec() -> None:
+    settings = Settings(_env_file=None, connection_method=ConnectionMethod.local_ap)
+
+    assert settings.video_max_clients == 2
+    assert settings.video_client_queue == 1
+    assert settings.video_encode_queue == 1
+    assert settings.video_max_fps == 0
+    assert settings.video_jpeg_quality == 80
+    assert settings.video_stall_s == 3

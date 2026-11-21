@@ -84,6 +84,14 @@ class FakeDataChannel:
         self.traffic_saving_calls: list[bool] = []
         # `True`/`False`: resposta; exceção: lançada; "hang": nunca responde.
         self.traffic_saving_result: bool | Exception | str = True
+        self.switch_video_calls: list[bool] = []
+        self.switch_video_error: Exception | None = None
+
+    def switchVideoChannel(self, switch: bool) -> None:  # noqa: N802
+        """Imita a lib: registra o pedido, sem resposta (ou lança o erro)."""
+        self.switch_video_calls.append(switch)
+        if self.switch_video_error is not None:
+            raise self.switch_video_error
 
     async def disableTrafficSaving(self, switch: bool) -> bool:  # noqa: N802
         """Imita a lib: registra o pedido e devolve o resultado configurado."""
@@ -126,11 +134,16 @@ class FakeConnection:
         self.pc = FakePeerConnection()
         self.connect_error = connect_error
         self.disconnected = False
+        self.video_track_listener: Callable[[Any], None] | None = None
+        # Track entregue ao ouvinte durante o `connect()`, como a lib 2.2.0.
+        self.video_track: Any = None
 
     async def connect(self) -> None:
         """Marca como conectada, ou falha se configurada para tal."""
         if self.connect_error is not None:
             raise self.connect_error
+        if self.video_track is not None and self.video_track_listener is not None:
+            self.video_track_listener(self.video_track)
         self.isConnected = True
         self.pc.connectionState = "connected"
 
@@ -158,3 +171,36 @@ class FakeConnectionFactory:
     def pub_sub(self) -> FakePubSub:
         """Atalho para o `FakePubSub` da conexão."""
         return self.connection.datachannel.pub_sub
+
+
+class TrackEndedError(Exception):
+    """Fim da track, como o `MediaStreamError` do aiortc."""
+
+
+class FakeVideoTrack:
+    """Track de vídeo falsa: entrega os quadros que o teste põe na fila."""
+
+    def __init__(self) -> None:
+        """Começa vazia; a fila não tem limite, como a do aiortc."""
+        self._queue: asyncio.Queue[Any] = asyncio.Queue()
+        self.received = 0
+
+    def put(self, frame: Any) -> None:
+        """Simula o aiortc entregando um quadro decodificado."""
+        self._queue.put_nowait(frame)
+
+    def end(self) -> None:
+        """Simula o fim da track."""
+        self._queue.put_nowait(TrackEndedError())
+
+    def pending(self) -> int:
+        """Quadros que ninguém leu ainda."""
+        return self._queue.qsize()
+
+    async def recv(self) -> Any:
+        """Devolve o próximo quadro; com a track encerrada, lança erro."""
+        item = await self._queue.get()
+        if isinstance(item, Exception):
+            raise item
+        self.received += 1
+        return item

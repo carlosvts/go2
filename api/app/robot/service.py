@@ -19,7 +19,9 @@ from app.robot.ports import ConnectionFactory
 from app.robot.safety import ObstacleAvoidanceReading
 from app.robot.speed import SpeedReading
 from app.robot.state import RobotStatus, StateCache
+from app.robot.streams import TrafficSaving
 from app.robot.unitree import UnitreeConnectionFactory
+from app.robot.video import VideoStream
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +43,7 @@ class Go2Robot:
         state: StateCache,
         movement: MoveController,
         lidar: LidarStream,
+        video: VideoStream,
     ) -> None:
         """Recebe os colaboradores já montados (ver :meth:`from_settings`)."""
         self._link = link
@@ -49,6 +52,7 @@ class Go2Robot:
         self._state = state
         self._movement = movement
         self._lidar = lidar
+        self._video = video
 
     @classmethod
     def from_settings(
@@ -66,6 +70,8 @@ class Go2Robot:
         factory = connection_factory or UnitreeConnectionFactory(settings)
         link = RobotLink(factory)
         channel = SportChannel(link, settings.request_timeout_s)
+        # O vídeo usa o mesmo data channel do LiDAR (F-003).
+        traffic = TrafficSaving(settings.request_timeout_s)
         return cls(
             link=link,
             channel=channel,
@@ -80,6 +86,17 @@ class Go2Robot:
                 request_timeout_s=settings.request_timeout_s,
                 telemetry_max_clients=settings.telemetry_max_clients,
                 telemetry_queue=settings.telemetry_client_queue,
+                traffic=traffic,
+            ),
+            video=VideoStream(
+                link,
+                traffic=traffic,
+                max_clients=settings.video_max_clients,
+                client_queue=settings.video_client_queue,
+                encode_queue=settings.video_encode_queue,
+                max_fps=settings.video_max_fps,
+                jpeg_quality=settings.video_jpeg_quality,
+                stall_s=settings.video_stall_s,
             ),
         )
 
@@ -156,6 +173,11 @@ class Go2Robot:
     def lidar(self) -> LidarStream:
         """Stream de nuvem de pontos do LiDAR (`/ws/lidar`)."""
         return self._lidar
+
+    @property
+    def video(self) -> VideoStream:
+        """Stream de vídeo da câmera frontal (`/ws/video`)."""
+        return self._video
 
     # ─── Estado ────────────────────────────────────────────────────────────
 

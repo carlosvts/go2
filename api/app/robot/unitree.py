@@ -22,7 +22,7 @@ from unitree_webrtc_connect.lidar.lidar_decoder_native import (
 )
 
 from app.config import ConnectionMethod, Settings
-from app.robot.ports import WebRTCConnection
+from app.robot.ports import VideoTrackListener, WebRTCConnection
 
 __all__ = [
     "DATA_CHANNEL_TYPE",
@@ -31,6 +31,7 @@ __all__ = [
     "SPORT_CMD",
     "RawLidarDecoder",
     "UnitreeConnectionFactory",
+    "VideoHookedConnection",
     "decode_points",
     "install_raw_lidar_decoder",
 ]
@@ -84,6 +85,34 @@ def decode_points(
     return points
 
 
+class VideoHookedConnection(UnitreeWebRTCConnection):  # type: ignore[misc]
+    """Conexão da lib que entrega a track de vídeo à api (F-003), sem patch.
+
+    A lib cria `self.video` em `init_webrtc`, já dentro do `connect()`, e
+    chama os callbacks dele no evento `track`, antes de o `connect()`
+    retornar. Esta propriedade intercepta a atribuição e registra o callback
+    nessa hora, a cada conexão.
+    """
+
+    video_track_listener: VideoTrackListener | None = None
+
+    @property
+    def video(self) -> Any:  # noqa: ANN401 - `WebRTCVideoChannel` da lib
+        """Canal de vídeo da lib, criado a cada `connect()`."""
+        return self.__dict__.get("_video_channel")
+
+    @video.setter
+    def video(self, channel: Any) -> None:  # noqa: ANN401
+        self.__dict__["_video_channel"] = channel
+        channel.add_track_callback(self._deliver_video_track)
+
+    async def _deliver_video_track(self, track: Any) -> None:  # noqa: ANN401
+        """Entrega a track e retorna logo: a lib espera cada callback em ordem."""
+        listener = self.video_track_listener
+        if listener is not None:
+            listener(track)
+
+
 class UnitreeConnectionFactory:
     """Cria a `UnitreeWebRTCConnection` correspondente à configuração."""
 
@@ -104,7 +133,7 @@ class UnitreeConnectionFactory:
         `aes_128_key=self._settings.robot_aes_128_key`.
         """
         settings = self._settings
-        connection: WebRTCConnection = UnitreeWebRTCConnection(
+        connection: WebRTCConnection = VideoHookedConnection(
             self._METHODS[settings.connection_method],
             ip=settings.robot_ip,
             serialNumber=settings.robot_serial_number,

@@ -132,7 +132,7 @@ Convenções que valem para todo o REST (`README.md`): comandos respondem `202` 
 | Fonte | Canal | Status | Nota |
 |---|---|---|---|
 | `ULIDAR_ARRAY` (métricas) + `ROBOTODOM` + `ULIDAR_STATE` | `/ws/telemetry` | ✅ software (F-002; falta teste no robô) carlosvts/go2-api#5 | Escopo mudou: telemetria **do LiDAR** (métricas de 1 s, pose e estado do sensor crus), para análise de SLAM. `LOW_STATE`/`SPORT_MOD_STATE` ficaram fora (seguem no `/status`). Contrato: `specs/contracts/ws-telemetry.md`. |
-| `WebRTCVideoChannel` (track) | `/ws/video` | 🔜 carlosvts/go2-api#4 | Codificar quadros fora do event loop; formato no WS a decidir. |
+| `WebRTCVideoChannel` (track) | `/ws/video` | ✅ software (F-003; falta teste no robô) carlosvts/go2-api#4 | Frames binários JPEG; conversão e JPEG fora do event loop (worker em thread); track capturada a cada `connect()` sem patch na lib. `disableTrafficSaving` com refcount comum ao LiDAR. Contrato: `specs/contracts/ws-video.md`. |
 | `ULIDAR_ARRAY` + decoder `native` | `/ws/lidar` | ✅ software (F-001; falta teste no robô) carlosvts/go2-api#6 | Frames binários de pontos float32; decodificação fora do event loop (decoder de repasse na lib + worker em thread). Contrato: `specs/contracts/ws-lidar.md`. Feito antes do `/ws/telemetry`, invertendo a ordem da §5 (decisão humana). |
 
 ### 4.6 Desenho interno dos streams (planejado)
