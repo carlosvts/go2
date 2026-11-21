@@ -2,9 +2,9 @@
 id: F-005
 titulo: Lanterna, LED e volume do robô (/device/*)
 tipo: comportamento
-status: proposta
+status: em-implementacao
 servicos: [api]
-verificacao: inferido
+verificacao: testado-software
 verificado-em: null
 depende-de: []                 # a confirmação por /status.settings (F-004) é opcional
 ---
@@ -78,11 +78,11 @@ Os tetos só limitam o que passa pela api. Volume e brilho já configurados no r
 
 | ID | Critério (observável) | Como verificar | Tipo | Verificação |
 |---|---|---|---|---|
-| A1 | Cada rota publica no tópico `VUI`, com `publish_request_new`, o api_id e o `parameter` (dict) da tabela; o LED sem `flash_cycle_ms` não manda `flash_cycle` | teste com fake pub_sub | software | inferido |
-| A2 | Valores inválidos levam `422` sem nada publicado, um caso por valor:<br>`level` −1, 11, acima do teto, `true` e `5.0`;<br>cor fora da lista;<br>`duration_s` 0 e acima do teto;<br>`flash_cycle_ms` 498 e `duration_s × 1000 + 1`.<br>Os limites exatos (499 e `duration_s × 1000`) são aceitos | teste | software | inferido |
-| A3 | Resposta com `status.code == 0` → `202`; outro código ou sem `header.status` → `502`; sem conexão → `503`; sem resposta em `GO2_REQUEST_TIMEOUT_S` → `504`. Durante a espera de um pedido VUI, `POST /commands/stop` responde e é publicado. Dois pedidos VUI simultâneos recebem cada um a sua resposta | teste | software | inferido |
-| A4 | Os `GET` leem o nível de `data.data` (string JSON); campo ausente ou JSON inválido → `502` | teste | software | inferido |
-| A5 | As rotas `/device/*` não aparecem no `/capabilities`, e o `version` dele não muda | teste | software | inferido |
+| A1 | Cada rota publica no tópico `VUI`, com `publish_request_new`, o api_id e o `parameter` (dict) da tabela; o LED sem `flash_cycle_ms` não manda `flash_cycle` | teste com fake pub_sub | software | testado-software (2026-11-22 @ fb7309b) |
+| A2 | Valores inválidos levam `422` sem nada publicado, um caso por valor:<br>`level` −1, 11, acima do teto, `true` e `5.0`;<br>cor fora da lista;<br>`duration_s` 0 e acima do teto;<br>`flash_cycle_ms` 498 e `duration_s × 1000 + 1`.<br>Os limites exatos (499 e `duration_s × 1000`) são aceitos | teste | software | testado-software (2026-11-22 @ fb7309b) |
+| A3 | Resposta com `status.code == 0` → `202`; outro código ou sem `header.status` → `502`; sem conexão → `503`; sem resposta em `GO2_REQUEST_TIMEOUT_S` → `504`. Durante a espera de um pedido VUI, `POST /commands/stop` responde e é publicado. Dois pedidos VUI simultâneos recebem cada um a sua resposta | teste | software | testado-software (2026-11-22 @ fb7309b) |
+| A4 | Os `GET` leem o nível de `data.data` (string JSON); campo ausente ou JSON inválido → `502` | teste | software | testado-software (2026-11-22 @ fb7309b) |
+| A5 | As rotas `/device/*` não aparecem no `/capabilities`, e o `version` dele não muda | teste | software | testado-software (2026-11-22 @ fb7309b) |
 | A6 | Com o robô real (deitado, ninguém de frente para ele): `GET /device/brightness` responde; `PUT` com 1, depois 0 a 10, muda a lanterna de apagada a máxima; o `GET` devolve o valor definido. Registrar a peça física que muda e o código de resposta | roteiro | hardware-only | inferido |
 | A7 | Com o robô real, `PUT /device/led` com cada uma das 7 cores e `duration_s=5` mostra a cor; cronometrar: a cor dura entre 4 e 6 s. Com `flash_cycle_ms=1000`, ela pisca; registrar a cadência. Registrar o que o LED faz quando o tempo acaba e qual peça física muda | roteiro | hardware-only | inferido |
 | A8 | Com o robô real, `GET /device/volume` responde; `PUT` com 2 e depois 8 muda o volume de um som tocado pelo robô (F-006 ou F-007, na mesma sessão), e o `GET` devolve o valor definido | roteiro | hardware-only | inferido |
@@ -149,3 +149,4 @@ No roteiro único da rodada: [`specs/checklists/api-completa.md`](../checklists/
   - limites inclusivos;
   - tolerância do A7;
   - `stop` durante a espera (A3).
+- 2026-11-22: implementada (`em-implementacao`); A1–A5 testados em software (fb7309b), com fake pub_sub; A6–A8 pendentes no robô.
