@@ -23,6 +23,15 @@ class RobotTimeoutError(Go2Error):
     """O robô não respondeu dentro de `GO2_REQUEST_TIMEOUT_S`."""
 
 
+class RobotRejectedError(Go2Error):
+    """O robô respondeu, mas recusou o pedido ou mandou algo ilegível.
+
+    Código ≠ 0 em `header.status`, resposta sem `header.status`, ou leitura
+    sem o campo esperado. Vira `502`. O estado do robô fica desconhecido: o
+    pedido pode ter sido aplicado.
+    """
+
+
 class InvalidCommandError(Go2Error, ValueError):
     """Um comando foi construído com valores inaceitáveis.
 

@@ -98,7 +98,7 @@ Cinco grupos: os quatro primeiros são REST (comando pontual), o quinto é WebSo
 
 **Status:** ✅ implementado · 🔜 planejado para o v1 · ⏸ registrado, fora do v1 (`todo-later`). Os números são issues do GitHub.
 
-Convenções que valem para todo o REST (`README.md`): comandos respondem `202` ao **aceitar** o comando (não ao fim da execução física), `503` sem conexão com o robô e `504` quando um comando que espera resposta estoura `GO2_REQUEST_TIMEOUT_S`.
+Convenções que valem para todo o REST (`README.md`): comandos respondem `202` ao **aceitar** o comando (não ao fim da execução física), `503` sem conexão com o robô e `504` quando um comando que espera resposta estoura `GO2_REQUEST_TIMEOUT_S`. `502` (desde a F-005) quando o robô responde mas **recusa** o pedido (`header.status.code` ≠ 0), responde sem `header.status`, ou uma leitura volta sem o campo esperado; o `detail` traz o código ou o motivo. Em `502` e `504` o estado do robô é desconhecido: o pedido pode ter sido aplicado (exceção `RobotRejectedError`, reutilizável pelas rotas de áudio).
 
 ### 4.1 Postura e movimento
 | Na lib | Endpoint | Status | Nota |
@@ -119,7 +119,11 @@ Convenções que valem para todo o REST (`README.md`): comandos respondem `202` 
 | Na lib | Endpoint | Status | Nota |
 |---|---|---|---|
 | `WebRTCAudioHub` (lista, upload, play, pause, resume, delete, megafone) | `/audio/*` | 🔜 carlosvts/go2-api#2 | Classe pronta, mas sem timeout, upload por caminho de arquivo e megafone em 3 chamadas (ver `lib_unitree_webrtc_connect.md` §7). Substitui o `CMD_PLAY_AUDIO` do modo chat. |
-| `RTC_TOPIC["VUI"]` volume/brilho/LED | `PUT/GET /device/volume`, `PUT/GET /device/brightness`, `PUT /device/led` | 🔜 carlosvts/go2-api#3 | **api_ids (1003–1007) e payloads a confirmar:** não estão nas constantes da lib 2.2.0. |
+| `RTC_TOPIC["VUI"]` 1005/1006 (brilho da lanterna) | `PUT /device/brightness` `{"level"}` · `GET /device/brightness` | ✅ software (F-005; falta teste no robô) carlosvts/go2-api#3 | `level` inteiro estrito, 0 a `GO2_MAX_BRIGHTNESS` (≤ 10). O `GET` lê `json.loads(data.data)["brightness"]`. |
+| `RTC_TOPIC["VUI"]` 1003/1004 (volume) | `PUT /device/volume` `{"level"}` · `GET /device/volume` | ✅ software (F-005; falta teste no robô) | `level` inteiro estrito, 0 a `GO2_MAX_VOLUME` (≤ 10). O `GET` lê `json.loads(data.data)["volume"]`. |
+| `RTC_TOPIC["VUI"]` 1007 (cor do LED) | `PUT /device/led` `{"color","duration_s","flash_cycle_ms"?}` | ✅ software (F-005; falta teste no robô) | Cores de `VUI_COLOR`; `1 ≤ duration_s ≤ GO2_LED_MAX_DURATION_S`; `499 ≤ flash_cycle_ms ≤ duration_s × 1000` (sem ele, cor fixa). Sem `GET`. |
+
+Todas as rotas `/device/*` esperam a resposta do robô (`publish_request_new`, timeout `GO2_REQUEST_TIMEOUT_S`) e respondem `202` só depois de `header.status.code == 0`: o robô **aceitou**, não que alguém viu a luz. `502`/`503`/`504` conforme as convenções acima. Não entram no `/capabilities`. **api_ids (1003–1007) e payloads vêm do exemplo `vui.py`, não das constantes da lib 2.2.0, e não foram vistos no robô.**
 
 ### 4.4 Segurança e controle
 | Na lib | Endpoint | Status | Nota |

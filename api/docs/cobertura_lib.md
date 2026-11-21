@@ -72,13 +72,13 @@ Os api_ids **não estão nas constantes da lib**: vêm do exemplo `vui.py`, não
 
 | api_id | O que faz | Payload (ex.) | Na api |
 |---|---|---|---|
-| 1003 | Define o volume | `{"volume": 0–10}` | ❌ |
-| 1004 | Lê o volume | resposta `{"volume"}` | ❌ |
-| 1005 | Define o brilho da lanterna | `{"brightness": 0–10}` | ❌ |
-| 1006 | Lê o brilho | resposta `{"brightness"}` | ❌ |
-| 1007 | Cor do LED por um tempo, com pisca opcional | `{"color", "time", "flash_cycle"?}`; cores `white, red, yellow, blue, green, cyan, purple` (`VUI_COLOR`); `flash_cycle` entre 499 e `time*1000` ms | ❌ |
+| 1003 | Define o volume | `{"volume": 0–10}` | ✅ `PUT /device/volume` (F-005; só software testado) |
+| 1004 | Lê o volume | resposta `{"volume"}` | ✅ `GET /device/volume` (F-005; só software testado) |
+| 1005 | Define o brilho da lanterna | `{"brightness": 0–10}` | ✅ `PUT /device/brightness` (F-005; só software testado) |
+| 1006 | Lê o brilho | resposta `{"brightness"}` | ✅ `GET /device/brightness` (F-005; só software testado) |
+| 1007 | Cor do LED por um tempo, com pisca opcional | `{"color", "time", "flash_cycle"?}`; cores `white, red, yellow, blue, green, cyan, purple` (`VUI_COLOR`); `flash_cycle` entre 499 e `time*1000` ms | ✅ `PUT /device/led` (F-005; só software testado) |
 
-Previsto em carlosvts/go2-api#3. É a rota de que depende o sinal de "câmera ligada" da F-003.
+Implementado na F-005 (carlosvts/go2-api#3), sem teste no robô. É a rota de que depende o sinal de "câmera ligada" da F-003.
 
 ## 5. Áudio
 
@@ -159,7 +159,7 @@ Previsto em carlosvts/go2-api#2. HRI: som do robô pode ser captado pelo microfo
 | Truques (flips, pulos, handstand, `Wallow`, `StandOut`…) | ~16 | ⛔ |
 | Modo de movimento (`MOTION_SWITCHER`) e MCF | 2 + ~20 | ❌ |
 | Desvio de obstáculo | 4 api_ids + joystick | 🟡 2 de 4 (os outros 2 não fazem falta: o `move` atual já é filtrado) |
-| Lanterna, LED, volume (VUI) | 5 api_ids | ❌ |
+| Lanterna, LED, volume (VUI) | 5 api_ids | ✅ todos (F-005; só software testado) |
 | Áudio (hub, megafone, track de saída, microfone) | ~15 | ❌ |
 | Câmera | stream + foto | 🟡 stream (F-003) |
 | Estado e sensores | ~10 tópicos | 🟡 2 tópicos no `/status` |

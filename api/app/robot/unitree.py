@@ -17,6 +17,7 @@ from unitree_webrtc_connect import (
     UnitreeWebRTCConnection,
     WebRTCConnectionMethod,
 )
+from unitree_webrtc_connect.constants import VUI_COLOR
 from unitree_webrtc_connect.lidar.lidar_decoder_native import (
     LidarDecoder as _NativeLidarDecoder,
 )
@@ -29,6 +30,7 @@ __all__ = [
     "OBSTACLES_AVOID_API",
     "RTC_TOPIC",
     "SPORT_CMD",
+    "VUI_COLOR",
     "RawLidarDecoder",
     "UnitreeConnectionFactory",
     "VideoHookedConnection",

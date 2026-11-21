@@ -19,6 +19,7 @@ from app.robot.ports import ConnectionFactory
 from app.robot.service import Go2Robot
 from app.routers import (
     capabilities,
+    device,
     gesture,
     lidar,
     movement,
@@ -118,6 +119,7 @@ def create_app(
     app.include_router(movement.router)
     app.include_router(speed.router)
     app.include_router(safety.router)
+    app.include_router(device.router)
     app.include_router(lidar.router)
     app.include_router(telemetry.router)
     app.include_router(video.router)

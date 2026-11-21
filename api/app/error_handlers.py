@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from app.exceptions import (
     Go2Error,
     InvalidCommandError,
+    RobotRejectedError,
     RobotTimeoutError,
     RobotUnavailableError,
 )
@@ -28,6 +29,7 @@ class ErrorHandlers:
         InvalidCommandError: HTTPStatus.UNPROCESSABLE_ENTITY,
         RobotUnavailableError: HTTPStatus.SERVICE_UNAVAILABLE,
         RobotTimeoutError: HTTPStatus.GATEWAY_TIMEOUT,
+        RobotRejectedError: HTTPStatus.BAD_GATEWAY,
     }
 
     @classmethod
