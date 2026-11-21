@@ -251,6 +251,8 @@ Pendentes (humano): nenhuma que bloqueie a implementação. Em aberto, sem propo
 
 ## Roteiro hardware-only
 
+**Roteiro executável da sessão:** [`specs/checklists/F-003.md`](../checklists/F-003.md), com os comandos, as tabelas a preencher e os critérios de passa/falha. O resumo abaixo é a referência da spec.
+
 Ordem: **H1 → humano decide `GO2_VIDEO_MAX_FPS` e `GO2_VIDEO_JPEG_QUALITY` → H2 com esses valores**.
 
 Preparação comum: api com log DEBUG (`--log-config logging-debug.json`), `GO2_LIDAR_MAX_CLIENTS=0` e `GO2_TELEMETRY_MAX_CLIENTS=0` (LiDAR desligado), pessoas no lab avisadas de que a câmera vai transmitir. Registrar o commit e os valores de todas as `GO2_VIDEO_*`.
@@ -290,3 +292,4 @@ Igual ao H2 do F-001 (`specs/features/F-001-ws-lidar.md`), trocando os clientes 
 - 2026-11-21: decisões do humano: `disableTrafficSaving` com refcount comum a `/ws/lidar`, `/ws/telemetry` e `/ws/video` (altera o F-001/F-002; novo A12b); extrair o código comum agora; sem regra de teleoperação (o visualizador é só para ver). Pendentes: privacidade, ordem dos padrões, estados `video`.
 - 2026-11-21: propostas aceitas pelo humano (privacidade com rota ligada e regra de uso, ordem H1 → padrões → H2, `STALL_S` 3 s, estados `video`). Sem pendências bloqueantes; pronta para `implement-spec`.
 - 2026-11-21: implementada em `feat/ws-video` (`548f89b`, em-implementacao). Os critérios `software` (A1–A14 e A12b) passam em teste automático com dublês: track e data channel falsos, e a classe real `WebRTCVideoChannel` da lib no A3. Nada disso prova comportamento no robô. A14 (carga, máquina de desenvolvimento): p99 do desvio do `move` 1,1 ms com vídeo contra 1,9 ms de base, máx. 34,5 ms para período de 33,3 ms, ~1 370 JPEGs 1280×720 sintéticos em 3 s para 2 clientes. A15–A18 pendentes (H1/H2).
+- 2026-11-21: roteiro executável criado em `specs/checklists/F-003.md` (H1 com o robô parado, decisão dos padrões, H2 com `move`/`stop`).
