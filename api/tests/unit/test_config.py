@@ -92,3 +92,28 @@ def test_padroes_de_video_da_spec() -> None:
     assert settings.video_max_fps == 0
     assert settings.video_jpeg_quality == 80
     assert settings.video_stall_s == 3
+
+
+@pytest.mark.parametrize(
+    ("campo", "valor"),
+    [
+        ("max_volume", -1),
+        ("max_volume", 11),
+        ("max_brightness", -1),
+        ("max_brightness", 11),
+        ("led_max_duration_s", 0),
+    ],
+)
+def test_f005_config_de_dispositivo_fora_da_faixa_nao_constroi(
+    campo: str, valor: int
+) -> None:
+    with pytest.raises(ValidationError):
+        Settings.model_validate({"connection_method": "LocalAP", campo: valor})
+
+
+def test_f005_padroes_de_dispositivo_da_spec() -> None:
+    settings = Settings(_env_file=None, connection_method=ConnectionMethod.local_ap)
+
+    assert settings.max_volume == 10
+    assert settings.max_brightness == 10
+    assert settings.led_max_duration_s == 60

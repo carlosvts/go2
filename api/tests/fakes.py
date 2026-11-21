@@ -6,10 +6,13 @@ o comportamento HTTP da API; a validação contra o robô físico é manual.
 
 import asyncio
 import json
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from app.robot.ports import StateCallback
+
+# Calcula a resposta de uma request a partir das `options` dela.
+Responder = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
 
 
 class FakePubSub:
@@ -21,6 +24,8 @@ class FakePubSub:
         self.subscriptions: dict[str, StateCallback] = {}
         self.response: dict[str, Any] | None = None
         self.hang_on_request = False
+        # Se definido, responde cada request pelas `options` (vence `response`).
+        self.responder: Responder | None = None
         self.subscribe_calls: list[str] = []
         self.unsubscribed: list[str] = []
 
@@ -42,8 +47,14 @@ class FakePubSub:
     async def publish_request_new(
         self, topic: str, options: dict[str, Any] | None = None
     ) -> dict[str, Any]:
-        """Registra uma request e devolve `response` (ou nunca responde)."""
+        """Registra uma request e devolve `response` (ou nunca responde).
+
+        Com `responder`, cada request recebe a resposta calculada para ela,
+        como a lib, que casa a resposta pelo id da request.
+        """
         self.sent.append({"topic": topic, "options": options, "type": "req"})
+        if self.responder is not None:
+            return await self.responder(options or {})
         if self.hang_on_request:
             await asyncio.Event().wait()
         if self.response is None:

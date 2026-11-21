@@ -5,13 +5,14 @@ import logging
 from typing import Any, Self
 
 from app.config import Settings
-from app.robot.channel import ObstacleAvoidChannel, SportChannel
+from app.robot.channel import ObstacleAvoidChannel, SportChannel, VuiChannel
 from app.robot.commands import MoveCommand, SportCommand
 from app.robot.connection import (
     ConnectionListener,
     ConnectionSnapshot,
     ConnectionState,
 )
+from app.robot.device import DeviceControls
 from app.robot.lidar import LidarStream
 from app.robot.link import RobotLink
 from app.robot.movement import MoveController
@@ -44,6 +45,7 @@ class Go2Robot:
         movement: MoveController,
         lidar: LidarStream,
         video: VideoStream,
+        device: DeviceControls,
     ) -> None:
         """Recebe os colaboradores já montados (ver :meth:`from_settings`)."""
         self._link = link
@@ -53,6 +55,7 @@ class Go2Robot:
         self._movement = movement
         self._lidar = lidar
         self._video = video
+        self._device = device
 
     @classmethod
     def from_settings(
@@ -98,6 +101,7 @@ class Go2Robot:
                 jpeg_quality=settings.video_jpeg_quality,
                 stall_s=settings.video_stall_s,
             ),
+            device=DeviceControls(VuiChannel(link, settings.request_timeout_s)),
         )
 
     # ─── Ciclo de vida ─────────────────────────────────────────────────────
@@ -178,6 +182,11 @@ class Go2Robot:
     def video(self) -> VideoStream:
         """Stream de vídeo da câmera frontal (`/ws/video`)."""
         return self._video
+
+    @property
+    def device(self) -> DeviceControls:
+        """Lanterna, LED e volume (`/device/*`, F-005)."""
+        return self._device
 
     # ─── Estado ────────────────────────────────────────────────────────────
 

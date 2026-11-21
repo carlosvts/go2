@@ -72,8 +72,15 @@ A API sobe sem tentar conectar. O `GET /status` responde `200` com `connected: f
 | `GET /commands/speed`    | —                                    | Lê o nível de velocidade. Espera resposta do robô: `504` se ele não responder em `GO2_REQUEST_TIMEOUT_S`.                                                               |
 | `PUT /safety/obstacle-avoidance` | `{"enabled": true}`                  | Liga ou desliga o desvio de obstáculo nativo do robô. Não espera confirmação: confira com o `GET`.                                                                                |
 | `GET /safety/obstacle-avoidance` | —                                    | Lê se o desvio está ligado: `{"enabled", "raw"}`. Espera resposta do robô (`504` em timeout); `enabled` vem `null` se a resposta não for reconhecida.                             |
+| `PUT /device/brightness` | `{"level": 5}`                       | Brilho da lanterna, 0 a `GO2_MAX_BRIGHTNESS` (≤ 10). Responde `202` `{"level"}` depois de o robô aceitar.                                                                         |
+| `GET /device/brightness` | —                                    | Lê o brilho guardado no robô: `{"level"}`.                                                                                                                                        |
+| `PUT /device/volume`     | `{"level": 5}`                       | Volume do alto-falante, 0 a `GO2_MAX_VOLUME` (≤ 10). Responde `202` `{"level"}` depois de o robô aceitar.                                                                         |
+| `GET /device/volume`     | —                                    | Lê o volume guardado no robô: `{"level"}`.                                                                                                                                        |
+| `PUT /device/led`        | `{"color": "red", "duration_s": 5, "flash_cycle_ms": 1000}` | Cor do LED (`white`, `red`, `yellow`, `blue`, `green`, `cyan`, `purple`) por `duration_s` (1 a `GO2_LED_MAX_DURATION_S`); `flash_cycle_ms` (opcional, 499 a `duration_s × 1000`) faz piscar. Sem leitura da cor. |
 
 Os comandos respondem `202` quando são enviados, sem esperar o robô terminar. Com o robô desconectado, respondem `503`. Comando desconhecido ou corpo inválido responde `422` e nada é enviado ao robô.
+
+As rotas `/device/*` (F-005) são diferentes: esperam a resposta do robô e só respondem `202` quando ele **aceita** o pedido (não quer dizer que alguém viu a luz). Se o robô recusa ou responde algo ilegível, `502`; sem resposta em `GO2_REQUEST_TIMEOUT_S`, `504`. Em `502` e `504` o pedido pode ter sido aplicado: confira com o `GET`. Os api_ids vêm de um exemplo da lib e ainda não foram testados no robô. Essas rotas não entram no `/capabilities`.
 
 Se a conexão com o robô cair, a API reconecta sozinha em segundo plano ([ficha](docs/essencial/rodar-com-docker.md)).
 

@@ -96,6 +96,9 @@ def test_documenta_os_endpoints_no_openapi(settings: Settings) -> None:
         "/commands/stop",
         "/commands/speed",
         "/safety/obstacle-avoidance",
+        "/device/brightness",
+        "/device/volume",
+        "/device/led",
     }
 
 

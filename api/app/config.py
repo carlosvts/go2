@@ -118,6 +118,19 @@ class Settings(BaseSettings):
     video_stall_s: float = Field(default=3.0, gt=0)
     """Segundos sem quadro, com a câmera ligada, até o estado `stalled`."""
 
+    # ─── Dispositivo: lanterna, LED, volume (/device/*, F-005) ─────────────
+    max_volume: int = Field(default=10, ge=0, le=10)
+    """Teto do volume aceito em `PUT /device/volume` (0–10). `10` = sem teto.
+    Só limita o que passa pela api."""
+
+    max_brightness: int = Field(default=10, ge=0, le=10)
+    """Teto do brilho da lanterna aceito em `PUT /device/brightness` (0–10).
+    `10` = sem teto. Só limita o que passa pela api."""
+
+    led_max_duration_s: int = Field(default=60, ge=1)
+    """Duração máxima de uma cor em `PUT /device/led`. Sugerido, sem medida: o
+    limite do robô não é conhecido."""
+
     max_vx: float = Field(default=1.0, gt=0)
     """Teto de velocidade frontal aceito em `POST /commands/move`, em m/s."""
 

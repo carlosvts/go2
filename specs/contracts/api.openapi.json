@@ -96,6 +96,38 @@
         "title": "ConnectionState",
         "type": "string"
       },
+      "DeviceLevelRequest": {
+        "description": "Nível de brilho ou de volume. Modo estrito: `true` e `5.0` levam `422`.\n\nEste modelo valida a faixa fixa 0–10. O teto configurável\n(`GO2_MAX_BRIGHTNESS`, `GO2_MAX_VOLUME`) é aplicado por :meth:`within`.",
+        "properties": {
+          "level": {
+            "description": "Nível de 0 ao teto configurado.",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Level",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "level"
+        ],
+        "title": "DeviceLevelRequest",
+        "type": "object"
+      },
+      "DeviceLevelResponse": {
+        "description": "Nível de brilho ou de volume.\n\nNo `PUT` (`202`), o nível pedido, que o robô aceitou; no `GET`, o nível\nque o robô informou.",
+        "properties": {
+          "level": {
+            "description": "Nível de 0 a 10.",
+            "title": "Level",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "level"
+        ],
+        "title": "DeviceLevelResponse",
+        "type": "object"
+      },
       "Gesture": {
         "description": "Gestos aceitos, como aparecem no corpo da request.",
         "enum": [
@@ -136,6 +168,83 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "LedColor": {
+        "description": "Cores do LED, iguais aos valores de `VUI_COLOR` da lib.",
+        "enum": [
+          "white",
+          "red",
+          "yellow",
+          "blue",
+          "green",
+          "cyan",
+          "purple"
+        ],
+        "title": "LedColor",
+        "type": "string"
+      },
+      "LedRequest": {
+        "description": "Cor do LED por `duration_s` segundos; com `flash_cycle_ms`, pisca.\n\nModo estrito nos inteiros. O teto `GO2_LED_MAX_DURATION_S` e o limite do\npisca (`499 ≤ flash_cycle_ms ≤ duration_s × 1000`) são aplicados por\n:meth:`to_command`.",
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/LedColor",
+            "description": "Cor do LED (`VUI_COLOR` da lib)."
+          },
+          "duration_s": {
+            "description": "Segundos com a cor, até `GO2_LED_MAX_DURATION_S`.",
+            "minimum": 1.0,
+            "title": "Duration S",
+            "type": "integer"
+          },
+          "flash_cycle_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Período do pisca, em ms, de 499 a `duration_s × 1000` (inferido do exemplo da lib). Sem ele, a cor fica fixa.",
+            "title": "Flash Cycle Ms"
+          }
+        },
+        "required": [
+          "color",
+          "duration_s"
+        ],
+        "title": "LedRequest",
+        "type": "object"
+      },
+      "LedResponse": {
+        "description": "Pedido de LED aceito pelo robô (`202`); não prova que a cor apareceu.",
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/LedColor"
+          },
+          "duration_s": {
+            "title": "Duration S",
+            "type": "integer"
+          },
+          "flash_cycle_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flash Cycle Ms"
+          }
+        },
+        "required": [
+          "color",
+          "duration_s",
+          "flash_cycle_ms"
+        ],
+        "title": "LedResponse",
         "type": "object"
       },
       "MoveRequest": {
@@ -647,6 +756,217 @@
         "summary": "Para o movimento imediatamente",
         "tags": [
           "commands"
+        ]
+      }
+    },
+    "/device/brightness": {
+      "get": {
+        "description": "Nível guardado no robô.",
+        "operationId": "get_brightness_device_brightness_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceLevelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Lê o brilho da lanterna",
+        "tags": [
+          "device"
+        ]
+      },
+      "put": {
+        "description": "Responde depois de o robô aceitar; até `GO2_MAX_BRIGHTNESS`.",
+        "operationId": "set_brightness_device_brightness_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceLevelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceLevelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Define o brilho da lanterna",
+        "tags": [
+          "device"
+        ]
+      }
+    },
+    "/device/led": {
+      "put": {
+        "description": "Responde depois de o robô aceitar. Não há leitura da cor.",
+        "operationId": "set_led_device_led_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LedRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Mostra uma cor no LED por um tempo",
+        "tags": [
+          "device"
+        ]
+      }
+    },
+    "/device/volume": {
+      "get": {
+        "description": "Nível guardado no robô.",
+        "operationId": "get_volume_device_volume_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceLevelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Lê o volume do alto-falante",
+        "tags": [
+          "device"
+        ]
+      },
+      "put": {
+        "description": "Responde depois de o robô aceitar; até `GO2_MAX_VOLUME`.",
+        "operationId": "set_volume_device_volume_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceLevelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceLevelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Define o volume do alto-falante",
+        "tags": [
+          "device"
         ]
       }
     },
