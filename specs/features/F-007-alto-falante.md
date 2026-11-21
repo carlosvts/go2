@@ -55,6 +55,7 @@ O manuseio da conexão (transceiver, sender) fica em `app/robot/unitree.py`.
 
 ### Validação (antes de tocar)
 - Upload lido em streaming até `GO2_AUDIO_MAX_UPLOAD_MB` (o mesmo limite da F-006); acima disso, `413`.
+- **Duração até `GO2_SPEAKER_MAX_DURATION_S`** (padrão 120 s, ~uma música; decisão do humano, 2026-11-22): acima disso, `413`. O arquivo inteiro vira PCM em memória (48 kHz estéreo, ~11 MiB por minuto), e um MP3 pequeno de bitrate baixo pode durar muito. A api recusa pela duração do cabeçalho, quando ele informa, e de qualquer forma para de decodificar assim que passa do teto.
 - WAV ou MP3, detectado pelo conteúdo e decodificável: senão, `415`.
 - Sem conexão: `503`.
 - `duration_s` vem da decodificação (número de amostras ÷ taxa).
@@ -82,6 +83,7 @@ Não muda (decisão do humano): as rotas ficam no OpenAPI e no README da api.
 | A11 | Com o robô real, `PUT /device/volume` (F-005) muda o volume do que a F-007 toca. Registrar se muda | roteiro | hardware-only | inferido |
 | A12 | Com o robô real, durante a reprodução de um áudio de ~30 s, o tempo entre `POST /commands/stop` e o robô parar, num `move`, tem mediana no máximo 0,2 s acima da mediana da linha de base sem áudio, e nenhuma repetição passa 0,4 s acima dela. Régua e protocolo do F-001 A13 | roteiro | hardware-only | inferido |
 | A13 | Com o robô real, tocar um áudio da F-006 e um da F-007 ao mesmo tempo. Registrar o que se ouve | roteiro | hardware-only | inferido |
+| A14 | Áudio mais longo que `GO2_SPEAKER_MAX_DURATION_S` → `413`, sem trocar a track; um áudio dentro do teto toca. Sem a duração no cabeçalho, a decodificação para ao passar do teto | teste (rota e decodificação) | software | testado-software (2026-11-22 @ 8ff897a) |
 
 ## Fora de escopo
 - Tocar de URL (rádio, streaming): a api passaria a buscar endereços arbitrários na rede.
@@ -152,3 +154,4 @@ No roteiro único da rodada: [`specs/checklists/api-completa.md`](../checklists/
   - `name` = nome do arquivo no multipart (ou `audio`), sem sanitizar;
   - sem teto de duração: um MP3 de 5 MiB em bitrate muito baixo pode virar centenas de MB de PCM (risco anotado, não tratado: a spec não pede).
 - 2026-11-22: gancho ligado ao `/ws/state` na integração (`9519ac5`); A3 completo. Todos os critérios `software` passam (`verificacao: testado-software`); A10–A13 pendentes no robô.
+- 2026-11-22: teto de duração `GO2_SPEAKER_MAX_DURATION_S` = 120 s (pedido do humano: "no máximo uma música"), critério A14.
