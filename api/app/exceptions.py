@@ -39,3 +39,22 @@ class InvalidCommandError(Go2Error, ValueError):
     :class:`app.robot.commands.MoveCommand`), de modo que um comando inválido
     simplesmente não chega a existir.
     """
+
+
+class NotFoundError(Go2Error):
+    """O recurso pedido não existe na api (ex.: `upload_id` esquecido). Vira `404`."""
+
+
+class ConflictError(Go2Error):
+    """O pedido conflita com o estado atual (envio em andamento, nome repetido).
+
+    Vira `409`.
+    """
+
+
+class PayloadTooLargeError(Go2Error):
+    """O arquivo recebido, ou o WAV que iria ao robô, passa do limite. Vira `413`."""
+
+
+class UnsupportedMediaError(Go2Error):
+    """O arquivo não é WAV nem MP3, ou não decodifica. Vira `415`."""

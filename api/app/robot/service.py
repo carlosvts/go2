@@ -5,7 +5,13 @@ import logging
 from typing import Any, Self
 
 from app.config import Settings
-from app.robot.channel import ObstacleAvoidChannel, SportChannel, VuiChannel
+from app.robot.audio import AudioHub
+from app.robot.channel import (
+    AudioHubChannel,
+    ObstacleAvoidChannel,
+    SportChannel,
+    VuiChannel,
+)
 from app.robot.commands import MoveCommand, SportCommand
 from app.robot.connection import (
     ConnectionListener,
@@ -46,6 +52,7 @@ class Go2Robot:
         lidar: LidarStream,
         video: VideoStream,
         device: DeviceControls,
+        audio: AudioHub,
     ) -> None:
         """Recebe os colaboradores já montados (ver :meth:`from_settings`)."""
         self._link = link
@@ -56,6 +63,7 @@ class Go2Robot:
         self._lidar = lidar
         self._video = video
         self._device = device
+        self._audio = audio
 
     @classmethod
     def from_settings(
@@ -102,6 +110,11 @@ class Go2Robot:
                 stall_s=settings.video_stall_s,
             ),
             device=DeviceControls(VuiChannel(link, settings.request_timeout_s)),
+            audio=AudioHub(
+                AudioHubChannel(link, settings.request_timeout_s),
+                link,
+                max_upload_bytes=settings.audio_max_upload_bytes,
+            ),
         )
 
     # ─── Ciclo de vida ─────────────────────────────────────────────────────
@@ -110,12 +123,14 @@ class Go2Robot:
         """Abre a conexão e assina os tópicos de estado."""
         await self._link.connect()
         self._state.attach(self._link.pub_sub)
+        self._audio.attach(self._link.pub_sub)
         # Emoji para localizar a linha rápido no terminal.
         log.info("🐝 Conectado ao Go2.")
 
     async def disconnect(self) -> None:
-        """Cancela o movimento em curso e encerra a conexão."""
+        """Cancela o movimento e o envio de áudio em curso e encerra a conexão."""
         await self._movement.cancel()
+        await self._audio.cancel_upload()
         await self._link.disconnect()
 
     async def keep_connected(self, interval_s: float) -> None:
@@ -187,6 +202,11 @@ class Go2Robot:
     def device(self) -> DeviceControls:
         """Lanterna, LED e volume (`/device/*`, F-005)."""
         return self._device
+
+    @property
+    def audio(self) -> AudioHub:
+        """Biblioteca de áudio do robô (`/audio/*`, F-006)."""
+        return self._audio
 
     # ─── Estado ────────────────────────────────────────────────────────────
 

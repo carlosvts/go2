@@ -18,6 +18,7 @@ from app.error_handlers import ErrorHandlers
 from app.robot.ports import ConnectionFactory
 from app.robot.service import Go2Robot
 from app.routers import (
+    audio,
     capabilities,
     device,
     gesture,
@@ -120,6 +121,7 @@ def create_app(
     app.include_router(speed.router)
     app.include_router(safety.router)
     app.include_router(device.router)
+    app.include_router(audio.router)
     app.include_router(lidar.router)
     app.include_router(telemetry.router)
     app.include_router(video.router)

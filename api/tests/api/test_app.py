@@ -99,6 +99,15 @@ def test_documenta_os_endpoints_no_openapi(settings: Settings) -> None:
         "/device/brightness",
         "/device/volume",
         "/device/led",
+        "/audio/files",
+        "/audio/files/{file_id}",
+        "/audio/files/{file_id}/play",
+        "/audio/uploads/{upload_id}",
+        "/audio/pause",
+        "/audio/resume",
+        "/audio/play-mode",
+        "/audio/silence",
+        "/audio/player",
     }
 
 

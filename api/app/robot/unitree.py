@@ -4,6 +4,9 @@ Concentrar os imports da lib aqui (padrão *Anti-Corruption Layer*) deixa o
 resto do projeto livre de detalhes dela: se a lib mudar, só este módulo muda.
 """
 
+import base64
+import hashlib
+import json
 from collections.abc import Sequence
 from typing import Any, ClassVar
 
@@ -17,7 +20,7 @@ from unitree_webrtc_connect import (
     UnitreeWebRTCConnection,
     WebRTCConnectionMethod,
 )
-from unitree_webrtc_connect.constants import VUI_COLOR
+from unitree_webrtc_connect.constants import AUDIO_API, VUI_COLOR
 from unitree_webrtc_connect.lidar.lidar_decoder_native import (
     LidarDecoder as _NativeLidarDecoder,
 )
@@ -26,11 +29,15 @@ from app.config import ConnectionMethod, Settings
 from app.robot.ports import VideoTrackListener, WebRTCConnection
 
 __all__ = [
+    "AUDIO_API",
+    "AUDIO_UPLOAD_BLOCK_CHARS",
+    "AUDIO_UPLOAD_BLOCK_INTERVAL_S",
     "DATA_CHANNEL_TYPE",
     "OBSTACLES_AVOID_API",
     "RTC_TOPIC",
     "SPORT_CMD",
     "VUI_COLOR",
+    "AudioUploadBlocks",
     "RawLidarDecoder",
     "UnitreeConnectionFactory",
     "VideoHookedConnection",
@@ -39,6 +46,58 @@ __all__ = [
 ]
 
 _NATIVE_DECODER = _NativeLidarDecoder()
+
+# Protocolo de `WebRTCAudioHub.upload_audio_file` (`webrtc_audiohub.py`, lib
+# 2.2.0): a string base64 do WAV vai em blocos de 4096 caracteres, com 0,1 s
+# entre um e outro (F-006).
+AUDIO_UPLOAD_BLOCK_CHARS = 4096
+AUDIO_UPLOAD_BLOCK_INTERVAL_S = 0.1
+
+
+class AudioUploadBlocks:
+    """Os blocos do envio de um WAV ao hub de áudio, como a lib monta (F-006).
+
+    O `parameter` de cada bloco é copiado de `upload_audio_file`, campo a
+    campo e na mesma ordem. A única troca: `file_name` é o nome pedido, não o
+    nome do arquivo em disco (a api não grava o arquivo).
+    """
+
+    def __init__(self, wav: bytes, file_name: str) -> None:
+        """Calcula o MD5 e corta a string base64 de `wav` em blocos."""
+        self._file_name = file_name
+        self._file_size = len(wav)
+        # MD5 é o que o robô confere, não uso criptográfico.
+        self.file_md5 = hashlib.md5(wav).hexdigest()  # noqa: S324
+        b64 = base64.b64encode(wav).decode("utf-8")
+        size = AUDIO_UPLOAD_BLOCK_CHARS
+        self._blocks = [b64[i : i + size] for i in range(0, len(b64), size)]
+
+    @property
+    def total(self) -> int:
+        """Número de blocos (`total_block_number`)."""
+        return len(self._blocks)
+
+    def parameter(self, index: int, create_time_ms: int) -> str:
+        """`parameter` (string JSON) do bloco `index`, contado de 1 a :attr:`total`.
+
+        Args:
+            index: Posição do bloco, a partir de 1.
+            create_time_ms: Instante Unix em ms; a lib usa o do envio de cada
+                bloco.
+        """
+        block = self._blocks[index - 1]
+        parameter = {
+            "file_name": self._file_name,
+            "file_type": "wav",
+            "file_size": self._file_size,
+            "current_block_index": index,
+            "total_block_number": self.total,
+            "block_content": block,
+            "current_block_size": len(block),
+            "file_md5": self.file_md5,
+            "create_time": create_time_ms,
+        }
+        return json.dumps(parameter, ensure_ascii=True)
 
 
 class RawLidarDecoder:

@@ -77,10 +77,22 @@ A API sobe sem tentar conectar. O `GET /status` responde `200` com `connected: f
 | `PUT /device/volume`     | `{"level": 5}`                       | Volume do alto-falante, 0 a `GO2_MAX_VOLUME` (≤ 10). Responde `202` `{"level"}` depois de o robô aceitar.                                                                         |
 | `GET /device/volume`     | —                                    | Lê o volume guardado no robô: `{"level"}`.                                                                                                                                        |
 | `PUT /device/led`        | `{"color": "red", "duration_s": 5, "flash_cycle_ms": 1000}` | Cor do LED (`white`, `red`, `yellow`, `blue`, `green`, `cyan`, `purple`) por `duration_s` (1 a `GO2_LED_MAX_DURATION_S`); `flash_cycle_ms` (opcional, 499 a `duration_s × 1000`) faz piscar. Sem leitura da cor. |
+| `GET /audio/files`       | —                                    | Lista os áudios guardados no robô: `[{"id", "name", "extra"}]`.                                                                                                                  |
+| `POST /audio/files`      | multipart: `file` (WAV/MP3), `name`? | Envia um áudio ao robô. MP3 vira WAV 44,1 kHz. Responde `202` `{"upload_id", "name", "total_chunks"}` e envia em segundo plano. `409` com outro envio em andamento ou nome repetido; `413` acima de `GO2_AUDIO_MAX_UPLOAD_MB` (arquivo ou WAV convertido); `415` se não for WAV/MP3; `422` nome inválido. |
+| `GET /audio/uploads/{upload_id}` | —                            | Estado do envio: `{"state", "name", "sent_chunks", "total_chunks", "file_id", "error"}`; `state` é `uploading`, `done` ou `failed`. `404` se desconhecido (guardam-se os 20 últimos). |
+| `PATCH /audio/files/{id}` | `{"name": "novo"}`                  | Renomeia um áudio.                                                                                                                                                                |
+| `DELETE /audio/files/{id}` | —                                  | Apaga um áudio.                                                                                                                                                                   |
+| `POST /audio/files/{id}/play` | —                               | Toca um áudio guardado. `202` = o robô aceitou, não que o som terminou.                                                                                                          |
+| `POST /audio/pause` · `POST /audio/resume` | —                  | Pausa / retoma a reprodução.                                                                                                                                                      |
+| `GET /audio/play-mode` · `PUT /audio/play-mode` | `{"mode": "list_loop"}` | Modo de reprodução: `single_cycle`, `no_cycle` ou `list_loop` (pode tocar sem fim).                                                                                     |
+| `POST /audio/silence`    | —                                    | Cala o robô: pausa o hub e para o alto-falante (F-007). Não mexe no movimento.                                                                                                    |
+| `GET /audio/player`      | —                                    | Último estado do player do robô, cru: `{"data", "age_s"}`.                                                                                                                        |
 
 Os comandos respondem `202` quando são enviados, sem esperar o robô terminar. Com o robô desconectado, respondem `503`. Comando desconhecido ou corpo inválido responde `422` e nada é enviado ao robô.
 
 As rotas `/device/*` (F-005) são diferentes: esperam a resposta do robô e só respondem `202` quando ele **aceita** o pedido (não quer dizer que alguém viu a luz). Se o robô recusa ou responde algo ilegível, `502`; sem resposta em `GO2_REQUEST_TIMEOUT_S`, `504`. Em `502` e `504` o pedido pode ter sido aplicado: confira com o `GET`. Os api_ids vêm de um exemplo da lib e ainda não foram testados no robô. Essas rotas não entram no `/capabilities`.
+
+As rotas `/audio/*` (F-006) seguem as mesmas regras de `/device/*`. A api não confere se o `id` existe: o robô responde, e a recusa vira `502`. O envio ocupa o mesmo data channel do `move` e do `stop` (um arquivo grande leva minutos); para calar o robô de uma vez, `POST /audio/silence`.
 
 Se a conexão com o robô cair, a API reconecta sozinha em segundo plano ([ficha](docs/essencial/rodar-com-docker.md)).
 

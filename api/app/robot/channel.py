@@ -8,6 +8,7 @@ from app.exceptions import RobotTimeoutError
 from app.robot.envelope import SportRequestBuilder
 from app.robot.link import RobotLink
 from app.robot.unitree import (
+    AUDIO_API,
     DATA_CHANNEL_TYPE,
     OBSTACLES_AVOID_API,
     RTC_TOPIC,
@@ -130,4 +131,21 @@ class VuiChannel(ApiChannel):
         """Recebe a conexão e o teto de espera de :meth:`request`."""
         super().__init__(
             link, request_timeout_s, topic=RTC_TOPIC["VUI"], api_ids=VUI_API
+        )
+
+
+class AudioHubChannel(ApiChannel):
+    """Biblioteca de áudio (`AUDIO_API`), em `rt/api/audiohub/request` (F-006).
+
+    Como no VUI, só :meth:`request`. O `parameter` vai como string JSON,
+    igual à classe `WebRTCAudioHub` da lib.
+    """
+
+    def __init__(self, link: RobotLink, request_timeout_s: float) -> None:
+        """Recebe a conexão e o teto de espera de :meth:`request`."""
+        super().__init__(
+            link,
+            request_timeout_s,
+            topic=RTC_TOPIC["AUDIO_HUB_REQ"],
+            api_ids=AUDIO_API,
         )
