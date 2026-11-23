@@ -51,6 +51,8 @@ Atalho para os comandos abaixo: `A=localhost:8000`.
 | Mensagens/s por tópico (`state_metrics`) | |
 | Algum frame acima de `GO2_STATE_MAX_HZ`? | |
 
+Sessão de 2026-11-23 (Insomnia, registrado pelo Claude do `api-teste-video-inicial.log`): `GET /status` → 200 às 11:04:53 e `GET /status?raw=true` → 200 às 11:05:06. O corpo das respostas e a comparação com o app não ficaram registrados; `ws_state_client.py` não rodou. A tabela acima continua em aberto (`TODO(humano)`).
+
 Passa se: **A10** as cinco seções não nulas em 5 s e os três valores batem com o app (bateria ±1). **A11** nenhum tópico acima do limite. **A12** é só registro.
 
 ### A2. Lanterna e LED (F-005 A6, A7) — 10 min
@@ -70,6 +72,8 @@ Leitura primeiro, depois valores baixos.
 | Pisca com `flash_cycle_ms=1000`? cadência | |
 | O que o LED faz quando o tempo acaba | |
 | É a mesma peça da lanterna? | |
+
+Sessão de 2026-11-23 (Insomnia, registrado pelo Claude do `api-teste-video-inicial.log`): 15× `PUT /device/led` → 202, de 11:05:29 a 11:08:29, com a câmera desligada (0 quadros lidos nesse intervalo). O log não guarda o corpo da requisição (cor, `duration_s`, `flash_cycle_ms`) nem o efeito físico; o humano relatou que funcionou, sem detalhe por cor. Brilho (`/device/brightness`) não aparece no log. A tabela acima continua em aberto (`TODO(humano)`). 202 é aceite, não confirmação de que o LED acendeu.
 
 Passa se: **A6** o brilho muda de apagado a máximo e o `GET` devolve o valor. **A7** as 7 cores aparecem, cada uma dura entre 4 e 6 s, e o pisca funciona.
 

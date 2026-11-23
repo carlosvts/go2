@@ -215,15 +215,15 @@ Notas sobre os limites:
 Pedido do humano (2026-11-21): quando existir a rota de device para a cor da lanterna, especificar uma cor para "câmera transmitindo". `TODO(humano)`: abrir a spec da lanterna depois da rota de device.
 
 ## Hipóteses não verificadas
-- Resolução 1280×720 (dossiê). `TODO(humano): medir` (H1).
-- Taxa de quadros da câmera pelo WebRTC. `TODO(humano): medir` (H1); define `GO2_VIDEO_MAX_FPS`.
-- Se o robô manda vídeo **antes** do `True` (desde o `connect()`) e se para com o `False`. Lido no código; `TODO(humano): verificar` (H1.1, A16).
+- Resolução 1280×720 (dossiê). **Medido em 2026-11-23 (H1):** 1280×720 em todos os quadros.
+- Taxa de quadros da câmera pelo WebRTC. **Medido em 2026-11-23 (H1):** a api lê ~14–15 quadros/s da track, sem teto. Taxa nominal da câmera continua desconhecida. Define `GO2_VIDEO_MAX_FPS` (decisão humana).
+- Se o robô manda vídeo **antes** do `True` (desde o `connect()`) e se para com o `False`. Lido no código. **2026-11-23:** para com o `False` (A16, ver Resultados); antes do `True` não houve `video_metrics` em janelas de 8–16 s, menores que os 30 s do H1.1: `TODO(humano): verificar` com 30 s.
 - Que a track chega a cada conexão mesmo com a câmera desligada (o transceiver é negociado no `connect`). Lido no código.
 - Se o vídeo de fato precisa de `disableTrafficSaving(True)`. A api chama de qualquer forma, pelo refcount comum (decisão humana); não se verificou se sem ele os quadros chegam.
-- Que `frame.time` vem preenchido nos quadros do Go2.
+- Que `frame.time` vem preenchido nos quadros do Go2. **2026-11-23:** vem preenchido (nunca `NaN`), mas o intervalo entre quadros saiu ~0,7 ms, não ~70 ms. Ver Resultados.
 - Quanto da codificação MJPEG do PyAV solta o GIL (o A14 passou: p99 1,13 ms com vídeo contra 1,93 ms de base, 1 339 JPEGs em 3 s nesta máquina).
 - Custo de CPU da decodificação H.264 (thread do aiortc), do RTP/SRTP no loop e da codificação JPEG na máquina da api. `TODO(humano): medir` (H1, `top`).
-- Tamanho do JPEG por quadro na qualidade padrão (provavelmente < 1 MiB a 1280×720, inferido).
+- Tamanho do JPEG por quadro na qualidade padrão (provavelmente < 1 MiB a 1280×720, inferido). **Medido em 2026-11-23:** ~61 KiB na qualidade 80 (visualizador), 36,9 KiB na 20 e 136,0 KiB na 100 (cliente).
 - Atraso câmera → visualizador. `TODO(humano): medir` (H1.7).
 - Se o Go2 indica de alguma forma que a câmera está transmitindo (luz, som). `TODO(humano): verificar` (H1.2).
 - Efeito no `stop`/`move` (A17/A18).
@@ -277,6 +277,25 @@ Igual ao H2 do F-001 (`specs/features/F-001-ws-lidar.md`), trocando os clientes 
 
 Área livre de pessoas e obstáculos no raio do `move`, uma pessoa com `python -m sense.stop` pronto, robô em `balance_stand`.
 
+## Resultados do hardware
+
+### H1 — 2026-11-23 (registrado pelo Claude; nenhum critério marcado)
+
+Evidência: `api-teste-video-inicial.log` (qualidade 80), `api-teste-video-max-quality.log` (100), `api-teste-video-quality=20.log` (20), `video-max-quality.txt`, `video-quality=20.txt` (cliente `ws_video_client.py`; o `video-h1.txt` do teste com qualidade 80 ficou vazio) e 3 vídeos OBS do visualizador. Commit provável `ffb6fa2` (não anotado na sessão). Api em log INFO (o `--log-config` falhou). `GO2_VIDEO_MAX_FPS=0`, filas 1, até 2 clientes. Tabela completa em [`specs/checklists/F-003.md`](../checklists/F-003.md).
+
+| Critério | Medido | Leitura do Claude |
+|---|---|---|
+| A15 | Qualidade 100: 57 janelas, 4.6–17.6 frames/s, 0 não decodificaram, 22 buracos no `seq`; log: `dropped_encode_queue` 35, `encode_errors` 0, `dropped_clients` 0. Qualidade 20: 58 janelas, 12.6–15.5 frames/s, 0 não decodificaram, 1 buraco; log: 2 / 0 / 0. Resolução 1280×720. Atraso médio 43 ms (100) e 24 ms (20). | Integridade e existência atendem o texto do critério. Incompleto: cliente rodou ~57 s (não 60), CPU da api não medida, `media_time` incoerente, cruzamento buraco↔descarte só por totais. **Aguarda decisão humana.** |
+| A16 | `Câmera desligada.` às 10:52:04, 10:53:30 e 10:58:17; `read: 0` a partir da janela seguinte em todas, por 25, 25 e 690 janelas (até o próximo cliente). | Atende o texto (0 a partir de 2 s, por ≥ 30 s na terceira). **Aguarda confirmação humana.** |
+| A17, A18 | Não rodados (H2). | Pendentes. Continua valendo: não mover o robô com o vídeo ativo. |
+
+Observações da sessão:
+- **Queda do codificador na qualidade 100:** de 11:13:43 a 11:13:45 a api codificou 5–6 quadros/s com a track a ~15; 22 dos 35 descartes da fila do codificador foram aí. Causa não medida (sem CPU; OBS gravava na mesma máquina).
+- **`media_time` contradiz a spec.** A spec diz que o campo está em segundos do relógio RTP; o intervalo medido foi ~0,7 ms a ~14 quadros/s (esperado ~70 ms). Hipótese do Claude, **inferida**: o Go2 incrementa o timestamp RTP em milissegundos (~70 por quadro) e o aiortc o lê como 90 kHz (70 / 90 000 ≈ 0,78 ms). Proposta: investigar antes de usar o campo e, se confirmado, documentar no contrato que `media_time` não está em segundos no Go2 (ou converter na api). Decisão humana.
+- **Avisos do decodificador H.264** do aiortc logo após ligar a câmera (24 no teste 80, 30 no 100, 0 no 20). Nenhum JPEG corrompido chegou ao cliente.
+- **Formato do JPEG** (teste de software, não JPEG do robô): baseline, YCbCr 4:2:0 faixa completa, 8 bits, sem JFIF. Tamanho cresce com a qualidade de forma monotônica (quadro de uma captura: 35,7 KiB na 20, 57,7 KiB na 80, 114,3 KiB na 100).
+- Faltam do H1: H1.1 com 30 s, H1.2 (luz/som), H1.5 (avaliação em texto), H1.7 (atraso câmera → tela), H1.8 (gravador), CPU. Sem a escolha humana de `GO2_VIDEO_JPEG_QUALITY`/`GO2_VIDEO_MAX_FPS`, o H2 não tem configuração.
+
 ## Histórico
 - 2026-11-21: criada (proposta). Decisões do humano: JPEG por quadro, visualização no lab, teto de taxa e qualidade configuráveis, padrões 2 clientes / filas 1 no `.env`, câmera desligada sem cliente, régua do `stop` igual à do LiDAR, três ferramentas de lab, lanterna fora de escopo.
 - 2026-11-21: revisada pelo `spec-reviewer`. Mudanças:
@@ -294,3 +313,4 @@ Igual ao H2 do F-001 (`specs/features/F-001-ws-lidar.md`), trocando os clientes 
 - 2026-11-21: implementada em `feat/ws-video` (`548f89b`, em-implementacao). Os critérios `software` (A1–A14 e A12b) passam em teste automático com dublês: track e data channel falsos, e a classe real `WebRTCVideoChannel` da lib no A3. Nada disso prova comportamento no robô. A14 (carga, máquina de desenvolvimento): p99 do desvio do `move` 1,1 ms com vídeo contra 1,9 ms de base, máx. 34,5 ms para período de 33,3 ms, ~1 370 JPEGs 1280×720 sintéticos em 3 s para 2 clientes. A15–A18 pendentes (H1/H2).
 - 2026-11-21: roteiro executável criado em `specs/checklists/F-003.md` (H1 com o robô parado, decisão dos padrões, H2 com `move`/`stop`).
 - 2026-11-22: JPEG com o PyAV (MJPEG) no lugar do OpenCV, que quebrava a imagem Docker. O `opencv-python` (dependência declarada pela lib, mas nunca importada) saiu da instalação por um override no `pyproject`. A1, A2 e A14 passam de novo (`133a8f1`).
+- 2026-11-23: H1 parcial no robô (qualidades 80, 100 e 20). Resultados registrados pelo Claude a partir dos logs e da saída do cliente; nenhum critério marcado (A15/A16 aguardam o humano). Achado: `media_time` com intervalo ~0,7 ms, contradiz a spec. A17/A18 pendentes.
