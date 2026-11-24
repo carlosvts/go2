@@ -10,7 +10,9 @@ pontos), escolhido pelo teste e não medido no robô.
 """
 
 import asyncio
+import gc
 import time
+from collections.abc import Iterator
 
 import numpy as np
 import pytest
@@ -24,6 +26,21 @@ from tests.lidar_payloads import lidar_message, voxel_bitmap
 
 MEASURE_S = 3.0
 PERIOD_S = 1.0 / Settings.model_fields["move_rate_hz"].default
+
+
+@pytest.fixture(autouse=True)
+def _isolated_heap() -> Iterator[None]:
+    """Tira do GC o lixo dos testes anteriores, só durante a medida.
+
+    Na suíte completa, as pausas do coletor (maiores com OpenCV/av
+    carregados) criavam picos que não vêm do código medido. Os limites não
+    mudam. A api real também carrega OpenCV: o efeito do GC lá é medido no
+    robô (F-003 A17/A18), não aqui.
+    """
+    gc.collect()
+    gc.freeze()
+    yield
+    gc.unfreeze()
 
 
 async def _intervals(duration_s: float) -> list[float]:

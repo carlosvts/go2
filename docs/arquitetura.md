@@ -26,6 +26,7 @@ flowchart LR
     end
 
     GO2["Unitree Go2"]
+    CLIENTS["Outros clientes da api<br/>scripts, notebooks, Insomnia,<br/>visualizadores de LiDAR/vídeo"]
 
     SENSE -->|"POST /v1/utterance<br/>WAV + meta"| SERVER
     SERVER -->|"status → som de retorno"| SENSE
@@ -33,26 +34,43 @@ flowchart LR
     STOPCLI -->|"POST /commands/stop"| API
     STOPCLI -.->|"POST /v1/cancel (em paralelo)"| SERVER
     API <-->|"WebRTC"| GO2
+    CLIENTS -->|"HTTP: /commands, /status, /device, /audio, /speaker<br/>WS: /ws/state, /ws/lidar, /ws/telemetry, /ws/video"| API
 
     classDef tvbox fill:#c8e6c9,stroke:#2e7d32,color:#000
     classDef server fill:#bbdefb,stroke:#1565c0,color:#000
     classDef api fill:#ffe0b2,stroke:#ef6c00,color:#000
     classDef robot fill:#e0e0e0,stroke:#424242,color:#000
     classDef data fill:#e1bee7,stroke:#6a1b9a,color:#000
+    classDef client fill:#fff,stroke:#ef6c00,stroke-dasharray:4 3,color:#000
     class MIC,SENSE,SPK,STOPCLI tvbox
     class SERVER server
     class API api
     class GO2 robot
     class CAT,MODELS,CAPT data
+    class CLIENTS client
     style TVBOX fill:#e8f5e9,stroke:#2e7d32,color:#000
     style PC fill:#fff8e1,stroke:#f9a825,color:#000
 ```
 
 | Serviço | Onde roda | Porta | Fala com |
 |---|---|---|---|
-| `api/` | PC, container `go2-api` | 8000 | Go2 (WebRTC); recebe do server e do `sense.stop` |
+| `api/` | PC, container `go2-api` | 8000 | Go2 (WebRTC); recebe do server, do `sense.stop` e de qualquer cliente na rede |
 | `server/` | PC, container `go2-server` | 9000 | api; recebe do tvbox |
 | `tvbox/` | TV Box, com `uv` direto | — (só cliente) | server; api só no `sense.stop` |
+
+## A api sozinha
+
+A api também é um produto à parte: quem quer só controlar ou observar o Go2 clona só `api/` (e `specs/contracts/`) e não precisa do server nem da TV Box. Passo a passo em [`api/README.md`](../api/README.md).
+
+| Grupo | Rotas | Spec |
+|---|---|---|
+| Movimento | `/commands/posture`, `/commands/gesture`, `/commands/move`, `/commands/stop`, `/commands/speed`, `/safety/obstacle-avoidance` | — (anterior às specs) |
+| Estado e sensores | `GET /status` (bateria, IMU, motores, configurações, erros), `/ws/state` | F-004 |
+| Lanterna, LED e volume | `/device/brightness`, `/device/led`, `/device/volume` | F-005 |
+| Áudio | `/speaker/*` (tocar na hora), `/audio/*` (biblioteca do robô, `/audio/silence`) | F-006, F-007 |
+| Streams | `/ws/lidar`, `/ws/telemetry`, `/ws/video` | F-001, F-002, F-003 |
+
+O que a lib oferece e ficou de fora, com o motivo, está em [`api/docs/cobertura_lib.md`](../api/docs/cobertura_lib.md). Truques, modo bípede, MCF e controle de motor direto estão restritos pelo `AGENTS.md`. Todas as rotas, com exemplos, estão na coleção do Insomnia (`api/insomnia/go2-api.json`).
 
 ## Um comando de voz
 

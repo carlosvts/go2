@@ -2,26 +2,44 @@
 
 import asyncio
 import logging
+import time
 from typing import Any, Self
 
 from app.config import Settings
-from app.robot.channel import ObstacleAvoidChannel, SportChannel
+from app.robot.audio import AudioHub
+from app.robot.channel import (
+    AudioHubChannel,
+    ObstacleAvoidChannel,
+    SportChannel,
+    VuiChannel,
+)
 from app.robot.commands import MoveCommand, SportCommand
 from app.robot.connection import (
     ConnectionListener,
     ConnectionSnapshot,
     ConnectionState,
 )
+from app.robot.device import DeviceControls
+from app.robot.errors import ActiveErrors
 from app.robot.lidar import LidarStream
 from app.robot.link import RobotLink
 from app.robot.movement import MoveController
 from app.robot.ports import ConnectionFactory
 from app.robot.safety import ObstacleAvoidanceReading
+from app.robot.speaker import Speaker
 from app.robot.speed import SpeedReading
 from app.robot.state import RobotStatus, StateCache
+from app.robot.state_stream import StateStream
+from app.robot.streams import TrafficSaving
 from app.robot.unitree import UnitreeConnectionFactory
+from app.robot.video import VideoStream
 
 log = logging.getLogger(__name__)
+
+SPEAKER_TOPIC = "speaker"
+"""Tópico do alto-falante (F-007) no `/ws/state`."""
+AUDIO_PLAYER_TOPIC = "audio_player"
+"""Tópico do player do robô (F-006) no `/ws/state`."""
 
 
 class Go2Robot:
@@ -41,6 +59,12 @@ class Go2Robot:
         state: StateCache,
         movement: MoveController,
         lidar: LidarStream,
+        video: VideoStream,
+        device: DeviceControls,
+        errors: ActiveErrors,
+        state_stream: StateStream,
+        speaker: Speaker,
+        audio: AudioHub,
     ) -> None:
         """Recebe os colaboradores já montados (ver :meth:`from_settings`)."""
         self._link = link
@@ -49,6 +73,45 @@ class Go2Robot:
         self._state = state
         self._movement = movement
         self._lidar = lidar
+        self._video = video
+        self._device = device
+        self._errors = errors
+        self._state_stream = state_stream
+        self._speaker = speaker
+        self._audio = audio
+        self._wire_audio()
+
+    def _wire_audio(self) -> None:
+        """Liga o áudio (F-006, F-007) ao `/ws/state` (F-004) e ao `silence`.
+
+        - `speaker`: mudança de estado pelo caminho sem descarte; no aceite, o
+          estado atual.
+        - `audio_player`: o `data` cru do player do robô, pelo caminho das
+          seções (com o teto `GO2_STATE_MAX_HZ`); no aceite, o último valor.
+        - `POST /audio/silence` também para o alto-falante.
+        """
+        speaker, stream, audio = self._speaker, self._state_stream, self._audio
+        speaker.subscribe(
+            lambda snapshot: stream.publish_event(SPEAKER_TOPIC, snapshot)
+        )
+        audio.subscribe_player_state(
+            lambda data: stream.publish_section(AUDIO_PLAYER_TOPIC, data)
+        )
+
+        def snapshot() -> list[tuple[str, float, Any]]:
+            now = time.time()
+            current = [(SPEAKER_TOPIC, now, speaker.snapshot.as_dict())]
+            player = audio.player()
+            if player.data is not None and player.age_s is not None:
+                current.insert(0, (AUDIO_PLAYER_TOPIC, now - player.age_s, player.data))
+            return current
+
+        stream.add_snapshot_provider(snapshot)
+
+        async def stop_speaker() -> None:
+            await speaker.stop()
+
+        audio.set_speaker_stopper(stop_speaker)
 
     @classmethod
     def from_settings(
@@ -66,11 +129,18 @@ class Go2Robot:
         factory = connection_factory or UnitreeConnectionFactory(settings)
         link = RobotLink(factory)
         channel = SportChannel(link, settings.request_timeout_s)
+        # O vídeo usa o mesmo data channel do LiDAR (F-003).
+        traffic = TrafficSaving(settings.request_timeout_s)
+        # Erros do data channel (F-004): só os da conexão atual; `None` na queda.
+        errors = ActiveErrors()
+        link.subscribe_datachannel_messages(errors.on_message)
+        link.state.subscribe(errors.on_connection)
+        state = StateCache()
         return cls(
             link=link,
             channel=channel,
             obstacle_avoid=ObstacleAvoidChannel(link, settings.request_timeout_s),
-            state=StateCache(),
+            state=state,
             movement=MoveController(channel, settings.move_rate_hz),
             lidar=LidarStream(
                 link,
@@ -80,21 +150,57 @@ class Go2Robot:
                 request_timeout_s=settings.request_timeout_s,
                 telemetry_max_clients=settings.telemetry_max_clients,
                 telemetry_queue=settings.telemetry_client_queue,
+                traffic=traffic,
+            ),
+            video=VideoStream(
+                link,
+                traffic=traffic,
+                max_clients=settings.video_max_clients,
+                client_queue=settings.video_client_queue,
+                encode_queue=settings.video_encode_queue,
+                max_fps=settings.video_max_fps,
+                jpeg_quality=settings.video_jpeg_quality,
+                stall_s=settings.video_stall_s,
+            ),
+            device=DeviceControls(VuiChannel(link, settings.request_timeout_s)),
+            errors=errors,
+            state_stream=StateStream(
+                link,
+                state,
+                errors,
+                max_clients=settings.state_max_clients,
+                max_hz=settings.state_max_hz,
+            ),
+            speaker=Speaker(link, max_duration_s=settings.speaker_max_duration_s),
+            audio=AudioHub(
+                AudioHubChannel(link, settings.request_timeout_s),
+                link,
+                max_upload_bytes=settings.audio_max_upload_bytes,
             ),
         )
 
     # ─── Ciclo de vida ─────────────────────────────────────────────────────
 
     async def connect(self) -> None:
-        """Abre a conexão e assina os tópicos de estado."""
-        await self._link.connect()
+        """Abre a conexão e assina os tópicos de estado.
+
+        Se a abertura falha, erros que a tentativa tenha mandado durante o
+        `connect()` são esquecidos: a lista volta a `None` (desconhecido).
+        """
+        try:
+            await self._link.connect()
+        except BaseException:
+            self._errors.reset(notify=True)
+            raise
         self._state.attach(self._link.pub_sub)
+        self._audio.attach(self._link.pub_sub)
         # Emoji para localizar a linha rápido no terminal.
         log.info("🐝 Conectado ao Go2.")
 
     async def disconnect(self) -> None:
-        """Cancela o movimento em curso e encerra a conexão."""
+        """Cancela o movimento e o envio de áudio em curso e encerra a conexão."""
         await self._movement.cancel()
+        await self._audio.cancel_upload()
         await self._link.disconnect()
 
     async def keep_connected(self, interval_s: float) -> None:
@@ -157,12 +263,39 @@ class Go2Robot:
         """Stream de nuvem de pontos do LiDAR (`/ws/lidar`)."""
         return self._lidar
 
+    @property
+    def video(self) -> VideoStream:
+        """Stream de vídeo da câmera frontal (`/ws/video`)."""
+        return self._video
+
+    @property
+    def device(self) -> DeviceControls:
+        """Lanterna, LED e volume (`/device/*`, F-005)."""
+        return self._device
+
+    @property
+    def state_stream(self) -> StateStream:
+        """Stream do estado e dos erros ativos (`/ws/state`, F-004)."""
+        return self._state_stream
+
+    @property
+    def speaker(self) -> Speaker:
+        """Alto-falante pela track de áudio WebRTC (`/speaker/*`, F-007)."""
+        return self._speaker
+
+    @property
+    def audio(self) -> AudioHub:
+        """Biblioteca de áudio do robô (`/audio/*`, F-006)."""
+        return self._audio
+
     # ─── Estado ────────────────────────────────────────────────────────────
 
     def status(self) -> RobotStatus:
         """Snapshot do cache de estado; nunca fala com o robô."""
         return self._state.snapshot(
-            connected=self.is_connected, connection=self.connection
+            connected=self.is_connected,
+            connection=self.connection,
+            errors=self._errors.current,
         )
 
     @property

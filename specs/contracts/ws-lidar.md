@@ -6,7 +6,7 @@ Stream da nuvem de pontos do LiDAR do Go2. Comportamento e critérios em [`F-001
 |---|---|
 | Dono | api |
 | Consumidores | `api/scripts/lidar_viewer.html` (visualização 3D no navegador), `api/scripts/ws_lidar_client.py` (diagnóstico no terminal) e `api/scripts/record_lidar.py` (gravação). O server ainda não. |
-| Ativação | Compartilhada com [`/ws/telemetry`](ws-telemetry.md) (F-002): o LiDAR é ligado e decodificado se houver cliente em qualquer das duas rotas. |
+| Ativação | Compartilhada com [`/ws/telemetry`](ws-telemetry.md) (F-002): o LiDAR é ligado e decodificado se houver cliente em qualquer das duas rotas. O `disableTrafficSaving` é comum também com [`/ws/video`](ws-video.md) (F-003): só é desfeito quando não sobra cliente em nenhuma das três. |
 | Rota | `GET /ws/lidar` (upgrade para WebSocket), sem autenticação |
 | Processo | Um só (`uvicorn` sem `--workers`): `seq` e o limite de clientes valem por processo |
 

@@ -1,6 +1,6 @@
 # Pegadinhas da `unitree_webrtc_connect` em uma tela
 
-**Em uma frase:** a lib funciona, mas falha em silêncio em vários pontos. Antes de mexer em `app/robot.py`, saiba destes.
+**Em uma frase:** a lib funciona, mas falha em silêncio em vários pontos. Antes de mexer em `app/robot/`, saiba destes.
 
 > Ficha para quem vai mexer no código. Termos como *callback* e *event loop* estão no [glossário](glossario.md).
 
@@ -15,6 +15,10 @@
 | 7 | Tudo é recriado a cada `connect()` | Assinaturas, callbacks e decoder somem | Refazer a configuração após conectar |
 | 8 | Callbacks de vídeo rodam **em sequência** e recebem a track | Só o primeiro funciona | Registrar um callback só |
 | 9 | Decoder de LiDAR padrão devolve malha | Sem pontos | `set_decoder("native")` |
+| 10 | A track de vídeo é entregue **durante** o `connect()`; callback registrado depois não a recebe | Vídeo mudo | Interceptar a criação de `conn.video` (`VideoHookedConnection`, `unitree.py`) |
+| 11 | Os erros do robô (`errors`, `add_error`, `rm_error`) só são impressos | A api não fica sabendo | Gancho no `handle_response` do data channel, a cada `connect()` (F-004) |
+| 12 | No aiortc, o envio de áudio **termina de vez** quando a track de um arquivo acaba | O próximo áudio sai mudo | Uma track própria que nunca termina e manda silêncio quando ociosa (`SpeakerTrack`, F-007) |
+| 13 | `WebRTCAudioHub` sem timeout, upload só por caminho de arquivo e MP3 via pydub (exige `ffmpeg`) | Envio trava ou falha sem `ffmpeg` | Protocolo copiado em `unitree.py` com timeout por bloco; MP3 convertido com PyAV (F-006) |
 
 ## Mais detalhes
 

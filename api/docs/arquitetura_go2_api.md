@@ -94,11 +94,11 @@ A `go2-api`, sendo a **única dona da conexão WebRTC**, resolve isso por constr
 
 ## 4. Superfície da API — implementado e planejado
 
-Cinco grupos: os quatro primeiros são REST (comando pontual), o quinto é WebSocket (fluxo contínuo).
+Seis grupos: os cinco primeiros são REST (comando pontual), o sexto é WebSocket (fluxo contínuo). A lista completa, com corpos e respostas, está no OpenAPI (`/docs`) e na coleção do Insomnia (`api/insomnia/go2-api.json`). O que a lib oferece e a api não expõe, com o motivo, está em [`cobertura_lib.md`](cobertura_lib.md).
 
-**Status:** ✅ implementado · 🔜 planejado para o v1 · ⏸ registrado, fora do v1 (`todo-later`). Os números são issues do GitHub.
+**Status:** ✅ implementado ("software" = só testes automáticos, falta o robô) · ⛔ restrito pelo `AGENTS.md` · ⏸ registrado, fora do v1 (`todo-later`). Os números são issues do GitHub.
 
-Convenções que valem para todo o REST (`README.md`): comandos respondem `202` ao **aceitar** o comando (não ao fim da execução física), `503` sem conexão com o robô e `504` quando um comando que espera resposta estoura `GO2_REQUEST_TIMEOUT_S`.
+Convenções que valem para todo o REST (`README.md`): comandos respondem `202` ao **aceitar** o comando (não ao fim da execução física), `503` sem conexão com o robô e `504` quando um comando que espera resposta estoura `GO2_REQUEST_TIMEOUT_S`. `502` (desde a F-005) quando o robô responde mas **recusa** o pedido (`header.status.code` ≠ 0), responde sem `header.status`, ou uma leitura volta sem o campo esperado; o `detail` traz o código ou o motivo. Em `502` e `504` o estado do robô é desconhecido: o pedido pode ter sido aplicado (exceção `RobotRejectedError`). Áudio (F-006/F-007) acrescenta `404` (`upload_id` desconhecido), `409` (envio em andamento, nome repetido), `413` (arquivo, WAV convertido ou duração acima do teto) e `415` (não é WAV/MP3 ou não decodifica).
 
 ### 4.1 Postura e movimento
 | Na lib | Endpoint | Status | Nota |
@@ -112,57 +112,74 @@ Convenções que valem para todo o REST (`README.md`): comandos respondem `202` 
 | Na lib | Endpoint | Status | Nota |
 |---|---|---|---|
 | `Hello`, `Stretch`, `FingerHeart`, `WiggleHips`, `Content`, `Dance1/2`, `Scrape`, `Pose` | `POST /commands/gesture` `{"cmd": "hello"}` | ✅ | Baixo risco físico. |
-| `FrontFlip`, `BackFlip`, `Handstand`, `MoonWalk`, `Bound` | `POST /commands/trick` `{"cmd": "front_flip", "confirm": true}` | 🔜 carlosvts/go2-api#1 | Separado de propósito: risco real de queda. Exige confirmação explícita. Nenhum foi testado ainda. Os ids diferem entre `SPORT_CMD` e `SPORT_CMD_MCF`; confirmar qual espaço vale para o robô. |
-| `SPORT_CMD_MCF` (`TrotRun`, `StaticWalk`, …) | — | fora do v1 | Exige trocar o robô para o modo MCF (`motion_switcher`, não mapeado; dossiê 12.2/12.3). |
+| `FrontFlip`, `BackFlip`, `Handstand`, `MoonWalk`, `Bound` | `POST /commands/trick` `{"cmd": "front_flip", "confirm": true}` | ⛔ restrito; ⏸ carlosvts/go2-api#1 | Separado de propósito: risco real de queda. Exige confirmação explícita. Nenhum foi testado ainda. Os ids diferem entre `SPORT_CMD` e `SPORT_CMD_MCF`; confirmar qual espaço vale para o robô. |
+| `SPORT_CMD_MCF` (`TrotRun`, `StaticWalk`, …) | — | ⛔ restrito; fora do v1 | Exige trocar o robô para o modo MCF (`motion_switcher`, não mapeado; dossiê 12.2/12.3). |
 
 ### 4.3 Dispositivo (áudio, LED, volume)
+
+As rotas `/audio/*` seguem as mesmas convenções das `/device/*` (abaixo da tabela). Contrato: `specs/features/F-006-audio-biblioteca.md` e o OpenAPI.
+
 | Na lib | Endpoint | Status | Nota |
 |---|---|---|---|
-| `WebRTCAudioHub` (lista, upload, play, pause, resume, delete, megafone) | `/audio/*` | 🔜 carlosvts/go2-api#2 | Classe pronta, mas sem timeout, upload por caminho de arquivo e megafone em 3 chamadas (ver `lib_unitree_webrtc_connect.md` §7). Substitui o `CMD_PLAY_AUDIO` do modo chat. |
-| `RTC_TOPIC["VUI"]` volume/brilho/LED | `PUT/GET /device/volume`, `PUT/GET /device/brightness`, `PUT /device/led` | 🔜 carlosvts/go2-api#3 | **api_ids (1003–1007) e payloads a confirmar:** não estão nas constantes da lib 2.2.0. |
+| `AUDIO_API` em `rt/api/audiohub/request` (lista 1001, play 1002, pause 1003, resume 1004, modo 1007/1010, rename 1008, delete 1009, upload 2001) + tópico `AUDIO_HUB_PLAY_STATE` | `GET/POST /audio/files` · `GET /audio/uploads/{id}` · `PATCH/DELETE /audio/files/{id}` · `POST /audio/files/{id}/play` · `POST /audio/pause` · `POST /audio/resume` · `GET/PUT /audio/play-mode` · `POST /audio/silence` · `GET /audio/player` | ✅ software (F-006; falta teste no robô) carlosvts/go2-api#2 | Não usa a classe `WebRTCAudioHub` (sem timeout, upload por caminho de arquivo, pydub): o canal próprio (`AudioHubChannel`) põe timeout em cada chamada e o protocolo de `upload_audio_file` foi copiado em `unitree.py` (blocos base64 de 4096 caracteres, 0,1 s entre eles, timeout por bloco). Envio assíncrono (`202` + estado), um por vez, MP3 → WAV com PyAV numa thread, limite `GO2_AUDIO_MAX_UPLOAD_MB` no arquivo e no WAV. `silence` também para o alto-falante (F-007). Megafone fora. Formato da lista e do modo vem do exemplo (`inferido`). |
+| Track de áudio de saída (exemplo `play_mp3.py`: `pc.addTrack(MediaPlayer)`) | `POST /speaker/play` (multipart `file`) · `POST /speaker/stop` · `GET /speaker` | ✅ software (F-007; falta teste no robô) | Toca WAV/MP3 na hora, sem guardar no robô; até `GO2_SPEAKER_MAX_DURATION_S` (120 s). Ver nota abaixo da tabela. |
+| `RTC_TOPIC["VUI"]` 1005/1006 (brilho da lanterna) | `PUT /device/brightness` `{"level"}` · `GET /device/brightness` | ✅ software (F-005; falta teste no robô) carlosvts/go2-api#3 | `level` inteiro estrito, 0 a `GO2_MAX_BRIGHTNESS` (≤ 10). O `GET` lê `json.loads(data.data)["brightness"]`. |
+| `RTC_TOPIC["VUI"]` 1003/1004 (volume) | `PUT /device/volume` `{"level"}` · `GET /device/volume` | ✅ software (F-005; falta teste no robô) | `level` inteiro estrito, 0 a `GO2_MAX_VOLUME` (≤ 10). O `GET` lê `json.loads(data.data)["volume"]`. |
+| `RTC_TOPIC["VUI"]` 1007 (cor do LED) | `PUT /device/led` `{"color","duration_s","flash_cycle_ms"?}` | ✅ software (F-005; falta teste no robô) | Cores de `VUI_COLOR`; `1 ≤ duration_s ≤ GO2_LED_MAX_DURATION_S`; `499 ≤ flash_cycle_ms ≤ duration_s × 1000` (sem ele, cor fixa). Sem `GET`. |
+
+Todas as rotas `/device/*` esperam a resposta do robô (`publish_request_new`, timeout `GO2_REQUEST_TIMEOUT_S`) e respondem `202` só depois de `header.status.code == 0`: o robô **aceitou**, não que alguém viu a luz. `502`/`503`/`504` conforme as convenções acima. Não entram no `/capabilities`. **api_ids (1003–1007) e payloads vêm do exemplo `vui.py`, não das constantes da lib 2.2.0, e não foram vistos no robô.**
+
+**Alto-falante (`/speaker/*`, F-007).** Nada passa pelo data channel: o áudio vai pela track WebRTC, no transceiver `audio` `sendrecv` que a lib negocia a cada conexão (`WebRTCAudioChannel`). No primeiro `play` de cada conexão a api põe nesse transceiver uma track própria (`SpeakerTrack`, `app/robot/speaker.py`; a troca de track é `attach_audio_track` em `app/robot/unitree.py`) que **nunca termina**: ociosa manda silêncio (quadros de 20 ms, 48 kHz, estéreo, s16), tocando manda o PCM do arquivo e, no fim, volta ao silêncio e a `idle`. Motivo: no aiortc 1.15.0 o laço de envio do sender termina de vez quando a track acaba (`MediaStreamError`). O arquivo (até `GO2_AUDIO_MAX_UPLOAD_MB`, lido em streaming pelo leitor comum `app/requests/upload.py` → `413`; até `GO2_SPEAKER_MAX_DURATION_S`, 120 s por padrão → `413`, recusado pela duração do cabeçalho ou ao passar do teto na decodificação; WAV/MP3 pelo conteúdo → `415`; sem conexão → `503`) é decodificado inteiro numa thread (PyAV) antes de tocar, em memória, sem arquivo temporário. Um áudio por vez: `play` novo substitui o atual; cada `play`/`stop` tem um número de ordem e um `play` só toca se nada mais novo chegou durante a decodificação. Queda da conexão → `idle`, e nada volta a tocar sozinho. `202` = a api passou a enviar, não que o robô reproduziu (não visto no robô). Não entram no `/capabilities`. Depois do primeiro `play`, a api manda ~50 pacotes de silêncio por segundo até a conexão cair (efeito no `stop` medido em F-007 A12).
 
 ### 4.4 Segurança e controle
 | Na lib | Endpoint | Status | Nota |
 |---|---|---|---|
-| `SPORT_MOD_STATE`/`LOW_STATE` | `GET /status` | ✅ | Snapshot do cache em memória; sempre `200`, com `connected: false` se o robô estiver fora. `?raw=true` devolve os payloads crus. |
-| `OBSTACLES_AVOID_API` (`SWITCH_SET`/`SWITCH_GET`) | `PUT/GET /safety/obstacle-avoidance` `{"enabled"}` | ✅ carlosvts/go2-api#8 | Implementado; formato da resposta do `GET` pendente de validação física. Não está confirmado que o desvio filtra o `SPORT_CMD["Move"]` usado pela API (dossiê 12.1). |
+| `SPORT_MOD_STATE`/`LOW_STATE`/`MULTIPLE_STATE` + erros do data channel | `GET /status` | ✅ (seções novas: software, F-004) | Snapshot do cache em memória; sempre `200`, com `connected: false` se o robô estiver fora. Seções `battery`, `imu`, `motion`, `motors`, `body_temperature_c`, `settings` e `errors` (`null` = desconhecido). `?raw=true` devolve os payloads crus. Erros capturados por um gancho no `handle_response` do data channel, instalado a cada `connect()` (`unitree.py`). |
+| `OBSTACLES_AVOID_API` (`SWITCH_SET`/`SWITCH_GET`) | `PUT/GET /safety/obstacle-avoidance` `{"enabled"}` | ✅ carlosvts/go2-api#8 | Implementado; formato da resposta do `GET` pendente de validação física. Observado pelo humano (2026-11-21): com o desvio ligado, o `POST /commands/move` **para antes de bater**; por isso o `MOVE` 1003 do serviço de desvio não entrou. |
 | — (design próprio) | `POST /control/acquire`, `POST /control/release` | ⏸ carlosvts/go2-api#7 | Lease com token e expiração (dossiê seção 13). |
 
 ### 4.5 Streams (WebSocket)
 | Fonte | Canal | Status | Nota |
 |---|---|---|---|
 | `ULIDAR_ARRAY` (métricas) + `ROBOTODOM` + `ULIDAR_STATE` | `/ws/telemetry` | ✅ software (F-002; falta teste no robô) carlosvts/go2-api#5 | Escopo mudou: telemetria **do LiDAR** (métricas de 1 s, pose e estado do sensor crus), para análise de SLAM. `LOW_STATE`/`SPORT_MOD_STATE` ficaram fora (seguem no `/status`). Contrato: `specs/contracts/ws-telemetry.md`. |
-| `WebRTCVideoChannel` (track) | `/ws/video` | 🔜 carlosvts/go2-api#4 | Codificar quadros fora do event loop; formato no WS a decidir. |
+| `WebRTCVideoChannel` (track) | `/ws/video` | ✅ software (F-003; falta teste no robô) carlosvts/go2-api#4 | Frames binários JPEG; conversão e JPEG fora do event loop (worker em thread); track capturada a cada `connect()` sem patch na lib. `disableTrafficSaving` com refcount comum ao LiDAR. Contrato: `specs/contracts/ws-video.md`. |
+| Cache do `/status` (`LOW_STATE`, `SPORT_MOD_STATE`, `MULTIPLE_STATE`, erros) + alto-falante + player do hub | `/ws/state` | ✅ software (F-004; falta teste no robô) | Frames JSON por seção, até `GO2_STATE_MAX_HZ` por tópico; `connection`, `errors` e `speaker` sem descarte. Não assina nada novo no robô. Contrato: `specs/contracts/ws-state.md`. |
 | `ULIDAR_ARRAY` + decoder `native` | `/ws/lidar` | ✅ software (F-001; falta teste no robô) carlosvts/go2-api#6 | Frames binários de pontos float32; decodificação fora do event loop (decoder de repasse na lib + worker em thread). Contrato: `specs/contracts/ws-lidar.md`. Feito antes do `/ws/telemetry`, invertendo a ordem da §5 (decisão humana). |
 
-### 4.6 Desenho interno dos streams (planejado)
+### 4.6 Desenho interno dos streams
+
+O `TopicHub` genérico planejado (carlosvts/go2-api#9) **não foi feito**: cada stream tem sua classe, e o que é comum ficou em `app/robot/streams.py` (F-003).
 
 ```
-callbacks da lib ──publish──▶ TopicHub ──subscribe──▶ 1 asyncio.Queue por cliente WS
- (event loop, #12)            (#9, em memória)          (cheia → descarta a mais antiga)
+callback da lib (loop) ─▶ fila de entrada limitada ─▶ worker em thread (decodifica/codifica)
+   ─▶ 1 fila por cliente (cheia → descarta a mais antiga) ─▶ laço `serve` do WebSocket
 ```
 
-- **`TopicHub` (carlosvts/go2-api#9):** `Topic(str, Enum)`, `subscribe(topic, maxsize=32) -> Queue`, `unsubscribe(topic, q)` (idempotente) e `publish(topic, data)` (síncrono, `put_nowait`). Envelope enviado aos clientes: `{"topic", "ts", "data"}`, com `ts = time.time()` no `publish`. Funciona só com um processo (`uvicorn` sem `--workers`).
-- **Ponte driver → hub (carlosvts/go2-api#12):** reaproveita os callbacks que já alimentam o `/status`. A lib guarda **um callback por tópico**, e um segundo `subscribe` silenciaria o `/status`.
-- **Refcount (carlosvts/go2-api#13):** assina no robô no primeiro cliente e cancela no último. `LOW_STATE`/`SPORT_MOD_STATE` nunca são cancelados, porque o `/status` depende deles.
-- **Estado da conexão (carlosvts/go2-api#14):** tópico `connection` com `connected`/`disconnected` (e `reconnecting` quando houver reconexão automática).
-- **Apoio ao desenvolvimento:** `FakeHub` (carlosvts/go2-api#10) gera dados simulados sem o robô; `scripts/ws_client.py` (carlosvts/go2-api#11) imprime mensagens e mede a taxa.
+- **Classes:** `LidarStream` (`/ws/lidar`, `/ws/telemetry`), `VideoStream` (`/ws/video`), `StateStream` (`/ws/state`). Laço comum de envio em `app/routers/streaming.py` (`serve`, `refuse`).
+- **Peças comuns (`streams.py`):** `DropOldestQueue`, `FrameClient` (textos nunca descartados, binários com fila curta) e `TrafficSaving`.
+- **Um callback por tópico na lib:** o `/ws/state` lê do mesmo cache do `/status`, sem assinar de novo; o `audio_player` (F-006) tem callback próprio.
+- **Refcount:** o LiDAR é assinado com cliente em `/ws/lidar` ou `/ws/telemetry`; a câmera é ligada (`switchVideoChannel`) com cliente em `/ws/video`. O `disableTrafficSaving` é **um só refcount para as três rotas** (`TrafficSaving`, F-003): `True` no primeiro cliente de qualquer uma, `False` só quando não sobra nenhum.
+- **Estado da conexão:** todo stream manda o frame `connection` (`connected`/`disconnected`/`reconnecting`) ao aceitar e a cada mudança, e fica aberto na queda.
+- **Trabalho pesado fora do event loop:** LZ4/voxel do LiDAR, JPEG do vídeo, decodificação e conversão de áudio rodam em thread.
+- **Ferramentas:** visualizadores (`scripts/lidar_viewer.html`, `video_viewer.html`), clientes de diagnóstico (`ws_lidar_client.py`, `ws_video_client.py`, `ws_state_client.py`) e gravadores (`record_lidar.py`, `record_video.py`). O `FakeHub` (#10) não foi feito: os testes usam dublês da conexão.
 
 ### Fora do escopo do v1
-Navegação autônoma (`uslam`), UWB/side-follow e modo MCF: payloads ainda não mapeados (dossiê seção 12.2/12.3). Entram como v2+, se fizer sentido investir nisso depois. Reconexão automática ao robô ficou fora do MVP e entrou depois (`Go2Robot.keep_connected`, em `app/robot/service.py`).
+Navegação autônoma (`uslam`), UWB/side-follow e modo MCF: payloads ainda não mapeados (dossiê seção 12.2/12.3). Também fora, por decisão (2026-11-21): ajuste de corpo e marcha (`Euler`, `BodyHeight`, gaits), microfone do robô, megafone e o `MOVE` do serviço de desvio. Detalhes em [`cobertura_lib.md`](cobertura_lib.md). Entram como v2+, se fizer sentido investir nisso depois. Reconexão automática ao robô ficou fora do MVP e entrou depois (`Go2Robot.keep_connected`, em `app/robot/service.py`).
 
 ---
 
 ## 5. Ordem de implementação
 
-1. ✅ **Postura, movimento, velocidade, gestos e `/status`** (4.1, parte de 4.2 e 4.4): o que o `robot_control` já fazia, reorganizado.
-2. 🔜 **Infraestrutura de streams** (4.6: carlosvts/go2-api#9, carlosvts/go2-api#10, carlosvts/go2-api#11, carlosvts/go2-api#12) e depois **`/ws/telemetry`** (carlosvts/go2-api#5), o stream mais simples, que valida o desenho.
-3. 🔜 **Refcount e estado da conexão** (carlosvts/go2-api#13, carlosvts/go2-api#14), pré-requisitos para lidar e vídeo não gerarem tráfego e CPU à toa.
-4. 🔜 **`/ws/lidar` e `/ws/video`** (carlosvts/go2-api#6, carlosvts/go2-api#4).
-5. 🔜 **Dispositivo** (carlosvts/go2-api#2, carlosvts/go2-api#3), depois de confirmar os payloads do VUI.
-6. 🔜 **Truques** (carlosvts/go2-api#1), só depois de testar cada comando fisicamente.
-7. ⏸ **Lease** (carlosvts/go2-api#7), junto com a decisão sobre controle de acesso. O **desvio de obstáculo** (carlosvts/go2-api#8) já tem o liga/desliga; falta validar no robô se ele filtra o `move`.
-8. Fora do v1: MCF, navegação, UWB.
+1. ✅ **Postura, movimento, velocidade, gestos e `/status`** (4.1, parte de 4.2 e 4.4).
+2. ✅ **`/ws/lidar` e `/ws/telemetry`** (F-001, F-002; carlosvts/go2-api#6, carlosvts/go2-api#5), com refcount e estado da conexão (#13, #14). Dados reais gravados no robô; efeito no `stop` não medido.
+3. ✅ software **`/ws/video`** (F-003, carlosvts/go2-api#4).
+4. ✅ software **Estado e sensores** (F-004): `/status` ampliado e `/ws/state`.
+5. ✅ software **Dispositivo** (F-005, carlosvts/go2-api#3): lanterna, LED e volume.
+6. ✅ software **Áudio** (F-006, F-007, carlosvts/go2-api#2): biblioteca do robô e alto-falante.
+7. ⏳ **Teste no robô** das F-003 a F-007: roteiros em `specs/checklists/F-003.md` e `specs/checklists/api-completa.md`, e a coleção do Insomnia.
+8. ⛔ **Truques** (carlosvts/go2-api#1): restritos pelo `AGENTS.md`; só com decisão em `specs/decisions/` e teste comando a comando.
+9. ⏸ **Lease** (carlosvts/go2-api#7) e autenticação: fora de escopo por enquanto.
+10. Fora do v1: MCF, navegação, UWB.
 
 ---
 

@@ -5,9 +5,11 @@ description = "The SSOT of the Go2 WebRTC connection"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "av>=17.1.0",
     "fastapi>=0.141.1",
     "numpy>=2.5.3",
     "pydantic-settings>=2.15.0",
+    "python-multipart>=0.0.34",
     "unitree-webrtc-connect==2.2.0",
     "uvicorn[standard]>=0.53.0",
 ]
@@ -136,3 +138,10 @@ convention = "google"
 
 [tool.ruff.format]
 docstring-code-format = true
+
+[tool.uv]
+# A unitree_webrtc_connect declara `opencv-python`, mas não o importa (só os
+# exemplos do repositório usam). O OpenCV com interface gráfica pesa ~90 MB e
+# exige bibliotecas de sistema (libxcb, libGL) que a imagem slim não tem. A api
+# codifica o JPEG com o PyAV (F-003). Este override tira o pacote da instalação.
+override-dependencies = ["opencv-python; sys_platform == 'never'"]

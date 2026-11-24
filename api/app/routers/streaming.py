@@ -1,4 +1,4 @@
-"""Laço comum dos WebSockets de stream (`/ws/lidar`, `/ws/telemetry`)."""
+"""Laço comum dos WebSockets de stream (`/ws/lidar`, `/ws/telemetry` e outros)."""
 
 import asyncio
 import contextlib

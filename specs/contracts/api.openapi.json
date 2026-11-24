@@ -1,6 +1,228 @@
 {
   "components": {
     "schemas": {
+      "ActiveErrorItem": {
+        "description": "Erro ativo, do data channel (`[timestamp, source, code]`).",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "integer"
+          },
+          "code_hex": {
+            "description": "Hex maiúsculo, sem `0x` (16 → `\"10\"`).",
+            "title": "Code Hex",
+            "type": "string"
+          },
+          "code_text": {
+            "description": "Texto da lib, ou `\"{source}-{code_hex}\"`.",
+            "title": "Code Text",
+            "type": "string"
+          },
+          "robot_ts": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Timestamp cru do robô.",
+            "title": "Robot Ts"
+          },
+          "seen_at": {
+            "description": "Unix (s) da api quando o erro entrou.",
+            "title": "Seen At",
+            "type": "number"
+          },
+          "source": {
+            "title": "Source",
+            "type": "integer"
+          },
+          "source_text": {
+            "description": "Texto da lib, ou `\"{source}\"`.",
+            "title": "Source Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "source_text",
+          "code",
+          "code_hex",
+          "code_text",
+          "robot_ts",
+          "seen_at"
+        ],
+        "title": "ActiveErrorItem",
+        "type": "object"
+      },
+      "AudioAccepted": {
+        "description": "O robô aceitou o pedido (`header.status.code == 0`).\n\nEm `play`, não quer dizer que o som terminou nem que alguém ouviu.",
+        "properties": {
+          "accepted": {
+            "default": true,
+            "title": "Accepted",
+            "type": "boolean"
+          }
+        },
+        "title": "AudioAccepted",
+        "type": "object"
+      },
+      "AudioFileResponse": {
+        "description": "Um áudio guardado no robô.",
+        "properties": {
+          "extra": {
+            "additionalProperties": true,
+            "description": "Os outros campos do item, como vieram, sem interpretação.",
+            "title": "Extra",
+            "type": "object"
+          },
+          "id": {
+            "description": "`UNIQUE_ID` do robô.",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "description": "`CUSTOM_NAME` do robô.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "extra"
+        ],
+        "title": "AudioFileResponse",
+        "type": "object"
+      },
+      "AudioRenameRequest": {
+        "description": "Nome novo no robô.\n\nA regra (1–64 caracteres, sem `/`, `\\` nem controle) é aplicada por\n:meth:`validated`, depois de tirar os espaços das pontas.",
+        "properties": {
+          "name": {
+            "description": "Nome novo no robô.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "AudioRenameRequest",
+        "type": "object"
+      },
+      "AudioRenamedResponse": {
+        "description": "Renomeação aceita pelo robô (`202`).",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "AudioRenamedResponse",
+        "type": "object"
+      },
+      "BatterySection": {
+        "description": "Bateria, de `rt/lf/lowstate`.",
+        "properties": {
+          "current_ma": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `bms_state.current` (mA).",
+            "title": "Current Ma"
+          },
+          "cycles": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `bms_state.cycle`.",
+            "title": "Cycles"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Carga em %. Mesma extração de `battery_percent`.",
+            "title": "Percent"
+          },
+          "temperatures_c": {
+            "$ref": "#/components/schemas/BatteryTemperatures"
+          },
+          "voltage_v": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `power_v` (V).",
+            "title": "Voltage V"
+          }
+        },
+        "title": "BatterySection",
+        "type": "object"
+      },
+      "BatteryTemperatures": {
+        "description": "Temperaturas do BMS, em °C (`inferido`).",
+        "properties": {
+          "bq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `bms_state.bq_ntc`.",
+            "title": "Bq"
+          },
+          "mcu": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `bms_state.mcu_ntc`.",
+            "title": "Mcu"
+          }
+        },
+        "title": "BatteryTemperatures",
+        "type": "object"
+      },
       "CapabilitiesResponse": {
         "description": "Lista dos comandos disponíveis e a versão dela.",
         "properties": {
@@ -96,6 +318,38 @@
         "title": "ConnectionState",
         "type": "string"
       },
+      "DeviceLevelRequest": {
+        "description": "Nível de brilho ou de volume. Modo estrito: `true` e `5.0` levam `422`.\n\nEste modelo valida a faixa fixa 0–10. O teto configurável\n(`GO2_MAX_BRIGHTNESS`, `GO2_MAX_VOLUME`) é aplicado por :meth:`within`.",
+        "properties": {
+          "level": {
+            "description": "Nível de 0 ao teto configurado.",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Level",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "level"
+        ],
+        "title": "DeviceLevelRequest",
+        "type": "object"
+      },
+      "DeviceLevelResponse": {
+        "description": "Nível de brilho ou de volume.\n\nNo `PUT` (`202`), o nível pedido, que o robô aceitou; no `GET`, o nível\nque o robô informou.",
+        "properties": {
+          "level": {
+            "description": "Nível de 0 a 10.",
+            "title": "Level",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "level"
+        ],
+        "title": "DeviceLevelResponse",
+        "type": "object"
+      },
       "Gesture": {
         "description": "Gestos aceitos, como aparecem no corpo da request.",
         "enum": [
@@ -136,6 +390,350 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "ImuSection": {
+        "description": "IMU, de `rt/sportmodestate` → `imu_state` (radianos, m/s², °C).",
+        "properties": {
+          "accelerometer": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "3 valores.",
+            "title": "Accelerometer"
+          },
+          "gyroscope": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "3 valores.",
+            "title": "Gyroscope"
+          },
+          "quaternion": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "4 valores.",
+            "title": "Quaternion"
+          },
+          "rpy": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "3 valores.",
+            "title": "Rpy"
+          },
+          "temperature": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature"
+          }
+        },
+        "title": "ImuSection",
+        "type": "object"
+      },
+      "LedColor": {
+        "description": "Cores do LED, iguais aos valores de `VUI_COLOR` da lib.",
+        "enum": [
+          "white",
+          "red",
+          "yellow",
+          "blue",
+          "green",
+          "cyan",
+          "purple"
+        ],
+        "title": "LedColor",
+        "type": "string"
+      },
+      "LedRequest": {
+        "description": "Cor do LED por `duration_s` segundos; com `flash_cycle_ms`, pisca.\n\nModo estrito nos inteiros. O teto `GO2_LED_MAX_DURATION_S` e o limite do\npisca (`499 ≤ flash_cycle_ms ≤ duration_s × 1000`) são aplicados por\n:meth:`to_command`.",
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/LedColor",
+            "description": "Cor do LED (`VUI_COLOR` da lib)."
+          },
+          "duration_s": {
+            "description": "Segundos com a cor, até `GO2_LED_MAX_DURATION_S`.",
+            "minimum": 1.0,
+            "title": "Duration S",
+            "type": "integer"
+          },
+          "flash_cycle_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Período do pisca, em ms, de 499 a `duration_s × 1000` (inferido do exemplo da lib). Sem ele, a cor fica fixa.",
+            "title": "Flash Cycle Ms"
+          }
+        },
+        "required": [
+          "color",
+          "duration_s"
+        ],
+        "title": "LedRequest",
+        "type": "object"
+      },
+      "LedResponse": {
+        "description": "Pedido de LED aceito pelo robô (`202`); não prova que a cor apareceu.",
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/LedColor"
+          },
+          "duration_s": {
+            "title": "Duration S",
+            "type": "integer"
+          },
+          "flash_cycle_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flash Cycle Ms"
+          }
+        },
+        "required": [
+          "color",
+          "duration_s",
+          "flash_cycle_ms"
+        ],
+        "title": "LedResponse",
+        "type": "object"
+      },
+      "MotionSection": {
+        "description": "Movimento, de `rt/sportmodestate` (metros, m/s, rad/s).",
+        "properties": {
+          "body_height": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Height"
+          },
+          "foot_force": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Tamanho livre.",
+            "title": "Foot Force"
+          },
+          "foot_raise_height": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foot Raise Height"
+          },
+          "gait_type": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gait Type"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Mesma extração de `mode`.",
+            "title": "Mode"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "3 valores.",
+            "title": "Position"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress"
+          },
+          "range_obstacle": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Tamanho livre. Pelo nome, distância ao obstáculo por direção (não confirmado).",
+            "title": "Range Obstacle"
+          },
+          "velocity": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "3 valores.",
+            "title": "Velocity"
+          },
+          "yaw_speed": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yaw Speed"
+          }
+        },
+        "title": "MotionSection",
+        "type": "object"
+      },
+      "MotorItem": {
+        "description": "Um motor, na ordem de `motor_state`.",
+        "properties": {
+          "lost": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lost"
+          },
+          "q": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Posição (rad).",
+            "title": "Q"
+          },
+          "temperature_c": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `temperature`.",
+            "title": "Temperature C"
+          }
+        },
+        "title": "MotorItem",
         "type": "object"
       },
       "MoveRequest": {
@@ -213,6 +811,95 @@
         "title": "ObstacleAvoidanceResponse",
         "type": "object"
       },
+      "PlayMode": {
+        "description": "Modos de reprodução da docstring de `set_play_mode` da lib (`inferido`).",
+        "enum": [
+          "single_cycle",
+          "no_cycle",
+          "list_loop"
+        ],
+        "title": "PlayMode",
+        "type": "string"
+      },
+      "PlayModeRequest": {
+        "description": "Modo de reprodução; outro valor leva `422`.",
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/PlayMode"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "PlayModeRequest",
+        "type": "object"
+      },
+      "PlayModeResponse": {
+        "description": "Modo de reprodução: pedido e aceito (`PUT`) ou informado (`GET`).",
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/PlayMode"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "PlayModeResponse",
+        "type": "object"
+      },
+      "PlaybackResponse": {
+        "description": "`play` aceito (`202`): a api começou a enviar, não prova que o robô tocou.",
+        "properties": {
+          "duration_s": {
+            "description": "Amostras decodificadas ÷ taxa.",
+            "title": "Duration S",
+            "type": "number"
+          },
+          "name": {
+            "description": "Nome do arquivo enviado.",
+            "title": "Name",
+            "type": "string"
+          },
+          "playback_id": {
+            "title": "Playback Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "playback_id",
+          "name",
+          "duration_s"
+        ],
+        "title": "PlaybackResponse",
+        "type": "object"
+      },
+      "PlayerStateResponse": {
+        "description": "Último `AUDIO_HUB_PLAY_STATE`, cru, e há quanto tempo chegou.",
+        "properties": {
+          "age_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`null` se nada chegou ainda.",
+            "title": "Age S"
+          },
+          "data": {
+            "description": "`data` do tópico, sem interpretação.",
+            "title": "Data"
+          }
+        },
+        "required": [
+          "data",
+          "age_s"
+        ],
+        "title": "PlayerStateResponse",
+        "type": "object"
+      },
       "Posture": {
         "description": "Posturas aceitas, como aparecem no corpo da request.\n\nGestos ficam em :class:`~app.requests.gesture.GestureRequest`; os\n\"tricks\" (`front_flip`, ...) ainda não existem — grupo 4.2 da\n`docs/arquitetura_go2_api.md`.",
         "enum": [
@@ -238,6 +925,185 @@
           "cmd"
         ],
         "title": "PostureRequest",
+        "type": "object"
+      },
+      "SettingsSection": {
+        "description": "Configurações, de `rt/multiplestate` (string JSON decodificada).",
+        "properties": {
+          "body_height": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `bodyHeight`.",
+            "title": "Body Height"
+          },
+          "brightness": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brightness"
+          },
+          "foot_raise_height": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `footRaiseHeight`.",
+            "title": "Foot Raise Height"
+          },
+          "obstacle_avoidance": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `obstaclesAvoidSwitch` (0/1 viram bool). Só informativo: a fonte de verdade é `/safety/obstacle-avoidance`.",
+            "title": "Obstacle Avoidance"
+          },
+          "speed_level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `speedLevel`.",
+            "title": "Speed Level"
+          },
+          "uwb": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `uwbSwitch`.",
+            "title": "Uwb"
+          },
+          "volume": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume"
+          }
+        },
+        "title": "SettingsSection",
+        "type": "object"
+      },
+      "SpeakerResponse": {
+        "description": "O que o alto-falante está fazendo. `playing` = a api está enviando.",
+        "properties": {
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "playback_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Playback Id"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Início do envio (UTC).",
+            "title": "Started At"
+          },
+          "state": {
+            "enum": [
+              "idle",
+              "playing"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "playback_id",
+          "name",
+          "started_at",
+          "duration_s"
+        ],
+        "title": "SpeakerResponse",
+        "type": "object"
+      },
+      "SpeakerStopResponse": {
+        "description": "`stop` aceito (`202`), também quando nada tocava.",
+        "properties": {
+          "state": {
+            "const": "idle",
+            "default": "idle",
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "title": "SpeakerStopResponse",
         "type": "object"
       },
       "SpeedLevelRequest": {
@@ -284,6 +1150,17 @@
       "StatusResponse": {
         "description": "Snapshot do estado do robô, lido do cache.",
         "properties": {
+          "battery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BatterySection"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`null` se `rt/lf/lowstate` não chegou nesta execução. Na queda, mantém o último valor (veja a idade e `connected`)."
+          },
           "battery_percent": {
             "anyOf": [
               {
@@ -296,10 +1173,51 @@
             "description": "Carga em %, do cache de `rt/lf/lowstate`. `null` se ainda não chegou estado ou se o campo não foi reconhecido.",
             "title": "Battery Percent"
           },
+          "body_temperature_c": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "← `temperature_ntc1` de `rt/lf/lowstate`.",
+            "title": "Body Temperature C"
+          },
           "connected": {
             "description": "Há conexão WebRTC viva e canal de dados validado. É o que decide se os comandos são aceitos ou levam `503`.",
             "title": "Connected",
             "type": "boolean"
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ActiveErrorItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Erros ativos do data channel. `null` = **desconhecido** (nenhuma mensagem nesta conexão, ou a conexão caiu), nunca \"sem erros\". `[]` só depois de uma fotografia vazia ou de um `rm_error` que esvaziou a lista.",
+            "title": "Errors"
+          },
+          "imu": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImuSection"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`null` se `rt/sportmodestate` não chegou."
           },
           "low_state_age_s": {
             "anyOf": [
@@ -325,6 +1243,51 @@
             "description": "Modo atual, do cache de `rt/sportmodestate`.",
             "title": "Mode"
           },
+          "motion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MotionSection"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`null` se `rt/sportmodestate` não chegou."
+          },
+          "motors": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MotorItem"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Um item por motor; item malformado vira `null`.",
+            "title": "Motors"
+          },
+          "multiple_state_age_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Há quantos segundos chegou o último `rt/multiplestate`.",
+            "title": "Multiple State Age S"
+          },
           "raw": {
             "anyOf": [
               {
@@ -335,8 +1298,19 @@
                 "type": "null"
               }
             ],
-            "description": "Payloads crus em cache. Presente para permitir fixar a extração de `battery_percent`/`mode` na validação com o robô ligado.",
+            "description": "Payloads crus em cache (`multiple_state` já decodificado). Presente para permitir fixar a extração na validação com o robô ligado.",
             "title": "Raw"
+          },
+          "settings": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SettingsSection"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`null` se `rt/multiplestate` não chegou ou não é JSON."
           },
           "since": {
             "description": "Momento (UTC) da última transição de `state`.",
@@ -367,6 +1341,94 @@
           "since"
         ],
         "title": "StatusResponse",
+        "type": "object"
+      },
+      "UploadAccepted": {
+        "description": "Envio aceito pela api (`202`); acompanhe em `GET /audio/uploads/{id}`.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "total_chunks": {
+            "title": "Total Chunks",
+            "type": "integer"
+          },
+          "upload_id": {
+            "title": "Upload Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "upload_id",
+          "name",
+          "total_chunks"
+        ],
+        "title": "UploadAccepted",
+        "type": "object"
+      },
+      "UploadState": {
+        "description": "Estado de um envio.",
+        "enum": [
+          "uploading",
+          "done",
+          "failed"
+        ],
+        "title": "UploadState",
+        "type": "string"
+      },
+      "UploadStatusResponse": {
+        "description": "Estado de um envio.\n\n`done` = o robô aceitou todos os blocos; a confirmação é `file_id`\naparecer em `GET /audio/files`.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`timeout`, `disconnected`, `rejected: …` ou `error: …`.",
+            "title": "Error"
+          },
+          "file_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Id novo na lista depois do envio; `null` se não apareceu.",
+            "title": "File Id"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sent_chunks": {
+            "title": "Sent Chunks",
+            "type": "integer"
+          },
+          "state": {
+            "$ref": "#/components/schemas/UploadState"
+          },
+          "total_chunks": {
+            "title": "Total Chunks",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "name",
+          "sent_chunks",
+          "total_chunks",
+          "file_id",
+          "error"
+        ],
+        "title": "UploadStatusResponse",
         "type": "object"
       },
       "ValidationError": {
@@ -418,6 +1480,511 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/audio/files": {
+      "get": {
+        "description": "`audio_list` do robô: `id`, `name` e o resto em `extra`.",
+        "operationId": "list_files_audio_files_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AudioFileResponse"
+                  },
+                  "title": "Response List Files Audio Files Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Lista os áudios guardados no robô",
+        "tags": [
+          "audio"
+        ]
+      },
+      "post": {
+        "description": "Valida, converte (MP3 → WAV 44,1 kHz) e envia em segundo plano.\n\nUm envio por vez. Os blocos ocupam o data channel do `move` e do `stop`\npor minutos num arquivo grande. Acompanhe em `GET /audio/uploads/{id}`.",
+        "operationId": "upload_file_audio_files_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "description": "WAV ou MP3 (detectado pelo conteúdo).",
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Nome no robô (1–64 caracteres, sem `/`, `\\` nem controle). Sem ele, o nome do arquivo sem extensão.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Já há um envio em andamento, ou o nome já existe."
+          },
+          "413": {
+            "description": "O arquivo, ou o WAV que iria ao robô, passa de `GO2_AUDIO_MAX_UPLOAD_MB`."
+          },
+          "415": {
+            "description": "Não é WAV nem MP3, ou não decodifica."
+          },
+          "422": {
+            "description": "Nome inválido ou corpo sem o campo `file`."
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Envia um WAV ou MP3 ao robô",
+        "tags": [
+          "audio"
+        ]
+      }
+    },
+    "/audio/files/{file_id}": {
+      "delete": {
+        "description": "Responde depois de o robô aceitar.",
+        "operationId": "delete_file_audio_files__file_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "title": "File Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Apaga um áudio",
+        "tags": [
+          "audio"
+        ]
+      },
+      "patch": {
+        "description": "Responde depois de o robô aceitar.",
+        "operationId": "rename_file_audio_files__file_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "title": "File Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AudioRenameRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioRenamedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Renomeia um áudio",
+        "tags": [
+          "audio"
+        ]
+      }
+    },
+    "/audio/files/{file_id}/play": {
+      "post": {
+        "description": "Aceite do robô; não espera o som terminar.",
+        "operationId": "play_file_audio_files__file_id__play_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "title": "File Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Toca um áudio guardado",
+        "tags": [
+          "audio"
+        ]
+      }
+    },
+    "/audio/pause": {
+      "post": {
+        "description": "Responde depois de o robô aceitar.",
+        "operationId": "pause_audio_pause_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Pausa a reprodução",
+        "tags": [
+          "audio"
+        ]
+      }
+    },
+    "/audio/play-mode": {
+      "get": {
+        "description": "Modo informado pelo robô.",
+        "operationId": "get_play_mode_audio_play_mode_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayModeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Lê o modo de reprodução",
+        "tags": [
+          "audio"
+        ]
+      },
+      "put": {
+        "description": "`single_cycle`, `no_cycle` ou `list_loop`. `list_loop` pode tocar sem fim.",
+        "operationId": "set_play_mode_audio_play_mode_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlayModeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayModeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Define o modo de reprodução",
+        "tags": [
+          "audio"
+        ]
+      }
+    },
+    "/audio/player": {
+      "get": {
+        "description": "Do tópico `AUDIO_HUB_PLAY_STATE`, sem falar com o robô.",
+        "operationId": "player_audio_player_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerStateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Último estado do player do robô, cru",
+        "tags": [
+          "audio"
+        ]
+      }
+    },
+    "/audio/resume": {
+      "post": {
+        "description": "Responde depois de o robô aceitar.",
+        "operationId": "resume_audio_resume_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Retoma a reprodução",
+        "tags": [
+          "audio"
+        ]
+      }
+    },
+    "/audio/silence": {
+      "post": {
+        "description": "Pausa o hub e para o alto-falante (F-007). Não mexe no movimento.",
+        "operationId": "silence_audio_silence_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Cala o robô: pausa o hub e para o alto-falante",
+        "tags": [
+          "audio"
+        ]
+      }
+    },
+    "/audio/uploads/{upload_id}": {
+      "get": {
+        "description": "`uploading`, `done` ou `failed` (com o motivo em `error`).",
+        "operationId": "upload_status_audio_uploads__upload_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "upload_id",
+            "required": true,
+            "schema": {
+              "title": "Upload Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Envio desconhecido (guardam-se os 20 últimos)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Estado de um envio",
+        "tags": [
+          "audio"
+        ]
+      }
+    },
     "/capabilities": {
       "get": {
         "description": "Não depende do robô: responde igual com ele ligado ou desligado.",
@@ -650,6 +2217,217 @@
         ]
       }
     },
+    "/device/brightness": {
+      "get": {
+        "description": "Nível guardado no robô.",
+        "operationId": "get_brightness_device_brightness_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceLevelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Lê o brilho da lanterna",
+        "tags": [
+          "device"
+        ]
+      },
+      "put": {
+        "description": "Responde depois de o robô aceitar; até `GO2_MAX_BRIGHTNESS`.",
+        "operationId": "set_brightness_device_brightness_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceLevelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceLevelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Define o brilho da lanterna",
+        "tags": [
+          "device"
+        ]
+      }
+    },
+    "/device/led": {
+      "put": {
+        "description": "Responde depois de o robô aceitar. Não há leitura da cor.",
+        "operationId": "set_led_device_led_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LedRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Mostra uma cor no LED por um tempo",
+        "tags": [
+          "device"
+        ]
+      }
+    },
+    "/device/volume": {
+      "get": {
+        "description": "Nível guardado no robô.",
+        "operationId": "get_volume_device_volume_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceLevelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Lê o volume do alto-falante",
+        "tags": [
+          "device"
+        ]
+      },
+      "put": {
+        "description": "Responde depois de o robô aceitar; até `GO2_MAX_VOLUME`.",
+        "operationId": "set_volume_device_volume_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceLevelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceLevelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "description": "O robô recusou (código ≠ 0) ou respondeu algo ilegível."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          },
+          "504": {
+            "description": "O robô não respondeu em `GO2_REQUEST_TIMEOUT_S`."
+          }
+        },
+        "summary": "Define o volume do alto-falante",
+        "tags": [
+          "device"
+        ]
+      }
+    },
     "/safety/obstacle-avoidance": {
       "get": {
         "description": "Espera a resposta do robô.\n\nSujeito a `504` se ele não responder dentro de `GO2_REQUEST_TIMEOUT_S`.",
@@ -709,6 +2487,104 @@
         "summary": "Liga ou desliga o desvio de obstáculo",
         "tags": [
           "safety"
+        ]
+      }
+    },
+    "/speaker": {
+      "get": {
+        "description": "`playing` quer dizer que a api está enviando o áudio.",
+        "operationId": "get_speaker_speaker_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpeakerResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "O que está tocando",
+        "tags": [
+          "speaker"
+        ]
+      }
+    },
+    "/speaker/play": {
+      "post": {
+        "description": "Lê o upload (até o teto), decodifica numa thread e começa a enviar.\n\nUm `play` ou `stop` que chegue durante a decodificação vence: este\nresponde `202` mas não toca.",
+        "operationId": "play_speaker_play_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "description": "WAV ou MP3.",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaybackResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "413": {
+            "description": "Arquivo acima de `GO2_AUDIO_MAX_UPLOAD_MB`."
+          },
+          "415": {
+            "description": "Não é WAV nem MP3 (pelo conteúdo) ou não decodifica."
+          },
+          "422": {
+            "description": "Sem `multipart/form-data` ou sem o campo `file`."
+          },
+          "503": {
+            "description": "Sem conexão com o robô."
+          }
+        },
+        "summary": "Toca um WAV ou MP3 no alto-falante, substituindo o atual",
+        "tags": [
+          "speaker"
+        ]
+      }
+    },
+    "/speaker/stop": {
+      "post": {
+        "description": "Volta ao silêncio e cancela `play` em decodificação; vale sem conexão.",
+        "operationId": "stop_speaker_stop_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpeakerStopResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Cala o alto-falante",
+        "tags": [
+          "speaker"
         ]
       }
     },

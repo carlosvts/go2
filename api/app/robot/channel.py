@@ -8,6 +8,7 @@ from app.exceptions import RobotTimeoutError
 from app.robot.envelope import SportRequestBuilder
 from app.robot.link import RobotLink
 from app.robot.unitree import (
+    AUDIO_API,
     DATA_CHANNEL_TYPE,
     OBSTACLES_AVOID_API,
     RTC_TOPIC,
@@ -84,6 +85,18 @@ class ApiChannel:
             ) from exc
 
 
+# Serviço VUI (luz e som). Os api_ids não estão nas constantes da lib 2.2.0:
+# vêm do exemplo `examples/go2/data_channel/vui/vui.py` e não foram vistos no
+# robô (F-005).
+VUI_API: Mapping[str, int] = {
+    "SetVolume": 1003,
+    "GetVolume": 1004,
+    "SetBrightness": 1005,
+    "GetBrightness": 1006,
+    "SetLed": 1007,
+}
+
+
 class SportChannel(ApiChannel):
     """Comandos esportivos (`SPORT_CMD`) em `rt/api/sport/request`."""
 
@@ -104,4 +117,35 @@ class ObstacleAvoidChannel(ApiChannel):
             request_timeout_s,
             topic=RTC_TOPIC["OBSTACLES_AVOID"],
             api_ids=OBSTACLES_AVOID_API,
+        )
+
+
+class VuiChannel(ApiChannel):
+    """Lanterna, LED e volume (`VUI_API`), em `rt/api/vui/request` (F-005).
+
+    Só :meth:`request`: toda chamada VUI espera a resposta do robô, porque o
+    `202` da api significa que o robô aceitou (`header.status.code == 0`).
+    """
+
+    def __init__(self, link: RobotLink, request_timeout_s: float) -> None:
+        """Recebe a conexão e o teto de espera de :meth:`request`."""
+        super().__init__(
+            link, request_timeout_s, topic=RTC_TOPIC["VUI"], api_ids=VUI_API
+        )
+
+
+class AudioHubChannel(ApiChannel):
+    """Biblioteca de áudio (`AUDIO_API`), em `rt/api/audiohub/request` (F-006).
+
+    Como no VUI, só :meth:`request`. O `parameter` vai como string JSON,
+    igual à classe `WebRTCAudioHub` da lib.
+    """
+
+    def __init__(self, link: RobotLink, request_timeout_s: float) -> None:
+        """Recebe a conexão e o teto de espera de :meth:`request`."""
+        super().__init__(
+            link,
+            request_timeout_s,
+            topic=RTC_TOPIC["AUDIO_HUB_REQ"],
+            api_ids=AUDIO_API,
         )

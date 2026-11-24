@@ -1,22 +1,25 @@
 # Tópicos que importam
 
-**Em uma frase:** a lib conhece dezenas de tópicos, mas o projeto usa (ou vai usar) só estes.
+**Em uma frase:** a lib conhece dezenas de tópicos, mas a api usa só estes. A lista completa, com o que ficou de fora e por quê, está em [`cobertura_lib.md`](../cobertura_lib.md).
 
 | Nome na lib (`RTC_TOPIC[...]`) | Tópico | Direção | O que é | Uso |
 |---|---|---|---|---|
 | `SPORT_MOD` | `rt/api/sport/request` | → robô | Comandos de postura, movimento e gestos | ✅ todos os `/commands/*` |
-| `SPORT_MOD_STATE` | `rt/sportmodestate` | ← robô | Modo atual, posição, velocidade | ✅ `/status` · 🔜 `/ws/telemetry` |
-| `LOW_STATE` | `rt/lf/lowstate` | ← robô | IMU, motores, bateria (baixa frequência, o `lf`) | ✅ `/status` · 🔜 `/ws/telemetry` |
-| `ULIDAR_ARRAY` | `rt/utlidar/voxel_map_compressed` | ← robô | LiDAR comprimido | 🔜 `/ws/lidar` |
-| `VUI` | `rt/api/vui/request` | → robô | Volume, brilho, LED | 🔜 `/device/*` |
-| `AUDIO_HUB_REQ` | `rt/api/audiohub/request` | → robô | Biblioteca de áudio do robô | 🔜 `/audio/*` |
-| `OBSTACLES_AVOID` | `rt/api/obstacles_avoid/request` | → robô | Desvio de obstáculo | ⏸ `/safety/*` |
+| `SPORT_MOD_STATE` | `rt/sportmodestate` | ← robô | Modo atual, posição, velocidade | ✅ `/status` (`imu`, `motion`) · `/ws/state` |
+| `LOW_STATE` | `rt/lf/lowstate` | ← robô | IMU, motores, bateria (baixa frequência, o `lf`) | ✅ `/status` (`battery`, `motors`) · `/ws/state` |
+| `MULTIPLE_STATE` | `rt/multiplestate` | ← robô | Brilho, volume, altura, nível de velocidade, desvio | ✅ `/status` (`settings`) · `/ws/state` |
+| `ULIDAR_ARRAY` | `rt/utlidar/voxel_map_compressed` | ← robô | LiDAR comprimido | ✅ `/ws/lidar` · métricas no `/ws/telemetry` |
+| `ULIDAR_STATE`, `ROBOTODOM` | `rt/utlidar/lidar_state`, `rt/utlidar/robot_pose` | ← robô | Estado do sensor e pose do robô | ✅ `/ws/telemetry` |
+| `VUI` | `rt/api/vui/request` | → robô | Volume, brilho, LED (api_ids só no exemplo da lib) | ✅ `/device/*` |
+| `AUDIO_HUB_REQ` | `rt/api/audiohub/request` | → robô | Biblioteca de áudio do robô | ✅ `/audio/*` |
+| `AUDIO_HUB_PLAY_STATE` | `rt/audiohub/player/state` | ← robô | Estado do player do robô | ✅ `GET /audio/player` · `/ws/state` |
+| `OBSTACLES_AVOID` | `rt/api/obstacles_avoid/request` | → robô | Desvio de obstáculo | ✅ `/safety/obstacle-avoidance` |
 
-O vídeo **não** é um tópico: chega como track WebRTC separada.
+O vídeo **não** é um tópico: chega como track WebRTC separada (`/ws/video`). O áudio do `/speaker/play` também vai por track, no sentido contrário. Os erros do robô (`errors`, `add_error`, `rm_error`) são tipos de mensagem do data channel, não tópicos.
 
 ## Pegadinha
 
-O formato exato do payload de `lowstate` e `sportmodestate` ainda não foi fixado. Por isso o `GET /status?raw=true` devolve o payload cru, para a validação com o robô ligado.
+Os nomes dos campos vêm dos exemplos da lib e ainda não foram conferidos no robô. Por isso o `GET /status?raw=true` devolve também os payloads crus, para a validação com o robô ligado.
 
 ## Mais detalhes
 

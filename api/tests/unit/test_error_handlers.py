@@ -13,6 +13,7 @@ from app.error_handlers import ErrorHandlers
 from app.exceptions import (
     Go2Error,
     InvalidCommandError,
+    RobotRejectedError,
     RobotTimeoutError,
     RobotUnavailableError,
 )
@@ -37,6 +38,7 @@ def _body(response: Any) -> Any:
         (InvalidCommandError("vx fora do limite"), HTTPStatus.UNPROCESSABLE_ENTITY),
         (RobotUnavailableError("sem conexão"), HTTPStatus.SERVICE_UNAVAILABLE),
         (RobotTimeoutError("sem resposta"), HTTPStatus.GATEWAY_TIMEOUT),
+        (RobotRejectedError("código 3104"), HTTPStatus.BAD_GATEWAY),
     ],
 )
 async def test_excecao_mapeada_vira_o_status_configurado(

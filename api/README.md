@@ -1,81 +1,231 @@
 # go2-api
 
-API HTTP que mantém e multiplexa a **única conexão WebRTC** com o Unitree Go2 (NEURON/UFLA). O robô só aceita uma conexão por vez, então os outros serviços (voz, chat etc.) mandam comandos por HTTP em vez de conectar direto.
+API HTTP e WebSocket para controlar e observar um **Unitree Go2** pela rede, sem lidar com WebRTC. Ela mantém a **única conexão WebRTC** que o robô aceita e a divide entre quantos clientes você quiser: scripts, notebooks, outros serviços. Projeto do NEURON/UFLA.
+
 <img width="1472" height="800" alt="image" src="https://github.com/user-attachments/assets/f698d3db-2de3-4f88-ac25-461d178a3c12" />
 
-## Rodando
+**O que dá para fazer:** mudar postura, fazer gestos, andar e parar; ler bateria, IMU, motores, temperaturas e erros; acender a lanterna, mudar a cor do LED e o volume; tocar áudio no alto-falante ou guardar áudios no robô; receber em tempo real a nuvem de pontos do LiDAR, o vídeo da câmera e o estado do robô.
+
+> [!WARNING]
+> É um robô de ~15 kg. Antes de mandar ele andar, leia [Segurança](#segurança). Não há autenticação: quem alcança a porta controla o robô. Use só na rede do laboratório.
+
+## Começar
+
+### 1. Pegar só a api
+
+Este repositório também tem o pipeline de voz (`server/`, `tvbox/`), de que você não precisa. Para baixar só a api e os contratos:
 
 ```bash
-cp .env.example .env    # preencha GO2_ROBOT_SERIAL_NUMBER ou GO2_ROBOT_IP
-uv sync
-uv run uvicorn app.main:create_app --factory --reload
+git clone --filter=blob:none --sparse https://github.com/carlosvts/go2.git
+cd go2
+git sparse-checkout set api specs/contracts
+cd api
 ```
 
-- Documentação interativa: `http://127.0.0.1:8000/docs`
-- Testes (não precisam do robô): `uv run pytest --cov`
-- Qualidade: `uv run ruff check . && uv run ruff format --check . && uv run mypy`
-
-Prefira o **serial** ao IP.
-
-> [!NOTE]
-> `192.168.123.x` é a rede interna do robô.
-
-### Com Docker
+### 2. Configurar
 
 ```bash
 cp .env.example .env
+```
+
+No `.env`, o mínimo é dizer onde o robô está. Com o robô no Wi-Fi do roteador (modo **LocalSTA**), use o **serial** (`B42D...`, na etiqueta ou no app). A api acha o robô mesmo se o IP mudar:
+
+```bash
+GO2_CONNECTION_METHOD=LocalSTA
+GO2_ROBOT_SERIAL_NUMBER=B42D2000XXXXXXXX
+```
+
+Com o robô criando a própria rede (modo **LocalAP**, IP fixo `192.168.12.1`), basta `GO2_CONNECTION_METHOD=LocalAP` com o computador conectado ao Wi-Fi do robô.
+
+> [!NOTE]
+> `192.168.123.x` é a rede interna do robô, alcançável só por cabo. Não use esse IP.
+
+### 3. Rodar
+
+**Com Docker** (Linux; recomendado para quem só quer usar):
+
+```bash
 docker compose --profile api up --build
 ```
 
-O container usa a rede do próprio PC (só Linux) e tem um healthcheck que indica se a API está no ar (não se o robô está conectado: isso é o `connected` do `GET /status`). Detalhes, reconexão e checklist de teste com o robô na [ficha](docs/essencial/rodar-com-docker.md).
+**Com Python** (precisa do [uv](https://docs.astral.sh/uv/) e da PortAudio: `sudo apt install portaudio19-dev` no Debian/Ubuntu):
 
-### Configuração
+```bash
+uv sync
+uv run uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000
+```
 
-Tudo por variáveis de ambiente (ou `.env`), comentadas em [`.env.example`](.env.example): modo de conexão e IP/serial do robô (`GO2_CONNECTION_METHOD`, `GO2_ROBOT_IP`, `GO2_ROBOT_SERIAL_NUMBER`), conexão na subida e intervalo de reconexão (`GO2_CONNECT_ON_STARTUP`, `GO2_RECONNECT_INTERVAL_S`), limites do `move` (`GO2_MAX_VX`, `GO2_MAX_VY`, `GO2_MAX_VYAW`, `GO2_MOVE_MAX_DURATION_S`, `GO2_MOVE_RATE_HZ`), espera por resposta do robô (`GO2_REQUEST_TIMEOUT_S`) e endereço/porta do servidor (`UVICORN_HOST`, `UVICORN_PORT`).
+Abra **`http://localhost:8000/docs`**: todas as rotas, com os corpos e a opção de testar no navegador. O log deve mostrar `🐝 Conectado ao Go2.`, e o `GET /status` deve ter `"connected": true`.
+
+O container usa a rede do próprio PC (`network_mode: host`), porque a descoberta do robô usa multicast e o WebRTC precisa anunciar o IP real. Por isso o Docker só funciona assim no Linux. Detalhes na [ficha](docs/essencial/rodar-com-docker.md).
+
+### Primeiros comandos
+
+```bash
+API=http://localhost:8000
+curl $API/status                                   # conexão, bateria, sensores
+curl -X POST $API/commands/posture -H 'content-type: application/json' -d '{"cmd":"stand_up"}'
+curl -X POST $API/commands/gesture -H 'content-type: application/json' -d '{"cmd":"hello"}'
+curl -X PUT  $API/device/led -H 'content-type: application/json' -d '{"color":"cyan","duration_s":5}'
+curl -X POST $API/speaker/play -F file=@meu-audio.mp3
+curl -X POST $API/commands/stop                    # parar (deixa o robô de pé)
+```
+
+Em Python:
+
+```python
+import httpx
+
+api = httpx.Client(base_url="http://localhost:8000")
+print(api.get("/status").json()["battery"])
+api.post(
+    "/commands/posture", json={"cmd": "balance_stand"}
+)  # necessário antes de andar
+api.post("/commands/move", json={"vx": 0.3, "vy": 0, "vyaw": 0, "duration_s": 2})
+```
+
+### Insomnia
+
+[`insomnia/go2-api.json`](insomnia/go2-api.json) tem **todas as rotas**, organizadas por grupo, com exemplos prontos: cada postura, gesto e cor de LED, os uploads de áudio e os quatro WebSockets. Para importar: arraste o arquivo para o Insomnia (ou *Import* → *From File*). No ambiente *Base Environment*, ajuste `base_url` e `ws_url` para o IP da máquina da api; `file_id` e `upload_id` são preenchidos à mão com o que as respostas devolverem.
+
+A coleção é gerada a partir do próprio app: rota nova → `uv run python scripts/make_insomnia.py` (um teste acusa se esquecer).
 
 ### Sem o robô
 
-Para testar os endpoints sem o robô, use no `.env`:
+Para desenvolver sem o robô:
 
 ```bash
 GO2_CONNECTION_METHOD=LocalAP
 GO2_CONNECT_ON_STARTUP=false
 ```
 
-A API sobe sem tentar conectar. O `GET /status` responde `200` com `connected: false`, os comandos respondem `503` e corpos inválidos respondem `422`.
+A api sobe sem conectar: `GET /status` responde `connected: false`, os comandos respondem `503` e corpos inválidos respondem `422`. Os testes também não precisam do robô: `uv run pytest`.
 
-> [!NOTE]
-> Com `LocalSTA`, a API exige `GO2_ROBOT_IP` ou `GO2_ROBOT_SERIAL_NUMBER` mesmo sem conectar. Por isso o exemplo usa `LocalAP`.
+## Segurança
+
+- **`move` exige `balance_stand` antes.** Só `stand_up` não basta ([ficha](docs/essencial/balance-stand-vs-stand-up.md)).
+- **`POST /commands/stop`** interrompe o movimento e deixa o robô de pé. **`damp`** desliga os motores: **o robô cai** se estiver de pé.
+- Tenha sempre um jeito de parar à mão: um terminal com o `curl -X POST $API/commands/stop` já digitado, e o controle remoto do Go2.
+- Gesto já enviado não é cancelável; só o `stop` interrompe um `move`.
+- O desvio de obstáculo nativo (`/safety/obstacle-avoidance`), no teste da equipe, **para** o robô antes de bater. Não foi visto contornar.
+- Truques (flips, pulos) e o modo bípede **não estão expostos** de propósito: risco real de queda.
+- Som alto e luz forte de repente assustam quem está perto, sobretudo criança. `POST /audio/silence` cala o robô.
+- Os streams (LiDAR, vídeo) dividem a conexão com os comandos. Até a equipe medir o efeito no `stop`, evite mover o robô com eles ligados.
+
+## O que a api faz
+
+Todas as rotas, com os corpos e as respostas, estão em **`/docs`** (OpenAPI). Este resumo diz o que cada uma faz.
+
+**Convenções**:
+- `202`: o robô **aceitou** o pedido. Não quer dizer que terminou. Ex.: o gesto pode estar em andamento, e o som pode ainda não ter tocado.
+- `422`: corpo inválido; nada é enviado.
+- `502`: o robô recusou ou respondeu algo ilegível.
+- `503`: sem conexão com o robô.
+- `504`: o robô não respondeu em `GO2_REQUEST_TIMEOUT_S`.
+
+Em `502` e `504` o pedido **pode ter sido aplicado**: confira com o `GET` correspondente.
+
+### Movimento
+
+| Rota | Corpo | O que faz |
+|---|---|---|
+| `POST /commands/posture` | `{"cmd": "stand_up"}` | Postura ([lista](#posturas)). Cancela o `move` em andamento. |
+| `POST /commands/gesture` | `{"cmd": "hello"}` | Gesto ([lista](#gestos)). Cancela o `move` em andamento. |
+| `POST /commands/move` | `{"vx", "vy", "vyaw", "duration_s"}` | Anda durante `duration_s` e para. Acima de `GO2_MAX_*` ou `GO2_MOVE_MAX_DURATION_S` responde `422`. Um `move` novo substitui o anterior. |
+| `POST /commands/stop` | — | Para e fica de pé onde está. |
+| `PUT` / `GET /commands/speed` | `{"level": 1}` | Nível de velocidade. |
+| `PUT` / `GET /safety/obstacle-avoidance` | `{"enabled": true}` | Liga, desliga e consulta o desvio de obstáculo nativo. |
+| `GET /capabilities` | — | Comandos de movimento aceitos, para catálogos automáticos. Não depende do robô. |
+
+### Estado e sensores
+
+| Rota | O que faz |
+|---|---|
+| `GET /status` | Conexão (`connected`, `state`, `since`), `battery` (percentual, tensão, corrente, ciclos, temperaturas), `imu`, `motion` (modo, posição, velocidade, altura do corpo…), `motors` (ângulo, temperatura), `body_temperature_c`, `settings` (brilho, volume, nível de velocidade, desvio…) e `errors`, os erros ativos do robô. `errors: null` quer dizer **desconhecido**, não "sem erros". Sempre `200`; `?raw=true` inclui os payloads crus. |
+| `GET /ws/state` (WebSocket) | O mesmo em tempo real, em frames JSON, até `GO2_STATE_MAX_HZ` por tópico; inclui o estado do alto-falante e do player do robô. [Contrato](../specs/contracts/ws-state.md). |
+
+Os nomes e as unidades dos campos vêm dos exemplos da lib e ainda não foram conferidos no robô.
+
+### Lanterna, LED e volume
+
+| Rota | Corpo | O que faz |
+|---|---|---|
+| `PUT` / `GET /device/brightness` | `{"level": 0–10}` | Brilho da lanterna. |
+| `PUT` / `GET /device/volume` | `{"level": 0–10}` | Volume do alto-falante. |
+| `PUT /device/led` | `{"color", "duration_s", "flash_cycle_ms"?}` | Cor do LED por um tempo: `white`, `red`, `yellow`, `blue`, `green`, `cyan` ou `purple`. Com `flash_cycle_ms`, pisca. |
+
+`GO2_MAX_VOLUME` e `GO2_MAX_BRIGHTNESS` limitam o que a api aceita; o padrão `10` não limita.
+
+### Áudio
+
+Formatos: **WAV e MP3**. Não precisa de `ffmpeg`. Limite: `GO2_AUDIO_MAX_UPLOAD_MB` (padrão 5 MB).
+
+| Rota | O que faz |
+|---|---|
+| `POST /speaker/play` (multipart `file`) | Toca o arquivo no alto-falante **na hora**, sem guardar no robô. Substitui o que estiver tocando. |
+| `POST /speaker/stop`, `GET /speaker` | Cala; diz o que está tocando. |
+| `GET /audio/files` | Lista os áudios **guardados no robô**. |
+| `POST /audio/files` (multipart `file`, `name`?) | Envia um áudio para o robô guardar. O envio é lento (minutos para alguns MB): responde `202` com um `upload_id` e o andamento fica em `GET /audio/uploads/{upload_id}`. |
+| `POST /audio/files/{id}/play`, `PATCH` / `DELETE /audio/files/{id}` | Toca, renomeia, apaga. |
+| `POST /audio/pause`, `POST /audio/resume`, `PUT` / `GET /audio/play-mode` | Controle do player do robô (`single_cycle`, `no_cycle`, `list_loop`). |
+| `GET /audio/player` | Último estado do player publicado pelo robô (cru). |
+| `POST /audio/silence` | **Cala tudo**: pausa o player do robô e para o alto-falante. |
+
+### Streams (WebSocket)
+
+Todos aceitam a conexão, mandam o estado da conexão com o robô em texto e ficam abertos se ele cair. Também têm limite de clientes (`1013` quando cheio).
+
+| Rota | O que manda | Contrato |
+|---|---|---|
+| `/ws/lidar` | Nuvem de pontos do LiDAR, frames binários `float32` | [ws-lidar](../specs/contracts/ws-lidar.md) |
+| `/ws/telemetry` | Métricas, pose e estado do LiDAR, frames JSON | [ws-telemetry](../specs/contracts/ws-telemetry.md) |
+| `/ws/video` | Câmera frontal, um JPEG por frame binário | [ws-video](../specs/contracts/ws-video.md) |
+| `/ws/state` | Estado e sensores, frames JSON | [ws-state](../specs/contracts/ws-state.md) |
+
+Ferramentas prontas em `scripts/`:
+- visualizadores no navegador: `lidar_viewer.html` e `video_viewer.html`;
+- clientes de diagnóstico: `ws_lidar_client.py`, `ws_video_client.py` e `ws_state_client.py`;
+- gravadores: `record_lidar.py` e `record_video.py`.
+
+### O que já foi testado no robô
+
+Cada rota tem uma spec em [`specs/features/`](../specs/features/) com o que já foi verificado. Resumo:
+
+| Grupo | Testado no robô |
+|---|---|
+| Postura, gestos, `move`, `stop` | sim, usados pela equipe com o pipeline de voz |
+| Velocidade, desvio de obstáculo | em parte (o desvio para antes de bater) |
+| `/ws/lidar`, `/ws/telemetry` | dados reais gravados; efeito no `stop` não medido |
+| `/ws/video`, `/status` ampliado, `/ws/state`, `/device/*`, áudio | **ainda não**: só testes automáticos |
+
+## Configuração
+
+Tudo por variáveis de ambiente ou pelo `.env`, comentadas em [`.env.example`](.env.example). As principais:
+
+| Variável | Padrão | Para quê |
+|---|---|---|
+| `GO2_CONNECTION_METHOD` | `LocalSTA` | `LocalSTA` (roteador) ou `LocalAP` (rede do robô) |
+| `GO2_ROBOT_SERIAL_NUMBER` / `GO2_ROBOT_IP` | — | Onde está o robô (prefira o serial) |
+| `GO2_CONNECT_ON_STARTUP` | `true` | `false` para subir sem robô |
+| `GO2_MAX_VX`, `GO2_MAX_VY`, `GO2_MAX_VYAW`, `GO2_MOVE_MAX_DURATION_S` | 1,0 / 1,0 / 2,0 / 10 | Limites do `move` |
+| `GO2_REQUEST_TIMEOUT_S` | `5` | Espera por resposta do robô |
+| `GO2_MAX_VOLUME`, `GO2_MAX_BRIGHTNESS` | `10` | Tetos de volume e brilho |
+| `GO2_AUDIO_MAX_UPLOAD_MB` | `5` | Tamanho máximo de áudio |
+| `GO2_LIDAR_MAX_CLIENTS`, `GO2_VIDEO_MAX_CLIENTS`, `GO2_STATE_MAX_CLIENTS`, `GO2_TELEMETRY_MAX_CLIENTS` | 1 / 2 / 4 / 1 | Clientes por stream (`0` desliga) |
+| `UVICORN_HOST`, `UVICORN_PORT` | `0.0.0.0`, `8000` | Endereço e porta da api |
 
 ## Arquitetura
 
-| Módulo                            | Responsabilidade                                                                                |
-| --------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `app/main.py`                     | App factory (`create_app`) e lifespan.                                                          |
-| `app/routers/`                    | Wrappers HTTP finos, um por grupo de endpoints.                                                 |
-| `app/requests/`, `app/responses/` | Corpos de entrada/saída; entrada inválida nem chega a existir.                                  |
-| `app/robot/`                      | Tudo que fala com o robô, sem HTTP: `link`, `channel`, `movement`, `state`, fachada `Go2Robot`. |
-| `app/robot/unitree.py`            | Única fronteira com a lib da Unitree.                                                           |
-| `app/error_handlers.py`           | Exceção de domínio → status HTTP, num só lugar.                                                 |
+| Módulo | Responsabilidade |
+|---|---|
+| `app/main.py` | App factory (`create_app`) e lifespan. |
+| `app/routers/` | Wrappers HTTP finos, um por grupo de rotas. |
+| `app/requests/`, `app/responses/` | Corpos de entrada e saída; entrada inválida nem chega a existir. |
+| `app/robot/` | Tudo que fala com o robô, sem HTTP: conexão, canais, movimento, estado, streams, áudio, fachada `Go2Robot`. |
+| `app/robot/unitree.py` | Única fronteira com a lib da Unitree (`unitree_webrtc_connect` 2.2.0). |
+| `app/error_handlers.py` | Exceção de domínio → status HTTP, num só lugar. |
 
-## Endpoints
-
-| Endpoint                 | Corpo                                | O que faz                                                                                                                                                                         |
-| ------------------------ | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /status`            | —                                    | Conexão (`connected`, `state`, `since`), bateria e modo. `state` é `connected`, `disconnected` ou `reconnecting`. Sempre `200`; `?raw=true` inclui os payloads crus.             |
-| `GET /capabilities`      | —                                    | Lista os comandos que a API aceita (nome, método, rota e campos do corpo) e um `version` que muda quando a lista muda. Não depende do robô.                                       |
-| `POST /commands/posture` | `{"cmd": "stand_up"}`                | Muda a postura ([lista abaixo](#posturas)). Cancela o `move` em andamento.                                                                                                        |
-| `POST /commands/gesture` | `{"cmd": "hello"}`                   | Executa um gesto ([lista abaixo](#gestos)). Cancela o `move` em andamento.                                                                                                        |
-| `POST /commands/move`    | `{"vx", "vy", "vyaw", "duration_s"}` | Move o robô durante `duration_s` e para. Acima dos limites configurados (`GO2_MAX_*`, `GO2_MOVE_MAX_DURATION_S`) responde `422`. Um `move` novo substitui o anterior.             |
-| `POST /commands/stop`    | —                                    | Interrompe o `move` em andamento e envia `StopMove`: o robô para de andar e fica de pé onde está, sem mudar de postura. Não desliga os motores (para isso, use a postura `damp`). |
-| `PUT /commands/speed`    | `{"level": 1}`                       | Define o nível de velocidade.                                                                                                                                                     |
-| `GET /commands/speed`    | —                                    | Lê o nível de velocidade. Espera resposta do robô: `504` se ele não responder em `GO2_REQUEST_TIMEOUT_S`.                                                               |
-| `PUT /safety/obstacle-avoidance` | `{"enabled": true}`                  | Liga ou desliga o desvio de obstáculo nativo do robô. Não espera confirmação: confira com o `GET`.                                                                                |
-| `GET /safety/obstacle-avoidance` | —                                    | Lê se o desvio está ligado: `{"enabled", "raw"}`. Espera resposta do robô (`504` em timeout); `enabled` vem `null` se a resposta não for reconhecida.                             |
-
-Os comandos respondem `202` quando são enviados, sem esperar o robô terminar. Com o robô desconectado, respondem `503`. Comando desconhecido ou corpo inválido responde `422` e nada é enviado ao robô.
-
-Se a conexão com o robô cair, a API reconecta sozinha em segundo plano ([ficha](docs/essencial/rodar-com-docker.md)).
+Qualidade: `uv run pytest --cov`, `uv run ruff check . && uv run ruff format --check . && uv run mypy`.
 
 ## Comandos
 
@@ -127,43 +277,21 @@ A lib (`SPORT_CMD`, versão 2.2.0) tem 49 comandos e a API expõe 21. Os demais 
 
 Estar na lib não garante que o robô aceite o comando: a lista é a mesma para vários firmwares. Na lib, `FreeWalk` e `LeadFollow` têm o mesmo número (1045), então um dos dois está errado.
 
-## Testar o desvio de obstáculo
-
-Com o robô de pé, em área livre, e alguém pronto para o `POST /commands/stop`:
-
-```bash
-API=http://localhost:8000
-curl -X PUT $API/safety/obstacle-avoidance -H 'Content-Type: application/json' -d '{"enabled": true}'
-curl $API/safety/obstacle-avoidance      # esperado: {"enabled": true, "raw": ...}
-```
-
-1. Se o `GET` devolver `enabled: null`, anote o `raw`: é o formato real da resposta, e o caminho de extração em `app/robot/safety.py` precisa ser ajustado a ele.
-2. Com `enabled: true`, ponha um obstáculo (uma caixa) a cerca de 1 m na frente do robô e mande-o andar devagar na direção dela:
-
-   ```bash
-   curl -X POST $API/commands/move -H 'Content-Type: application/json' \
-     -d '{"vx": 0.3, "vy": 0, "vyaw": 0, "duration_s": 3}'
-   ```
-
-3. Repita com `{"enabled": false}`. Se o robô para ou desvia só com o desvio ligado, o `Move` é filtrado. Se ele encosta na caixa nos dois casos, o desvio não vale para o `Move` da API, e o movimento terá de ir por outro canal (o `MOVE` da própria API de desvio ou o controle simulado).
-
-## Limitações atuais
+## Limitações
 
 - **Sem autenticação:** quem alcança a porta controla o robô. Use só na rede do laboratório.
-- **Sem arbitragem entre clientes:** o último `move` enviado substitui o anterior.
-- **Reconexão sem reenvio:** se a conexão cair, a API tenta de novo sozinha a cada `GO2_RECONNECT_INTERVAL_S` (`state: reconnecting` no `GET /status`). Enquanto isso os comandos respondem `503` e não são guardados para depois.
-- **Queda só visível por polling:** o `GET /status` mostra `state` (`connected`/`disconnected`/`reconnecting`) e `since`, mas ainda não há WebSocket que avise da queda: o tópico `connection` depende do hub (carlosvts/go2-api#9, carlosvts/go2-api#12). O `connected` é o que decide os `503` e pode demorar mais que o `state` para refletir uma falha.
-- **Desvio de obstáculo com o `move`:** no teste da equipe com o robô, pela pipeline de voz (ou seja, via `POST /commands/move`), com o desvio ligado o robô **parou ao ir bater** num obstáculo. Não foi visto contornar: não conte com isso ([como testar](#testar-o-desvio-de-obstáculo)).
-- **Pendente de validação com o robô ligado:** os payloads de `Move`/`SpeedLevel`, a leitura de bateria/modo e o formato da resposta do desvio de obstáculo.
+- **Sem arbitragem entre clientes:** o último pedido vale (um `move` novo substitui o anterior; a última cor do LED fica).
+- **Um processo só:** não rode o uvicorn com `--workers`. A conexão com o robô é uma só.
+- **Reconexão sem reenvio:** se a conexão cair, a api tenta de novo sozinha a cada `GO2_RECONNECT_INTERVAL_S` (`state: reconnecting`). Enquanto isso, os comandos respondem `503` e nada é guardado para depois. Cada tentativa trava a api por alguns segundos.
+- **Não verificado no robô:** formatos de vários payloads (bateria, IMU, erros, VUI, áudio) vêm dos exemplos da lib; veja a tabela "O que já foi testado no robô".
 
 ## Documentação
 
-- [`docs/go2_modelo_mental.md`](docs/go2_modelo_mental.md): visão geral e modos de rede.
-- [`docs/arquitetura_go2_api.md`](docs/arquitetura_go2_api.md): arquitetura, endpoints implementados e planejados.
-- [`docs/dossie_go2.md`](docs/dossie_go2.md): specs, protocolo e tópicos do robô.
-- [`docs/lib_unitree_webrtc_connect.md`](docs/lib_unitree_webrtc_connect.md): comportamento real da lib 2.2.0 (pub/sub, timeouts, vídeo, lidar).
-
-Índice completo em [`docs/README.md`](docs/README.md).
+- [`docs/cobertura_lib.md`](docs/cobertura_lib.md): tudo o que a lib oferece e o que a api expõe.
+- [`docs/arquitetura_go2_api.md`](docs/arquitetura_go2_api.md): arquitetura, convenções e rotas.
+- [`docs/essencial/`](docs/essencial/README.md): fichas curtas (parar o robô, modos de rede, pegadinhas da lib, Docker…).
+- [`docs/dossie_go2.md`](docs/dossie_go2.md) e [`docs/lib_unitree_webrtc_connect.md`](docs/lib_unitree_webrtc_connect.md): o robô, o protocolo e a lib 2.2.0.
+- [`../specs/contracts/`](../specs/contracts/): contratos dos streams e o OpenAPI.
 
 ## Termos
 

@@ -97,6 +97,65 @@ class Settings(BaseSettings):
     """Itens à espera por tópico, por cliente de telemetria; cheia, descarta o
     mais antigo do tópico. Não medido."""
 
+    # ─── Vídeo (/ws/video, F-003) ─────────────────────────────────────────
+    video_max_clients: int = Field(default=2, ge=0)
+    """Clientes simultâneos em `/ws/video`. Acima disso o novo leva `1013`;
+    `0` desliga a rota."""
+
+    video_client_queue: int = Field(default=1, ge=1)
+    """Frames JPEG à espera por cliente; cheia, descarta o mais antigo."""
+
+    video_encode_queue: int = Field(default=1, ge=1)
+    """Quadros à espera do codificador JPEG; cheia, descarta o mais antigo."""
+
+    video_max_fps: float = Field(default=0.0, ge=0)
+    """Teto de quadros admitidos por segundo; `0` = sem teto. Padrão a decidir
+    depois de medir a taxa da câmera (F-003 H1)."""
+
+    video_jpeg_quality: int = Field(default=80, ge=1, le=100)
+    """Qualidade do JPEG. Sugerido, sem medida (F-003 H1)."""
+
+    video_stall_s: float = Field(default=3.0, gt=0)
+    """Segundos sem quadro, com a câmera ligada, até o estado `stalled`."""
+
+    # ─── Dispositivo: lanterna, LED, volume (/device/*, F-005) ─────────────
+    max_volume: int = Field(default=10, ge=0, le=10)
+    """Teto do volume aceito em `PUT /device/volume` (0–10). `10` = sem teto.
+    Só limita o que passa pela api."""
+
+    max_brightness: int = Field(default=10, ge=0, le=10)
+    """Teto do brilho da lanterna aceito em `PUT /device/brightness` (0–10).
+    `10` = sem teto. Só limita o que passa pela api."""
+
+    led_max_duration_s: int = Field(default=60, ge=1)
+    """Duração máxima de uma cor em `PUT /device/led`. Sugerido, sem medida: o
+    limite do robô não é conhecido."""
+    # ─── Estado (/ws/state, F-004) ────────────────────────────────────────
+    state_max_clients: int = Field(default=4, ge=0)
+    """Clientes simultâneos em `/ws/state`. Acima disso o novo leva `1013`;
+    `0` desliga a rota. Sugerido, sem medida (F-004)."""
+
+    state_max_hz: float = Field(default=10.0, ge=0)
+    """Teto de frames por segundo, por cliente e por tópico de seção, no
+    `/ws/state`; `0` = sem teto. Sugerido, sem medida (F-004 A11)."""
+
+    # ─── Áudio (/audio/* F-006, /speaker/* F-007) ──────────────────────────
+    audio_max_upload_mb: float = Field(default=5.0, gt=0)
+    """Teto, em MiB, do arquivo recebido em `POST /audio/files` e
+    `POST /speaker/play` (a leitura para no limite, `413`) e também do WAV que
+    vai ao robô na F-006 (um MP3 pequeno pode virar um WAV grande). Sugerido,
+    sem medida: 5 MiB de WAV estéreo 44,1 kHz são ~30 s e ≥ 3 min de envio."""
+
+    speaker_max_duration_s: float = Field(default=120.0, gt=0)
+    """Duração máxima de um áudio em `POST /speaker/play`, em segundos (~uma
+    música). Acima disso, `413`. O arquivo inteiro é decodificado em memória
+    (48 kHz estéreo: ~11 MiB por minuto), então o teto protege a api."""
+
+    @property
+    def audio_max_upload_bytes(self) -> int:
+        """:attr:`audio_max_upload_mb` em bytes (1 MiB = 1 048 576)."""
+        return int(self.audio_max_upload_mb * 1024 * 1024)
+
     max_vx: float = Field(default=1.0, gt=0)
     """Teto de velocidade frontal aceito em `POST /commands/move`, em m/s."""
 

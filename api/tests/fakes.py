@@ -6,10 +6,13 @@ o comportamento HTTP da API; a validação contra o robô físico é manual.
 
 import asyncio
 import json
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from app.robot.ports import StateCallback
+
+# Calcula a resposta de uma request a partir das `options` dela.
+Responder = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
 
 
 class FakePubSub:
@@ -21,6 +24,8 @@ class FakePubSub:
         self.subscriptions: dict[str, StateCallback] = {}
         self.response: dict[str, Any] | None = None
         self.hang_on_request = False
+        # Se definido, responde cada request pelas `options` (vence `response`).
+        self.responder: Responder | None = None
         self.subscribe_calls: list[str] = []
         self.unsubscribed: list[str] = []
 
@@ -42,8 +47,14 @@ class FakePubSub:
     async def publish_request_new(
         self, topic: str, options: dict[str, Any] | None = None
     ) -> dict[str, Any]:
-        """Registra uma request e devolve `response` (ou nunca responde)."""
+        """Registra uma request e devolve `response` (ou nunca responde).
+
+        Com `responder`, cada request recebe a resposta calculada para ela,
+        como a lib, que casa a resposta pelo id da request.
+        """
         self.sent.append({"topic": topic, "options": options, "type": "req"})
+        if self.responder is not None:
+            return await self.responder(options or {})
         if self.hang_on_request:
             await asyncio.Event().wait()
         if self.response is None:
@@ -51,7 +62,7 @@ class FakePubSub:
             raise AssertionError(msg)
         return self.response
 
-    def publish_state(self, topic: str, data: dict[str, Any]) -> None:
+    def publish_state(self, topic: str, data: Any) -> None:
         """Simula o robô publicando `data` em `topic`."""
         self.subscriptions[topic]({"type": "msg", "topic": topic, "data": data})
 
@@ -84,6 +95,14 @@ class FakeDataChannel:
         self.traffic_saving_calls: list[bool] = []
         # `True`/`False`: resposta; exceção: lançada; "hang": nunca responde.
         self.traffic_saving_result: bool | Exception | str = True
+        self.switch_video_calls: list[bool] = []
+        self.switch_video_error: Exception | None = None
+
+    def switchVideoChannel(self, switch: bool) -> None:  # noqa: N802
+        """Imita a lib: registra o pedido, sem resposta (ou lança o erro)."""
+        self.switch_video_calls.append(switch)
+        if self.switch_video_error is not None:
+            raise self.switch_video_error
 
     async def disableTrafficSaving(self, switch: bool) -> bool:  # noqa: N802
         """Imita a lib: registra o pedido e devolve o resultado configurado."""
@@ -126,11 +145,26 @@ class FakeConnection:
         self.pc = FakePeerConnection()
         self.connect_error = connect_error
         self.disconnected = False
+        self.video_track_listener: Callable[[Any], None] | None = None
+        # Mensagens de erro do data channel (F-004); a lib real passa pelo gancho.
+        self.datachannel_message_listener: (
+            Callable[[Any, dict[str, Any]], None] | None
+        ) = None
+        # Track entregue ao ouvinte durante o `connect()`, como a lib 2.2.0.
+        self.video_track: Any = None
+        # Tracks de áudio postas no transceiver (F-007), em ordem.
+        self.audio_tracks: list[Any] = []
+
+    def attach_audio_track(self, track: Any) -> None:
+        """Registra a track posta no transceiver de áudio."""
+        self.audio_tracks.append(track)
 
     async def connect(self) -> None:
         """Marca como conectada, ou falha se configurada para tal."""
         if self.connect_error is not None:
             raise self.connect_error
+        if self.video_track is not None and self.video_track_listener is not None:
+            self.video_track_listener(self.video_track)
         self.isConnected = True
         self.pc.connectionState = "connected"
 
@@ -158,3 +192,36 @@ class FakeConnectionFactory:
     def pub_sub(self) -> FakePubSub:
         """Atalho para o `FakePubSub` da conexão."""
         return self.connection.datachannel.pub_sub
+
+
+class TrackEndedError(Exception):
+    """Fim da track, como o `MediaStreamError` do aiortc."""
+
+
+class FakeVideoTrack:
+    """Track de vídeo falsa: entrega os quadros que o teste põe na fila."""
+
+    def __init__(self) -> None:
+        """Começa vazia; a fila não tem limite, como a do aiortc."""
+        self._queue: asyncio.Queue[Any] = asyncio.Queue()
+        self.received = 0
+
+    def put(self, frame: Any) -> None:
+        """Simula o aiortc entregando um quadro decodificado."""
+        self._queue.put_nowait(frame)
+
+    def end(self) -> None:
+        """Simula o fim da track."""
+        self._queue.put_nowait(TrackEndedError())
+
+    def pending(self) -> int:
+        """Quadros que ninguém leu ainda."""
+        return self._queue.qsize()
+
+    async def recv(self) -> Any:
+        """Devolve o próximo quadro; com a track encerrada, lança erro."""
+        item = await self._queue.get()
+        if isinstance(item, Exception):
+            raise item
+        self.received += 1
+        return item

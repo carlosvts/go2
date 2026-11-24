@@ -4,6 +4,10 @@ Concentrar os imports da lib aqui (padrão *Anti-Corruption Layer*) deixa o
 resto do projeto livre de detalhes dela: se a lib mudar, só este módulo muda.
 """
 
+import base64
+import hashlib
+import json
+import logging
 from collections.abc import Sequence
 from typing import Any, ClassVar
 
@@ -17,25 +21,124 @@ from unitree_webrtc_connect import (
     UnitreeWebRTCConnection,
     WebRTCConnectionMethod,
 )
+from unitree_webrtc_connect.constants import AUDIO_API, VUI_COLOR
 from unitree_webrtc_connect.lidar.lidar_decoder_native import (
     LidarDecoder as _NativeLidarDecoder,
 )
+from unitree_webrtc_connect.msgs.error_handler import (
+    get_error_code_text,
+    get_error_source_text,
+    integer_to_hex_string,
+)
 
 from app.config import ConnectionMethod, Settings
-from app.robot.ports import WebRTCConnection
+from app.robot.ports import (
+    AudioTrack,
+    DataChannelMessageListener,
+    VideoTrackListener,
+    WebRTCConnection,
+)
 
 __all__ = [
+    "AUDIO_API",
+    "AUDIO_UPLOAD_BLOCK_CHARS",
+    "AUDIO_UPLOAD_BLOCK_INTERVAL_S",
     "DATA_CHANNEL_TYPE",
     "OBSTACLES_AVOID_API",
     "RTC_TOPIC",
     "SPORT_CMD",
+    "VUI_COLOR",
+    "AudioUploadBlocks",
     "RawLidarDecoder",
     "UnitreeConnectionFactory",
+    "VideoHookedConnection",
+    "attach_audio_track",
     "decode_points",
+    "describe_error",
     "install_raw_lidar_decoder",
 ]
 
+log = logging.getLogger(__name__)
+
 _NATIVE_DECODER = _NativeLidarDecoder()
+
+_ERROR_MESSAGE_TYPES = frozenset(
+    {
+        DATA_CHANNEL_TYPE["ERRORS"],
+        DATA_CHANNEL_TYPE["ADD_ERROR"],
+        DATA_CHANNEL_TYPE["RM_ERROR"],
+    }
+)
+"""Tipos de mensagem do data channel que a lib só imprime (F-004)."""
+
+
+def describe_error(source: int, code: int) -> tuple[str, str, str]:
+    """Textos de um erro do robô, com as funções e a tabela da lib.
+
+    Returns:
+        `(source_text, code_hex, code_text)`. `code_hex` é hex maiúsculo,
+        sem `0x` (16 → `"10"`); sem texto na tabela, os fallbacks da lib:
+        `"{source}"` e `"{source}-{code_hex}"`.
+    """
+    code_hex = str(integer_to_hex_string(code))
+    return (
+        str(get_error_source_text(source)),
+        code_hex,
+        str(get_error_code_text(source, code_hex)),
+    )
+
+
+# Protocolo de `WebRTCAudioHub.upload_audio_file` (`webrtc_audiohub.py`, lib
+# 2.2.0): a string base64 do WAV vai em blocos de 4096 caracteres, com 0,1 s
+# entre um e outro (F-006).
+AUDIO_UPLOAD_BLOCK_CHARS = 4096
+AUDIO_UPLOAD_BLOCK_INTERVAL_S = 0.1
+
+
+class AudioUploadBlocks:
+    """Os blocos do envio de um WAV ao hub de áudio, como a lib monta (F-006).
+
+    O `parameter` de cada bloco é copiado de `upload_audio_file`, campo a
+    campo e na mesma ordem. A única troca: `file_name` é o nome pedido, não o
+    nome do arquivo em disco (a api não grava o arquivo).
+    """
+
+    def __init__(self, wav: bytes, file_name: str) -> None:
+        """Calcula o MD5 e corta a string base64 de `wav` em blocos."""
+        self._file_name = file_name
+        self._file_size = len(wav)
+        # MD5 é o que o robô confere, não uso criptográfico.
+        self.file_md5 = hashlib.md5(wav).hexdigest()  # noqa: S324
+        b64 = base64.b64encode(wav).decode("utf-8")
+        size = AUDIO_UPLOAD_BLOCK_CHARS
+        self._blocks = [b64[i : i + size] for i in range(0, len(b64), size)]
+
+    @property
+    def total(self) -> int:
+        """Número de blocos (`total_block_number`)."""
+        return len(self._blocks)
+
+    def parameter(self, index: int, create_time_ms: int) -> str:
+        """`parameter` (string JSON) do bloco `index`, contado de 1 a :attr:`total`.
+
+        Args:
+            index: Posição do bloco, a partir de 1.
+            create_time_ms: Instante Unix em ms; a lib usa o do envio de cada
+                bloco.
+        """
+        block = self._blocks[index - 1]
+        parameter = {
+            "file_name": self._file_name,
+            "file_type": "wav",
+            "file_size": self._file_size,
+            "current_block_index": index,
+            "total_block_number": self.total,
+            "block_content": block,
+            "current_block_size": len(block),
+            "file_md5": self.file_md5,
+            "create_time": create_time_ms,
+        }
+        return json.dumps(parameter, ensure_ascii=True)
 
 
 class RawLidarDecoder:
@@ -84,6 +187,95 @@ def decode_points(
     return points
 
 
+class VideoHookedConnection(UnitreeWebRTCConnection):  # type: ignore[misc]
+    """Conexão da lib com ganchos para a api, sem patch na lib.
+
+    - Vídeo (F-003): a lib cria `self.video` em `init_webrtc`, já dentro do
+      `connect()`, e chama os callbacks dele no evento `track`, antes de o
+      `connect()` retornar. A propriedade `video` intercepta a atribuição e
+      registra o callback nessa hora, a cada conexão.
+    - Erros (F-004): a lib cria `self.datachannel` no mesmo `init_webrtc`. A
+      propriedade `datachannel` embrulha o `handle_response` dessa instância:
+      o original roda e, depois, as mensagens `errors`/`add_error`/`rm_error`
+      vão para :attr:`datachannel_message_listener`. Como o gancho entra na
+      criação do canal, a fotografia de erros que chega logo depois da
+      validação, ainda dentro do `connect()`, não se perde.
+    """
+
+    video_track_listener: VideoTrackListener | None = None
+    datachannel_message_listener: DataChannelMessageListener | None = None
+
+    @property
+    def datachannel(self) -> Any:  # noqa: ANN401 - `WebRTCDataChannel` da lib
+        """Data channel da lib, criado a cada `connect()`."""
+        return self.__dict__.get("_datachannel")
+
+    @datachannel.setter
+    def datachannel(self, channel: Any) -> None:  # noqa: ANN401
+        self.__dict__["_datachannel"] = channel
+        original = channel.handle_response
+
+        async def handle_response(message: Any) -> None:  # noqa: ANN401
+            try:
+                await original(message)
+            finally:
+                self._deliver_datachannel_message(channel, message)
+
+        channel.handle_response = handle_response
+
+    def _deliver_datachannel_message(self, channel: Any, message: Any) -> None:  # noqa: ANN401
+        """Entrega as mensagens de erro; falha da api fica no log, longe da lib."""
+        listener = self.datachannel_message_listener
+        if listener is None or not isinstance(message, dict):
+            return
+        if message.get("type") not in _ERROR_MESSAGE_TYPES:
+            return
+        try:
+            listener(channel, message)
+        except Exception:
+            log.exception("❌ Falha ao tratar mensagem de erro do data channel.")
+
+    @property
+    def video(self) -> Any:  # noqa: ANN401 - `WebRTCVideoChannel` da lib
+        """Canal de vídeo da lib, criado a cada `connect()`."""
+        return self.__dict__.get("_video_channel")
+
+    @video.setter
+    def video(self, channel: Any) -> None:  # noqa: ANN401
+        self.__dict__["_video_channel"] = channel
+        channel.add_track_callback(self._deliver_video_track)
+
+    async def _deliver_video_track(self, track: Any) -> None:  # noqa: ANN401
+        """Entrega a track e retorna logo: a lib espera cada callback em ordem."""
+        listener = self.video_track_listener
+        if listener is not None:
+            listener(track)
+
+    def attach_audio_track(self, track: AudioTrack) -> None:
+        """Põe `track` no transceiver de áudio que a lib negociou (F-007)."""
+        attach_audio_track(self.pc, track)
+
+
+def attach_audio_track(pc: Any, track: AudioTrack) -> None:  # noqa: ANN401
+    """Troca a track do sender do transceiver de áudio de `pc`, sem renegociar.
+
+    A lib cria um transceiver `audio` `sendrecv` em `init_webrtc`
+    (`WebRTCAudioChannel`). O sender dele já roda o laço de envio, que espera
+    em silêncio enquanto não há track; `replaceTrack` só troca a fonte. Esse
+    laço termina de vez se a track lançar `MediaStreamError`, por isso a track
+    da api nunca termina (aiortc 1.15.0, `rtcrtpsender.py`).
+
+    Raises:
+        RuntimeError: se `pc` não tem transceiver de áudio.
+    """
+    for transceiver in pc.getTransceivers():
+        if transceiver.kind == "audio":
+            transceiver.sender.replaceTrack(track)
+            return
+    msg = "❌ A conexão não tem transceiver de áudio."
+    raise RuntimeError(msg)
+
+
 class UnitreeConnectionFactory:
     """Cria a `UnitreeWebRTCConnection` correspondente à configuração."""
 
@@ -104,7 +296,7 @@ class UnitreeConnectionFactory:
         `aes_128_key=self._settings.robot_aes_128_key`.
         """
         settings = self._settings
-        connection: WebRTCConnection = UnitreeWebRTCConnection(
+        connection: WebRTCConnection = VideoHookedConnection(
             self._METHODS[settings.connection_method],
             ip=settings.robot_ip,
             serialNumber=settings.robot_serial_number,

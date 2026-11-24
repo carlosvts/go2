@@ -16,6 +16,16 @@ runs:
       run: |
         sudo apt-get update
         sudo apt-get install --yes --no-install-recommends portaudio19-dev
+    # A lib importa `sounddevice`, que inicia o PortAudio no import. No Ubuntu 26.04
+    # (ubuntu-latest desde nov/2026) o PortAudio 19.7 tem backend PulseAudio e o
+    # import falha sem servidor ("PulseAudio_Initialize: Can't connect to server").
+    # Um servidor PulseAudio sem placa de som basta; os testes não tocam áudio.
+    - name: Servidor PulseAudio para o import do sounddevice
+      shell: bash
+      run: |
+        sudo apt-get install --yes --no-install-recommends pulseaudio
+        pulseaudio --check || pulseaudio --daemonize --exit-idle-time=-1
+        pulseaudio --check
     - uses: astral-sh/setup-uv@v8.1.0
       with:
         enable-cache: true

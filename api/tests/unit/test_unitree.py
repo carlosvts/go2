@@ -17,7 +17,7 @@ class _RecordedConnection:
 
 @pytest.fixture
 def recorded(monkeypatch: pytest.MonkeyPatch) -> type[_RecordedConnection]:
-    monkeypatch.setattr(unitree, "UnitreeWebRTCConnection", _RecordedConnection)
+    monkeypatch.setattr(unitree, "VideoHookedConnection", _RecordedConnection)
     return _RecordedConnection
 
 

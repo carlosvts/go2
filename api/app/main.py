@@ -18,14 +18,19 @@ from app.error_handlers import ErrorHandlers
 from app.robot.ports import ConnectionFactory
 from app.robot.service import Go2Robot
 from app.routers import (
+    audio,
     capabilities,
+    device,
     gesture,
     lidar,
     movement,
     posture,
     safety,
+    speaker,
     speed,
+    state,
     telemetry,
+    video,
 )
 from app.routers import status as status_router
 
@@ -50,11 +55,15 @@ class RobotLifespan:
         robot = Go2Robot.from_settings(self._settings, self._connection_factory)
         app.state.robot = robot
         robot.lidar.start()
+        robot.video.start()
+        robot.state_stream.start()
         await self._connect(robot)
         keeper = self._start_keeper(robot)
         try:
             yield
         finally:
+            await robot.state_stream.stop()
+            await robot.video.stop()
             await robot.lidar.stop()
             if keeper is not None:
                 keeper.cancel()
@@ -115,6 +124,11 @@ def create_app(
     app.include_router(movement.router)
     app.include_router(speed.router)
     app.include_router(safety.router)
+    app.include_router(device.router)
+    app.include_router(speaker.router)
+    app.include_router(audio.router)
     app.include_router(lidar.router)
     app.include_router(telemetry.router)
+    app.include_router(video.router)
+    app.include_router(state.router)
     return app

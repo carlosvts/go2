@@ -35,7 +35,7 @@ def cache(clock: _Clock) -> StateCache:
     return StateCache(clock=clock)
 
 
-def test_attach_assina_os_dois_topicos_de_estado(cache: StateCache) -> None:
+def test_attach_assina_os_topicos_de_estado(cache: StateCache) -> None:
     pub_sub = FakePubSub()
 
     cache.attach(pub_sub)
@@ -43,6 +43,7 @@ def test_attach_assina_os_dois_topicos_de_estado(cache: StateCache) -> None:
     assert set(pub_sub.subscriptions) == {
         RTC_TOPIC["SPORT_MOD_STATE"],
         RTC_TOPIC["LOW_STATE"],
+        RTC_TOPIC["MULTIPLE_STATE"],  # F-004
     }
 
 
@@ -106,6 +107,7 @@ def test_raw_expoe_os_payloads_sem_interpretar(cache: StateCache) -> None:
     assert cache.raw == {
         "sport_mode_state": {"mode": 3, "extra": 1},
         "low_state": None,
+        "multiple_state": None,  # F-004
     }
 
 

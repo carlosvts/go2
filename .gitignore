@@ -11,3 +11,6 @@ __pycache__/
 # logs da api. Ficam no disco do lab, nunca no repo (centenas de MB).
 gravacoes/
 /api-*.log
+
+# worktrees temporários dos subagentes do Claude Code
+.claude/worktrees/
